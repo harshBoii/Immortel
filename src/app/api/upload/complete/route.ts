@@ -164,11 +164,7 @@ export async function POST(request: Request) {
 
       // Trigger external pipeline (process-from-api) in background; do not await
       const baseUrl = process.env.PROCESSING_API_BASE ?? process.env.CLIPFOX_PROCESSING_URL;
-      const appUrl =
-        process.env.NEXT_APP_URL ??
-        process.env.NEXT_PUBLIC_APP_URL ??
-        process.env.NEXT_PUBLIC_APP_PRODUCTION_URL ??
-        "http://localhost:3000";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
       if (baseUrl) {
         const api_url = `${appUrl.replace(/\/$/, "")}/api/videos/${asset.id}/download`;
