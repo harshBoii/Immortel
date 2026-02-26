@@ -157,7 +157,7 @@ export async function POST(request: Request) {
       `✅ [UPLOAD COMPLETE] Session ${updatedSession.id} finalized. Asset ${asset.id} created.`
     );
 
-    let queue = null;
+    let queue: Awaited<ReturnType<typeof enqueueAssetStreamUpload>> | null = null;
     if (isVideo) {
       // For videos, enqueue for Cloudflare Stream processing
       queue = await enqueueAssetStreamUpload(asset.id, priority);
