@@ -19,6 +19,7 @@ export function middleware(request: NextRequest) {
   const isVideosDownloadApi =
     pathname.startsWith('/api/videos') && pathname.endsWith('/download');
   const isMicroservicesApi = pathname.startsWith('/api/receive-intel');
+  
   const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi;
 
   if (isPublic) {
