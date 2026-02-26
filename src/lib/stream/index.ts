@@ -10,7 +10,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 export async function processQueue(batchSize = 5) {
   console.log(`[STREAM QUEUE] Processing batch of ${batchSize} items`);
 
-  const results = [];
+  const results: Array<Awaited<ReturnType<typeof processNextQueueItem>>> = [];
   for (let i = 0; i < batchSize; i++) {
     try {
       const result = await processNextQueueItem();
