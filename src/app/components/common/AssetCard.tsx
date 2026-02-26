@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Tooltip } from './Tooltip';
 import { PixelatedButton } from './UI/Buttons';
+import { ViewMoreDropdown } from './UI/ViewMoreDropdown';
 
 export type AssetCardData = {
   id: string;
@@ -61,14 +62,6 @@ const IconDownload = () => (
   </svg>
 );
 
-const IconMore = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="1" />
-    <circle cx="19" cy="12" r="1" />
-    <circle cx="5" cy="12" r="1" />
-  </svg>
-);
-
 const IconDescription = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -91,19 +84,8 @@ export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: 
   const isApproved = asset.approved === true;
   const isRejected = asset.approved === false;
   const canOpenModal = isVideo && (asset.hasIntelligence === true);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLDivElement>(null);
   const linkAssetId = asset.sourceAssetId ?? asset.id;
   const isReel = Boolean(asset.sourceAssetId);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    const handleOutside = (e: MouseEvent) => {
-      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
-    };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [moreOpen]);
 
   return (
     <div
@@ -131,7 +113,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: 
           </div>
         )}
         {/* Duration badge for video */}
-        {isVideo && asset.duration != null && (
+        {isVideo && asset.duration != null && asset.duration >= 0 && (
           <span className="absolute bottom-1 right-1 px-1.5 py-0.5 text-[10px] font-medium bg-black/70 text-white rounded">
             {Math.floor(asset.duration / 60)}:{(asset.duration % 60).toString().padStart(2, '0')}
           </span>
@@ -170,7 +152,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: 
       </div>
 
       {/* Info & CTAs */}
-      <div className="p-3 rounded-b-xl overflow-visible">
+      <div className="p-4 rounded-b-xl overflow-visible">
         <p className="text-sm font-medium text-foreground truncate" title={asset.title}>
           {asset.title}
         </p>
@@ -210,53 +192,36 @@ export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: 
                 <IconDownload />
               </button>
             </Tooltip>
-            <Tooltip content="More options">
-              <div ref={moreRef} className="relative">
-                <PixelatedButton
-                  variant="viewMore"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMoreOpen((o) => !o);
-                  }}
-                >
-                  <IconMore />
-                </PixelatedButton>
-                {moreOpen && (
-                  <div
-                    className="absolute right-0 top-full mt-1 min-w-[160px] py-1 border-2 border-[#E91E8C] bg-[#FFE4F0] shadow-[3px_3px_0_0_#C41A75] z-[100]"
-                    style={{ borderRadius: 0 }}
-                    role="menu"
-                  >
-                    {isVideo && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMoreOpen(false);
-                            onViewVideo?.(asset);
-                          }}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#FF2D92]/20 transition-colors"
-                          role="menuitem"
-                        >
-                          <IconVideo />
-                          View video
-                        </button>
-                        <Link
-                          href={`/ingestion/asset/${linkAssetId}/description`}
-                          onClick={(e) => { e.stopPropagation(); setMoreOpen(false); }}
-                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#FF2D92]/20 transition-colors"
-                          role="menuitem"
-                        >
-                          <IconDescription />
-                          See description
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </Tooltip>
+            <ViewMoreDropdown tooltipContent="More options">
+              {(close) =>
+                isVideo ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        close();
+                        onViewVideo?.(asset);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-blue-500/30 transition-colors"
+                      role="menuitem"
+                    >
+                      <IconVideo />
+                      View video
+                    </button>
+                    <Link
+                      href={`/ingestion/asset/${linkAssetId}/description`}
+                      onClick={(e) => { e.stopPropagation(); close(); }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-blue-500/30 transition-colors"
+                      role="menuitem"
+                    >
+                      <IconDescription />
+                      See description
+                    </Link>
+                  </>
+                ) : null
+              }
+            </ViewMoreDropdown>
           </div>
         </div>
       </div>

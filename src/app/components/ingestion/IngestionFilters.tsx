@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ViewMoreDropdown } from '../common/UI/ViewMoreDropdown';
 
 export type ViewMode = 'raw' | 'reels' | 'webinars';
 export type SortBy = 'time' | 'size';
@@ -50,14 +51,34 @@ export function IngestionFilters({
       {/* Sort */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs text-muted-foreground">Sort by</span>
-        <select
-          value={sortBy}
-          onChange={(e) => onSortByChange(e.target.value as SortBy)}
-          className="px-3 py-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          <option value="time">Time</option>
-          <option value="size">Size</option>
-        </select>
+        <ViewMoreDropdown tooltipContent="Sort by" align="left">
+          {(close) => (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onSortByChange('time');
+                  close();
+                }}
+                className={`flex w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-blue-500/30 transition-colors ${sortBy === 'time' ? 'bg-[#FF2D92]/15 font-medium' : ''}`}
+                role="menuitem"
+              >
+                Time
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onSortByChange('size');
+                  close();
+                }}
+                className={`flex w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-blue-500/30 transition-colors ${sortBy === 'size' ? 'bg-[#FF2D92]/15 font-medium' : ''}`}
+                role="menuitem"
+              >
+                Size
+              </button>
+            </>
+          )}
+        </ViewMoreDropdown>
         <button
           type="button"
           onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}

@@ -1,1 +1,1 @@
-export { PixelatedButton, type PixelatedButtonVariant } from './PixelatedButton';
+export {PixelatedButton } from './PixelatedButton';

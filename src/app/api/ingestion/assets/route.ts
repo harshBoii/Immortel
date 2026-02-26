@@ -105,7 +105,10 @@ export async function GET(request: Request) {
           status: a.status,
           thumbnailUrl: a.thumbnailUrl,
           approved: meta.approved as boolean | undefined ?? null,
-          duration: a.duration ?? null,
+          duration:
+            a.duration != null && typeof a.duration === "number" && a.duration >= 0
+              ? a.duration
+              : null,
           resolution: a.resolution ?? null,
           createdAt: a.createdAt.toISOString(),
           hasIntelligence: (a._count?.intelligence ?? 0) > 0,
