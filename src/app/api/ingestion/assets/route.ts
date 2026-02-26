@@ -95,7 +95,7 @@ export async function GET(request: Request) {
         },
       });
 
-      const list: AssetCardData[] = assets.map((a) => {
+      const list: AssetCardData[] = assets.map((a: any) => {
         const meta = (a.metadata as Record<string, unknown>) ?? {};
         return {
           id: a.id,
