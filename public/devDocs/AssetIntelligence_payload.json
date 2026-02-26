@@ -1,0 +1,227 @@
+{
+    "url": "https://app.clipfox.studio/api/receive-intel",
+    "payload": {
+      "assetId": "cmlxuokkb0001ic049t0nw64r",
+      "assetType": "VIDEO",
+      "language": "English",
+      "contentType": "Travel vlog",
+      "durationSeconds": 880,
+      "titlePrimary": "First Time in the Philippines: Bulacan to El Nido (Palawan Travel Vlog)",
+      "titleVariants": {
+        "seo": "First Time in the Philippines Travel Vlog | Bulacan to El Nido Palawan | Island Hopping, Food, Tips",
+        "emotional": "Losing Track of Time in Paradise: Our First Trip to the Philippines",
+        "clickbait": "We Didn’t Expect THIS in El Nido, Philippines!"
+      },
+      "shortSummary": "A first-time trip to the Philippines from Bulacan to El Nido, Palawan—meeting family, battling jet lag, exploring lagoons and beaches, and sharing practical travel tips.",
+      "longDescription": "Join us on our first-ever trip to the Philippines! We start with family time in Bulacan (Marilao), adjusting to an 18-hour time jump from Hawaii and soaking up the local vibe before heading out for an island getaway in El Nido, Palawan. From travel logistics to first impressions, we bring you along for the full experience.\nIn El Nido, we explore iconic limestone cliffs, turquoise lagoons, white-sand beaches, and vibrant marine life. Expect scenic boat rides, snorkeling, market snacks, and laid-back sunsets—plus our honest take on what surprised us most. We also share quick tips on getting around, what to budget for tours, and how to plan your first visit.\nWhether you’re researching your first Philippines trip or reliving your last island-hopping adventure, this vlog captures the excitement, family connection, and natural beauty that make Palawan unforgettable.",
+      "theme": "First-time travel and cultural discovery",
+      "tone": [
+        "adventurous",
+        "warm",
+        "casual",
+        "enthusiastic"
+      ],
+      "topics": [
+        "Philippines travel",
+        "Palawan",
+        "El Nido",
+        "Bulacan",
+        "Manila",
+        "family visit",
+        "island hopping",
+        "snorkeling",
+        "travel tips",
+        "budget travel",
+        "local food",
+        "time zone and jet lag",
+        "Hawaii to Philippines travel",
+        "domestic flights in the Philippines",
+        "beaches and lagoons",
+        "drone cinematography"
+      ],
+      "sentiment": "positive",
+      "intensityScore": 64.0,
+      "tags": [
+        "Philippines",
+        "El Nido",
+        "Palawan",
+        "Bulacan",
+        "Marilao",
+        "Manila",
+        "travel vlog",
+        "first time in the Philippines",
+        "island hopping",
+        "snorkeling",
+        "lagoon",
+        "beach",
+        "limestone cliffs",
+        "drone shots",
+        "travel tips",
+        "budget",
+        "itinerary",
+        "family travel",
+        "Asia travel",
+        "vacation",
+        "Hawaii to Philippines",
+        "jet lag"
+      ],
+      "visualContext": [
+        "car",
+        "person",
+        "chair",
+        "dining table",
+        "family home interior",
+        "airport",
+        "airplane",
+        "van transfer",
+        "outrigger boat",
+        "ocean",
+        "white-sand beach",
+        "limestone cliffs",
+        "lagoon",
+        "snorkel gear",
+        "market stalls",
+        "street food",
+        "sunset",
+        "drone aerials",
+        "tropical foliage",
+        "tricycle (Philippine)"
+      ],
+      "spiritualElements": false,
+      "targetAudience": [
+        "travel enthusiasts",
+        "first-time visitors to the Philippines",
+        "adventure seekers",
+        "budget travelers",
+        "couples and families",
+        "US-based travelers planning Asia trips",
+        "vlog and drone video fans"
+      ],
+      "bestPlatforms": [
+        "YouTube",
+        "YouTube Shorts",
+        "TikTok",
+        "Instagram Reels",
+        "Facebook Watch"
+      ],
+      "videoGenres": [
+        "Travel Vlog",
+        "Adventure",
+        "Lifestyle"
+      ],
+      "chapters": [
+        {
+          "title": "Cold Open: Touchdown & First Impressions",
+          "startSeconds": 0,
+          "endSeconds": 18,
+          "summary": "Quick arrival montage and family setting; setting up the trip’s purpose."
+        },
+        {
+          "title": "Bulacan Family Time (Marilao)",
+          "startSeconds": 18,
+          "endSeconds": 48,
+          "summary": "Introductions with Micah’s family and clarifying where Bulacan/Marilao is."
+        },
+        {
+          "title": "Jet Lag +18 Hours from Hawaii",
+          "startSeconds": 48,
+          "endSeconds": 110,
+          "summary": "Losing track of days, adjusting to the time difference, and planning the Palawan leg."
+        },
+        {
+          "title": "Getting There: Manila to El Nido",
+          "startSeconds": 110,
+          "endSeconds": 240,
+          "summary": "Transit logistics: flights/transfers and first look at Palawan’s coastline."
+        },
+        {
+          "title": "El Nido Town: First Walkthrough",
+          "startSeconds": 240,
+          "endSeconds": 360,
+          "summary": "Settling in, arranging boat tours, and grabbing local bites."
+        },
+        {
+          "title": "Island Hopping Begins",
+          "startSeconds": 360,
+          "endSeconds": 510,
+          "summary": "Heading out on a banca boat to lagoons and beaches; iconic cliff views."
+        },
+        {
+          "title": "Snorkeling & Crystal-Clear Water",
+          "startSeconds": 510,
+          "endSeconds": 630,
+          "summary": "Underwater scenes, marine life, and reef explorations."
+        },
+        {
+          "title": "Food Break: Market Snacks & Filipino Favorites",
+          "startSeconds": 630,
+          "endSeconds": 720,
+          "summary": "Local dishes, quick prices, and what to try as a first-timer."
+        },
+        {
+          "title": "Golden Hour Over Limestone Cliffs",
+          "startSeconds": 720,
+          "endSeconds": 800,
+          "summary": "Sunset cruise and drone shots over El Nido’s karst formations."
+        },
+        {
+          "title": "Costs, Tips, and What We’d Do Differently",
+          "startSeconds": 800,
+          "endSeconds": 860,
+          "summary": "Tour prices, packing tips, and timing advice for El Nido."
+        },
+        {
+          "title": "Reflections & What’s Next",
+          "startSeconds": 860,
+          "endSeconds": 880,
+          "summary": "Takeaways from our first Philippines trip and sign-off."
+        }
+      ],
+      "shortsHooks": [
+        "We jumped 18 hours into the future flying from Hawaii to the Philippines!",
+        "Our first look at El Nido’s insane limestone cliffs.",
+        "Crystal-clear water you have to see to believe.",
+        "How much does island hopping in Palawan really cost?",
+        "Trying Filipino market snacks for the first time.",
+        "Family time in Bulacan before paradise in Palawan.",
+        "This El Nido sunset felt unreal."
+      ],
+      "clipfoxInsights": [
+        {
+          "type": "clipIdea",
+          "label": "Jet Lag Shock (+18 Hours)",
+          "startSeconds": 48,
+          "endSeconds": 84,
+          "insight": "Great hook for Shorts: time-zone jump story with energetic delivery."
+        },
+        {
+          "type": "clipIdea",
+          "label": "El Nido First Look",
+          "startSeconds": 240,
+          "endSeconds": 270,
+          "insight": "Use dramatic music and quick cuts of cliffs and water for maximum retention."
+        },
+        {
+          "type": "clipIdea",
+          "label": "Snorkeling Reveal",
+          "startSeconds": 520,
+          "endSeconds": 560,
+          "insight": "Underwater color pop—add captions and fish IDs for engagement."
+        },
+        {
+          "type": "searchIntent",
+          "label": "Itinerary & Costs",
+          "startSeconds": 800,
+          "endSeconds": 860,
+          "insight": "Answer queries on ‘El Nido Tour A price’, ‘how to get to El Nido’, and packing lists."
+        },
+        {
+          "type": "audience",
+          "label": "First-Time Philippines Travelers",
+          "insight": "Emphasize Bulacan-to-Palawan contrast, cultural intro, and easy logistics."
+        }
+      ],
+      "modelVersion": "gpt-4o",
+      "confidence": 95.0
+    }
+  }

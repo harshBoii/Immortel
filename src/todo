@@ -1,0 +1,14 @@
+R2 and stream Setup
+In Database incoroporate a special type of video called webinar , 
+Upload/start and upload/complete api , stream Processing api and cron job also a (/cron api route)
+Connect To Microservice (For Shorts Generation and Info Extraction)
+After upload is finished an assetgrid should be added with tag of processing , when procssing is done then it should be reflect as cta on assetgrid
+Api to set the times for webinar (webinar model will have this column)
+
+For Shorts Generation 
+
+We will send to api 
+    1. Number of shorts to generate
+    2. Duration of shorts 
+    3. Short Type (  EDUCATIONAL , FLASHY , CASUAL , STORY , PROMOTIONAL )
+

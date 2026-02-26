@@ -1,0 +1,477 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+// ============================================================
+// ENUMS
+// ============================================================
+
+//  VIDEO    → dynamic  — has Cloudflare Stream fields
+//  IMAGE    → static   — no stream, visual only
+//  DOCUMENT → static   — no stream, page/file based
+enum AssetType {
+  VIDEO
+  IMAGE
+  DOCUMENT
+}
+
+enum AssetStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+  ARCHIVED
+}
+
+enum StreamQueueStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum StreamQueuePriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum UploadSource {
+  NATIVE
+  YOUTUBE
+  GOOGLE_DRIVE
+  DROPBOX
+  URL
+}
+
+enum MicroAssetStatus {
+  DRAFT
+  READY
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ContentStyle {
+  EDUCATIONAL 
+  FLASHY 
+  CASUAL 
+  STORY 
+  PROMOTIONAL 
+}
+
+enum IntelligenceStatus {
+  PENDING
+  PROCESSING
+  READY
+}
+
+
+// ============================================================
+// COMPANY
+// ============================================================
+
+model Company {
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(255)
+  slug        String  @unique @db.VarChar(255)
+  description String? @db.Text
+  logoUrl     String? @db.VarChar(1000)
+  website     String? @db.VarChar(500)
+  email    String @unique @db.VarChar(255)
+
+  userName String @unique @db.VarChar(255)
+  password String @db.VarChar(255)
+  
+
+  // ── All asset types in one relation ──────────────
+  assets            Asset[]
+  microAssets       MicroAsset[]
+  assetIntelligence AssetIntelligence[]
+  webinars          Webinar[]
+
+
+  // ── Brand identity (optional 1-to-1) ─────────────
+  branding          CompanyBranding?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([slug])
+  @@map("companies")
+}
+
+
+// ============================================================
+// COMPANY BRANDING  (optional 1-to-1 with Company)
+// ============================================================
+
+model CompanyBranding {
+  id        String @id @default(cuid())
+  companyId String @unique
+
+  // ── Brand identity ────────────────────────────────
+  logoUrl    String? @db.VarChar(1000)
+  faviconUrl String? @db.VarChar(1000)
+  banner     String? @db.VarChar(1000) // Banner image URL
+  themeMusic String? @db.VarChar(1000) // Theme music audio URL
+
+  // ── Color scheme ──────────────────────────────────
+  primaryColor   String @default("#D7765A") @db.VarChar(20) // Main brand color
+  secondaryColor String @default("#8B5CF6") @db.VarChar(20) // Accent color
+  bgColor        String @default("#141414") @db.VarChar(20) // Background
+  surfaceColor   String @default("#181818") @db.VarChar(20) // Cards / panels
+  textColor      String @default("#FFFFFF") @db.VarChar(20) // Primary text
+
+  // ── Contact information ───────────────────────────
+  companyAddress String? @default("123 Main St, San Francisco, CA") @db.VarChar(500)
+
+  // ── Relation ──────────────────────────────────────
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("company_branding")
+}
+
+
+// ============================================================
+// UNIFIED ASSET TABLE  (Single Table Inheritance)
+//
+//  assetType = VIDEO    → uses: duration, fps, codec,
+//                                resolution, streamId,
+//                                playbackUrl, thumbnailUrl
+//
+//  assetType = IMAGE    → uses: resolution, mimeType
+//                         NOT:  stream fields
+//
+//  assetType = DOCUMENT → uses: mimeType, pageCount
+//                         NOT:  stream fields, resolution
+// ============================================================
+
+model Asset {
+  id           String      @id @default(cuid())
+  assetType    AssetType   // discriminator
+  title        String      @db.VarChar
+  filename     String      @db.VarChar
+  originalSize BigInt
+  status       AssetStatus @default(UPLOADING)
+
+  // ── R2 Storage — all types ────────────────────────
+  r2Key    String @db.VarChar(500)
+  r2Bucket String @db.VarChar(255)
+
+  // ── VIDEO + IMAGE: visual dimensions ─────────────
+  resolution  String? @db.VarChar(20)  // e.g. "1920x1080" — null for DOCUMENT
+
+  // ── IMAGE + DOCUMENT: MIME type ───────────────────
+  mimeType    String? @db.VarChar(100) // e.g. "image/jpeg", "application/pdf" — null for VIDEO
+
+  // ── VIDEO-only fields ─────────────────────────────
+  duration    Int?    // seconds          — null for IMAGE, DOCUMENT
+  fps         Int?    //                  — null for IMAGE, DOCUMENT
+  codec       String? @db.VarChar(50)   // — null for IMAGE, DOCUMENT
+
+  // ── Cloudflare Stream — VIDEO only ────────────────
+  // NOTE: intentionally absent for IMAGE and DOCUMENT
+  streamId     String? @unique @db.VarChar(255)
+  playbackUrl  String? @db.Text
+  thumbnailUrl String? @db.Text
+
+  // ── DOCUMENT-only fields ──────────────────────────
+  pageCount   Int?    //                  — null for VIDEO, IMAGE
+
+  // ── Metadata — all types ──────────────────────────
+  tags         String[]     @default([])
+  metadata     Json         @default("{}")
+  uploadSource UploadSource @default(NATIVE)
+
+  // ── Intelligence (VIDEO: PROCESSING after upload, READY when intel received)
+  intelligenceStatus IntelligenceStatus?
+
+  // ── Company ───────────────────────────────────────
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── Relations ─────────────────────────────────────
+  intelligence AssetIntelligence[]
+  microAssets  MicroAsset[]         // VIDEO and DOCUMENT only; enforced at app layer
+  description  AssetDescription?
+  webinars     Webinar[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  streamQueueItems StreamQueue[]
+
+  @@index([companyId])
+  @@index([assetType])
+  @@index([status])
+  @@index([uploadSource])
+  @@index([assetType, status])
+  @@index([assetType, companyId])
+  @@index([createdAt(sort: Desc)])
+  @@index([intelligenceStatus])
+  @@map("assets")
+}
+
+model StreamQueue {
+  id          String              @id @default(cuid())
+
+  // Link to the source asset (VIDEO only at app layer)
+  assetId     String
+  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // R2 object to pull from (can be original or compressed)
+  r2Key       String              @db.VarChar(500)
+  r2Bucket    String              @db.VarChar(255)
+
+  // Queue state
+  status      StreamQueueStatus   @default(PENDING)
+  priority    StreamQueuePriority @default(NORMAL)
+  attempts    Int                 @default(0)
+  maxAttempts Int                 @default(3)
+  lastError   String?             @db.Text
+
+  // Cloudflare Stream fields
+  streamId    String?             @db.VarChar(255)
+
+  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
+  startedAt   DateTime?           @db.Timestamptz(3)
+  completedAt DateTime?           @db.Timestamptz(3)
+
+  @@index([status, priority, createdAt])
+  @@index([assetId])
+  @@map("stream_queue")
+}
+
+model UploadSession {
+  id           String   @id @default(cuid())
+
+  // R2 multipart upload
+  uploadId     String   @db.VarChar(255)
+  key          String   @db.VarChar(500)
+
+  // File info
+  fileName     String   @db.VarChar(255)
+  fileSize     BigInt
+  fileType     String   @db.VarChar(200)
+
+  // Multipart progress
+  totalParts   Int
+  uploadedParts Int[]   @default([])
+
+  // Status and context
+  status       String   @db.VarChar(50) // e.g. IN_PROGRESS, COMPLETED, FAILED
+  campaignId   String?  @db.VarChar(255)
+  uploadedBy   String?  @db.VarChar(255)
+  metadata     String?  @db.Text
+
+  // Expiry
+  expiresAt    DateTime @db.Timestamptz(3)
+
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+  @@index([uploadedBy])
+  @@index([campaignId])
+  @@map("upload_sessions")
+}
+
+// ============================================================
+// ASSET DESCRIPTION  (1-to-1, primarily used for VIDEO)
+// ============================================================
+
+model AssetDescription {
+  id      String @id @default(cuid())
+  assetId String @unique
+
+  content    String  @db.Text
+  seoTitle   String? @db.VarChar(500)
+  seoSummary String? @db.Text
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("asset_descriptions")
+}
+
+
+
+// ============================================================
+// ASSET INTELLIGENCE — AI analysis across all asset types
+// ============================================================
+
+model AssetIntelligence {
+  id String @id @default(cuid())
+
+  // ── Parent asset reference ─────────────────────────
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // ── Core metadata ─────────────────────────────────
+  language          String?  @db.VarChar(10)
+  contentType       String?  @db.VarChar(100)
+  durationSeconds   Int?     // VIDEO only — null for IMAGE, DOCUMENT
+  theme             String?  @db.VarChar(255)
+  sentiment         String?  @db.VarChar(50)  // positive, negative, neutral, mixed
+  intensityScore    Float?   // 0–100
+  spiritualElements Boolean  @default(false)
+
+  // ── Searchable text ───────────────────────────────
+  titlePrimary    String? @db.VarChar(500)
+  shortSummary    String? @db.Text
+  longDescription String? @db.Text
+
+  // ── Arrays (PostgreSQL GIN-indexable) ─────────────
+  tags           String[] @default([])
+  tone           String[] @default([])
+  topics         String[] @default([])
+  targetAudience String[] @default([])
+  bestPlatforms  String[] @default([])
+  visualContext  String[] @default([])
+  videoGenres    String[] @default([]) // VIDEO only — empty for IMAGE, DOCUMENT
+
+  // ── Complex JSON structures ────────────────────────
+  titleVariants   Json? @default("{}")  // { seo: "", emotional: "", clickbait: "" }
+  chapters        Json? @default("[]")  // [{ timestamp, title, description }]
+  shortsHooks     Json? @default("[]")  // [{ start, end, hook_type, description }]
+  clipfoxInsights Json? @default("[]")
+
+  // ── ML model metadata ─────────────────────────────
+  modelVersion String?  @db.VarChar(50)
+  confidence   Float?
+  processedAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  // ── Company ───────────────────────────────────────
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Recommended GIN indexes — run after migration:
+  // CREATE INDEX idx_intelligence_tags      ON asset_intelligence USING GIN (tags);
+  // CREATE INDEX idx_intelligence_topics    ON asset_intelligence USING GIN (topics);
+  // CREATE INDEX idx_intelligence_platforms ON asset_intelligence USING GIN ("bestPlatforms");
+
+  @@index([assetId])
+  @@index([companyId])
+  @@index([language])
+  @@index([sentiment])
+  @@index([theme])
+  @@index([contentType])
+  @@index([spiritualElements])
+  @@index([processedAt(sort: Desc)])
+  @@map("asset_intelligence")
+}
+
+// ============================================================
+// MICRO ASSET — clips / segments from VIDEO or DOCUMENT
+// (IMAGE assets are atomic and not segmentable — enforced
+//  at application layer via asset.assetType check)
+// ============================================================
+
+model MicroAsset {
+  id String @id @default(cuid())
+
+  // ── Parent asset reference ─────────────────────────
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // ── Core ──────────────────────────────────────────
+  title       String  @db.VarChar(500)
+  startTime   Float   // seconds (VIDEO) or page number (DOCUMENT)
+  endTime     Float   // seconds (VIDEO) or page number (DOCUMENT)
+  hook        String? @db.Text
+  editingIdea String? @db.Text
+
+  // ── Optional metadata ─────────────────────────────
+  description String? @db.Text
+  thumbnail   String? @db.VarChar(1000)
+
+  // ── Status & categorisation ───────────────────────
+  status   MicroAssetStatus @default(DRAFT)
+  category String?          @db.VarChar(100) // "hook", "highlight", "b-roll"
+  tags     String[]         @default([])
+  shortType ContentStyle?   @default(CASUAL)
+
+  // ── AI / ML ───────────────────────────────────────
+  aiGenerated Boolean @default(false)
+  confidence  Float?  // 0–100
+
+
+  // ── Company ───────────────────────────────────────
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // ── Approvals ─────────────────────────────────────
+  is_approved Boolean @default(false)
+  approved_at DateTime? @db.Timestamptz(3)
+
+  @@index([assetId])
+  @@index([companyId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt(sort: Desc)])
+  @@index([is_approved])
+  @@map("micro_assets")
+}
+
+
+
+// ============================================================
+// WEBINAR — scheduling + streaming configuration
+// ============================================================
+
+model Webinar {
+  id          String  @id @default(cuid())
+
+  // ── Core info ───────────────────────────────────────
+  title       String  @db.VarChar(255)
+  description String? @db.Text
+
+  // ── Linked streaming asset (usually VIDEO) ─────────
+  assetId String?
+  asset   Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  // ── Company ────────────────────────────────────────
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── Scheduling / recurrence ────────────────────────
+  // One-off scheduled date & time
+  scheduledAt DateTime? @db.Timestamptz(3)
+
+  // Recurring configuration
+  isRecurring        Boolean  @default(false)
+  recurringDayOfWeek String?  @db.VarChar(20)  // e.g. "MONDAY"
+  recurringTime      String?  @db.VarChar(10)  // e.g. "18:30" in HH:mm
+  timeZone           String?  @db.VarChar(50)  // e.g. "Europe/Paris"
+
+  // ── Status ─────────────────────────────────────────
+  status String @default("DRAFT") @db.VarChar(50) // DRAFT, SCHEDULED, LIVE, COMPLETED, CANCELLED
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  is_approved Boolean @default(false)
+  approved_at DateTime? @db.Timestamptz(3)
+
+
+  @@index([companyId])
+  @@index([assetId])
+  @@index([scheduledAt])
+  @@index([is_approved])
+  @@map("webinars")
+}
+
