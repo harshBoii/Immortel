@@ -206,11 +206,13 @@ export async function POST(request: Request) {
       assetType,
       uploadSessionId: session.id,
       queuedForStream: isVideo,
-      ...(queue && {
-        queueId: queue.id,
-        queueStatus: queue.status,
-        priority: queue.priority,
-      }),
+      ...(queue
+        ? {
+            queueId: queue.id,
+            queueStatus: queue.status,
+            priority: queue.priority,
+          }
+        : {}),
     });
   } catch (error) {
     console.error("[UPLOAD COMPLETE ERROR]", error);
