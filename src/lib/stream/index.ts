@@ -30,7 +30,7 @@ export async function processQueue(batchSize = 5) {
  * Process next pending item in the queue
  */
 export async function processNextQueueItem() {
-  let queueItem = null;
+  let queueItem: any = null;
 
   try {
     // Get next pending item (prioritize HIGH, then NORMAL, then LOW)
