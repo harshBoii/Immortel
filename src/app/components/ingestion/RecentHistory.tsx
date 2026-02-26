@@ -3,10 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { Tooltip } from '../common/Tooltip';
-import type { AssetCardData } from './AssetCard';
+import type { AssetCardData } from '../common/AssetCard';
+
+type RecentHistoryItem = {
+  id: AssetCardData['id'];
+  title: AssetCardData['title'];
+  filename: AssetCardData['filename'];
+  assetType: AssetCardData['assetType'];
+  status: AssetCardData['status'];
+  createdAt?: AssetCardData['createdAt'];
+};
 
 type RecentHistoryProps = {
-  items: Array<Pick<AssetCardData, 'id' | 'title' | 'filename' | 'assetType' | 'status' | 'createdAt'>>;
+  items: RecentHistoryItem[];
 };
 
 function formatDate(value: string | Date | undefined) {
