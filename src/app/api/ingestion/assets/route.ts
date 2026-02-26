@@ -137,7 +137,7 @@ export async function GET(request: Request) {
         include: { asset: true },
       });
 
-      const list: ReelCardData[] = microAssets.map((m) => {
+      const list: ReelCardData[] = microAssets.map((m: any) => {
         const parent = m.asset;
         const thumbnailUrl =
           parent?.streamId && parent.assetType === "VIDEO"
