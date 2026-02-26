@@ -16,7 +16,9 @@ export function middleware(request: NextRequest) {
   const isLoginPage = pathname === '/login';
   const isAuthApi = pathname.startsWith('/api/auth');
   const isCronApi = pathname.startsWith('/api/cron');
-  const isPublic = isLoginPage || isAuthApi || isCronApi;
+  const isVideosDownloadApi =
+    pathname.startsWith('/api/videos') && pathname.endsWith('/download');
+  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {
