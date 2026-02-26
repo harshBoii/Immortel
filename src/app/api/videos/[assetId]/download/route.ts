@@ -87,6 +87,8 @@ export async function GET(
       expiresIn,
     });
 
+    const formattedSize = formatBytes(asset.originalSize);
+
     return NextResponse.json({
       success: true,
       asset: {
@@ -94,8 +96,15 @@ export async function GET(
         title: asset.title,
         filename: asset.filename,
         size: asset.originalSize.toString(),
-        formattedSize: formatBytes(asset.originalSize),
+        formattedSize,
         assetType: asset.assetType,
+      },
+      video: {
+        id: asset.id,
+        title: asset.title,
+        filename: asset.filename,
+        size: asset.originalSize.toString(),
+        formattedSize,
       },
       download: {
         url: presignedUrl,
