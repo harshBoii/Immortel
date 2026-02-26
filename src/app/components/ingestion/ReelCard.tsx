@@ -14,6 +14,12 @@ export type ReelCardData = {
   thumbnailUrl: string | null;
   approved?: boolean | null;
   createdAt?: string;
+  hook?: string | null;
+  description?: string | null;
+  category?: string | null;
+  tags?: string[];
+  shortType?: string | null;
+  parentStreamId?: string | null;
 };
 
 type ReelCardProps = {

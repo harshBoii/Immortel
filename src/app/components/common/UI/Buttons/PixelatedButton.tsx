@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 
-const PIXEL = 3;
+const PIXEL = 2;
 
 export type PixelatedButtonVariant = 'approve' | 'reject' | 'viewMore';
 
@@ -67,9 +67,6 @@ export function PixelatedButton({
 
   const buttonStyle: React.CSSProperties = {
     backgroundColor: bg,
-    borderWidth: 2,
-    borderStyle: 'solid',
-    borderColor: style.border,
     boxShadow: `${shadowOffset}px ${shadowOffset}px 0 0 ${pressed ? style.activeShadow : style.shadow}`,
     color: style.text,
     transform: `translate(0, ${translateY}px)`,
@@ -78,7 +75,7 @@ export function PixelatedButton({
   };
 
   const shared = {
-    className: `inline-flex items-center justify-center min-w-[36px] h-9 px-2 border-2 select-none ${className}`.trim(),
+    className: `inline-flex items-center justify-center min-w-[28px] h-7 px-1.5 select-none ${className}`.trim(),
     style: buttonStyle,
     title,
     onClick,

@@ -8,9 +8,10 @@ type AssetGridProps = {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onAssetClick?: (asset: AssetCardData) => void;
+  onViewVideo?: (asset: AssetCardData) => void;
 };
 
-export function AssetGrid({ assets, onApprove, onReject, onAssetClick }: AssetGridProps) {
+export function AssetGrid({ assets, onApprove, onReject, onAssetClick, onViewVideo }: AssetGridProps) {
   if (assets.length === 0) {
     return (
       <div className="glass-card rounded-xl p-12 text-center">
@@ -29,6 +30,7 @@ export function AssetGrid({ assets, onApprove, onReject, onAssetClick }: AssetGr
           onApprove={onApprove}
           onReject={onReject}
           onClick={asset.assetType === 'VIDEO' ? onAssetClick : undefined}
+          onViewVideo={asset.assetType === 'VIDEO' ? onViewVideo : undefined}
         />
       ))}
     </div>

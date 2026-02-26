@@ -18,6 +18,12 @@ export type AssetCardData = {
   createdAt?: string | Date;
   hasIntelligence?: boolean;
   intelligenceStatus?: string | null;
+  /** When set (e.g. for reels), description/video links and download use this asset id instead of id */
+  sourceAssetId?: string;
+  /** For reels: segment start time in seconds (parent video). Used for "View video" preview. */
+  startTime?: number;
+  /** For reels: segment end time in seconds (parent video). Used for "View video" preview. */
+  endTime?: number;
 };
 
 type AssetCardProps = {
@@ -25,6 +31,7 @@ type AssetCardProps = {
   onApprove?: (id: string) => void;
   onReject?: (id: string) => void;
   onClick?: (asset: AssetCardData) => void;
+  onViewVideo?: (asset: AssetCardData) => void;
 };
 
 const IconCheck = () => (
@@ -72,13 +79,22 @@ const IconDescription = () => (
   </svg>
 );
 
-export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProps) {
+const IconVideo = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+);
+
+export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: AssetCardProps) {
   const isVideo = asset.assetType === 'VIDEO';
   const isApproved = asset.approved === true;
   const isRejected = asset.approved === false;
   const canOpenModal = isVideo && (asset.hasIntelligence === true);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement>(null);
+  const linkAssetId = asset.sourceAssetId ?? asset.id;
+  const isReel = Boolean(asset.sourceAssetId);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -95,10 +111,10 @@ export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProp
       tabIndex={canOpenModal ? 0 : undefined}
       onClick={canOpenModal ? () => onClick?.(asset) : undefined}
       onKeyDown={canOpenModal ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(asset); } } : undefined}
-      className={`glass-card rounded-xl overflow-hidden group hover:shadow-lg transition-shadow ${canOpenModal ? 'cursor-pointer' : ''}`}
+      className={`glass-card rounded-xl group hover:shadow-lg transition-shadow ${canOpenModal ? 'cursor-pointer' : ''}`}
     >
       {/* Thumbnail */}
-      <div className="aspect-video bg-muted/50 relative">
+      <div className="aspect-video bg-muted/50 relative overflow-hidden rounded-t-xl">
         {asset.thumbnailUrl ? (
           <img
             src={asset.thumbnailUrl}
@@ -122,7 +138,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProp
         )}
         {/* Approval status icon */}
         <div className="absolute top-2 right-2 flex items-center gap-1">
-          {isVideo && !asset.hasIntelligence && (
+          {isVideo && !asset.hasIntelligence && !isReel && (
             <Tooltip content="Intelligence required to generate shorts">
               <span className="px-2 py-0.5 text-[10px] font-medium bg-amber-500/90 text-white rounded">
                 Processing…
@@ -154,7 +170,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProp
       </div>
 
       {/* Info & CTAs */}
-      <div className="p-3">
+      <div className="p-3 rounded-b-xl overflow-visible">
         <p className="text-sm font-medium text-foreground truncate" title={asset.title}>
           {asset.title}
         </p>
@@ -186,7 +202,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProp
                 onClick={(e) => {
                   e.stopPropagation();
                   if (asset.id) {
-                    window.open(`/api/assets/${asset.id}/download`, '_blank');
+                    window.open(`/api/assets/${linkAssetId}/download`, '_blank');
                   }
                 }}
                 className="p-2 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-foreground transition-colors"
@@ -207,20 +223,35 @@ export function AssetCard({ asset, onApprove, onReject, onClick }: AssetCardProp
                 </PixelatedButton>
                 {moreOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 min-w-[160px] py-1 border-2 border-[#E91E8C] bg-[#FFE4F0] shadow-[3px_3px_0_0_#C41A75] z-10"
+                    className="absolute right-0 top-full mt-1 min-w-[160px] py-1 border-2 border-[#E91E8C] bg-[#FFE4F0] shadow-[3px_3px_0_0_#C41A75] z-[100]"
                     style={{ borderRadius: 0 }}
                     role="menu"
                   >
                     {isVideo && (
-                      <Link
-                        href={`/ingestion/asset/${asset.id}/description`}
-                        onClick={(e) => { e.stopPropagation(); setMoreOpen(false); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#FF2D92]/20 transition-colors"
-                        role="menuitem"
-                      >
-                        <IconDescription />
-                        See description
-                      </Link>
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMoreOpen(false);
+                            onViewVideo?.(asset);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#FF2D92]/20 transition-colors"
+                          role="menuitem"
+                        >
+                          <IconVideo />
+                          View video
+                        </button>
+                        <Link
+                          href={`/ingestion/asset/${linkAssetId}/description`}
+                          onClick={(e) => { e.stopPropagation(); setMoreOpen(false); }}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-left text-sm text-[#1a1a1a] hover:bg-[#FF2D92]/20 transition-colors"
+                          role="menuitem"
+                        >
+                          <IconDescription />
+                          See description
+                        </Link>
+                      </>
                     )}
                   </div>
                 )}

@@ -154,6 +154,12 @@ export async function GET(request: Request) {
           thumbnailUrl,
           approved: m.is_approved,
           createdAt: m.createdAt.toISOString(),
+          hook: m.hook ?? null,
+          description: m.description ?? null,
+          category: m.category ?? null,
+          tags: m.tags ?? [],
+          shortType: m.shortType ?? null,
+          parentStreamId: parent?.streamId ?? null,
         };
       });
       return NextResponse.json({ success: true, data: list });

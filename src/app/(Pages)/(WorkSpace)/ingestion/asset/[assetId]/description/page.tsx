@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 
 type AssetData = {
@@ -56,14 +56,18 @@ type IntelligenceData = {
 
 export default function AssetDescriptionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ assetId: string }>;
+  searchParams: Promise<{ start?: string; end?: string }>;
 }) {
   const [assetId, setAssetId] = useState<string | null>(null);
   const [asset, setAsset] = useState<AssetData | null>(null);
   const [intelligence, setIntelligence] = useState<IntelligenceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [segment, setSegment] = useState<{ start: number; end: number } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,6 +77,21 @@ export default function AssetDescriptionPage({
     });
     return () => { cancelled = true; };
   }, [params]);
+
+  useEffect(() => {
+    let cancelled = false;
+    searchParams.then((s) => {
+      if (cancelled) return;
+      const start = s.start != null ? parseFloat(s.start) : NaN;
+      const end = s.end != null ? parseFloat(s.end) : NaN;
+      if (!Number.isNaN(start) && !Number.isNaN(end) && start < end) {
+        setSegment({ start, end });
+      } else {
+        setSegment(null);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [searchParams]);
 
   useEffect(() => {
     if (!assetId) return;
@@ -101,6 +120,41 @@ export default function AssetDescriptionPage({
     return () => { cancelled = true; };
   }, [assetId]);
 
+  const hasPlayback = asset != null && Boolean(asset?.playbackUrl);
+
+  useEffect(() => {
+    if (!hasPlayback || !segment || !videoRef.current) return;
+    const video = videoRef.current;
+
+    const seekToStart = () => {
+      if (video.currentTime < segment.start - 0.5 || video.currentTime > segment.end + 0.5) {
+        video.currentTime = segment.start;
+      }
+    };
+
+    const onLoadedMetadata = () => {
+      video.currentTime = segment.start;
+    };
+
+    const onTimeUpdate = () => {
+      if (video.currentTime >= segment.end - 0.25) {
+        video.pause();
+        video.currentTime = segment.start;
+      }
+    };
+
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('seeked', seekToStart);
+    seekToStart();
+
+    return () => {
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('seeked', seekToStart);
+    };
+  }, [hasPlayback, segment]);
+
   if (loading || !assetId) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[50vh]">
@@ -125,8 +179,9 @@ export default function AssetDescriptionPage({
     );
   }
 
-  const hasPlayback = Boolean(asset.playbackUrl);
   const intel = intelligence;
+  const formatTime = (sec: number) =>
+    `${Math.floor(sec / 60)}:${(Math.floor(sec % 60)).toString().padStart(2, '0')}`;
 
   return (
     <div className="p-6 h-full">
@@ -141,9 +196,17 @@ export default function AssetDescriptionPage({
         {/* Top-left quarter: video player */}
         <div className="lg:col-span-1">
           <div className="glass-card rounded-xl overflow-hidden sticky top-6">
+            {segment && (
+              <div className="px-3 py-1.5 bg-[#FFE4F0] border-b-2 border-[#E91E8C] text-center">
+                <p className="text-xs font-medium text-[#1a1a1a]">
+                  Previewing short ({formatTime(segment.start)} – {formatTime(segment.end)})
+                </p>
+              </div>
+            )}
             <div className="aspect-video bg-muted/30 flex items-center justify-center">
               {hasPlayback ? (
                 <video
+                  ref={videoRef}
                   key={asset.playbackUrl ?? ''}
                   src={asset.playbackUrl ?? undefined}
                   controls

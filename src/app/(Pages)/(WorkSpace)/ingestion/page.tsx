@@ -8,6 +8,8 @@ import {
   ReelsGrid,
   WebinarsGrid,
   AssetActionModal,
+  AssetVideoModal,
+  ReelPreviewModal,
   RecentHistory,
   WebinarVsShortsChart,
   ApprovedAssetsPieChart,
@@ -53,6 +55,8 @@ export default function IngestionPage() {
   const [webinars, setWebinars] = useState<WebinarCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAsset, setModalAsset] = useState<AssetCardData | null>(null);
+  const [videoAsset, setVideoAsset] = useState<AssetCardData | null>(null);
+  const [previewReel, setPreviewReel] = useState<ReelCardData | null>(null);
   const [contentUsage, setContentUsage] = useState<ContentUsageData>(DEFAULT_CONTENT_USAGE);
 
   const { items: uploadItems, startUpload, clearItems } = useUploadWithProgress();
@@ -193,9 +197,15 @@ export default function IngestionPage() {
                       setModalAsset(asset);
                     }
                   }}
+                  onViewVideo={(asset) => setVideoAsset(asset)}
                 />
               ) : viewMode === 'reels' ? (
-                <ReelsGrid reels={reels} onApprove={handleApprove} onReject={handleReject} />
+                <ReelsGrid
+                  reels={reels}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  onViewVideo={(reel) => setPreviewReel(reel)}
+                />
               ) : (
                 <WebinarsGrid webinars={webinars} />
               )}
@@ -223,6 +233,18 @@ export default function IngestionPage() {
         onClose={() => setModalAsset(null)}
         asset={modalAsset}
         onComplete={handleAssetActionComplete}
+      />
+
+      <AssetVideoModal
+        isOpen={videoAsset != null}
+        asset={videoAsset}
+        onClose={() => setVideoAsset(null)}
+      />
+
+      <ReelPreviewModal
+        isOpen={previewReel != null}
+        onClose={() => setPreviewReel(null)}
+        reel={previewReel}
       />
     </div>
   );

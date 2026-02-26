@@ -3,11 +3,13 @@ export { UploadProgress } from './UploadProgress';
 export { AssetGrid } from '../common/AssetGrid';
 export { AssetCard, type AssetCardData } from '../common/AssetCard';
 export { AssetActionModal } from './AssetActionModal';
+export { AssetVideoModal } from './AssetVideoModal';
 export { RecentHistory } from './RecentHistory';
 export { Tooltip } from '../common/Tooltip';
 export { IngestionFilters, type ViewMode, type SortBy, type SortOrder } from './IngestionFilters';
 export { ReelsGrid } from './ReelsGrid';
 export { ReelCard, type ReelCardData } from './ReelCard';
+export { ReelPreviewModal } from './reels/PreviewModal';
 export { WebinarsGrid } from './WebinarsGrid';
 export { WebinarCard, type WebinarCardData } from './WebinarCard';
 export {
