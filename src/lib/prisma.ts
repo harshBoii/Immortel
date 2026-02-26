@@ -1,5 +1,5 @@
-import Prisma from "@prisma/client";
-const { PrismaClient } = Prisma;
+// ✅ Correct
+import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
