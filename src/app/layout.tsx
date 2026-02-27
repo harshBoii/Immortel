@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { FloatingLiveWebinarButton } from "./components/webinar/FloatingLiveWebinarButton";
 
 export const metadata: Metadata = {
   title: "Immortel",
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-background text-foreground font-body antialiased">
         {children}
+        <FloatingLiveWebinarButton />
       </body>
     </html>
   );
