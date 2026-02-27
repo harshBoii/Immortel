@@ -70,12 +70,15 @@ export async function POST(request: Request) {
 
     if (schedule === "24x7") {
       isRecurring = true;
-      recurringDayOfWeek = "SUNDAY,MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY";
-      recurringTime = "00:00-23:59";
+    // Clamp to column sizes: recurringDayOfWeek (VarChar(20)), recurringTime (VarChar(10))
+    recurringDayOfWeek = "ALL";
+    recurringTime = "24x7";
     } else if (schedule === "scheduled" && type === "recurring" && daysOfWeek?.length && startTime && endTime) {
       isRecurring = true;
-      recurringDayOfWeek = daysOfWeek.map((d) => DAY_NAMES[d]).join(",");
-      recurringTime = `${startTime}-${endTime}`;
+    const joinedDays = daysOfWeek.map((d) => DAY_NAMES[d]).join(",");
+    recurringDayOfWeek = joinedDays.slice(0, 20);
+    const timeRange = `${startTime}-${endTime}`;
+    recurringTime = timeRange.slice(0, 10);
     } else if (schedule === "scheduled" && type === "onetime" && date && startTime) {
       scheduledAt = new Date(`${date}T${startTime}:00`);
     }
