@@ -101,7 +101,17 @@ export function useUploadWithProgress() {
   );
 
   const startUpload = useCallback(
-    async (files: File[], onProgress?: (fileId: string, percent: number) => void) => {
+    async (
+      files: File[],
+      onProgress?: (fileId: string, percent: number) => void
+    ): Promise<
+      {
+        id: string;
+        file: File;
+        assetId?: string;
+        error?: string;
+      }[]
+    > => {
       const newItems: UploadItem[] = Array.from(files).map((file) => ({
         id: `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
@@ -109,6 +119,13 @@ export function useUploadWithProgress() {
         status: 'pending' as const,
       }));
       setItems((prev) => [...newItems, ...prev]);
+
+      const completedResults: {
+        id: string;
+        file: File;
+        assetId?: string;
+        error?: string;
+      }[] = [];
 
       for (const item of newItems) {
         setItems((prev) =>
@@ -133,7 +150,16 @@ export function useUploadWithProgress() {
               : p
           )
         );
+
+        completedResults.push({
+          id: item.id,
+          file: item.file,
+          assetId: result.assetId,
+          error: result.error,
+        });
       }
+
+      return completedResults;
     },
     [uploadFile]
   );

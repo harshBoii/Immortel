@@ -66,12 +66,21 @@ const IconLogOut = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconGlobe = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
 const MAIN_SECTIONS = [
   { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
   { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
+  { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
 ];
 
 /* ============================================
@@ -172,6 +181,14 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconHistory} label="History" href="/ingestion/history" />
         </>
       );
+    case 'geo':
+      return (
+        <>
+          <SectionLabel label="GEO" />
+          <SecondaryNavItem icon={IconLayoutDashboard} label="Data Mine" href="/geo/data-mine" />
+          <SecondaryNavItem icon={IconLayoutDashboard} label="Info Spread" href="/geo/info-spread" />
+        </>
+      );
     default:
       return (
         <>
@@ -197,6 +214,8 @@ export default function AppSidebar() {
         return '/';
       case 'ingestion':
         return '/ingestion';
+      case 'geo':
+        return '/geo/data-mine';
       default:
         return '/';
     }
@@ -221,6 +240,7 @@ export default function AppSidebar() {
   useEffect(() => {
     if (pathname === '/') setActiveSection('home');
     else if (pathname?.startsWith('/ingestion')) setActiveSection('ingestion');
+    else if (pathname?.startsWith('/geo')) setActiveSection('geo');
     else setActiveSection('home');
   }, [pathname]);
 

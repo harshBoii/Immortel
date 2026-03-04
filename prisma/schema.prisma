@@ -68,6 +68,47 @@ enum IntelligenceStatus {
   READY
 }
 
+enum AeoPageType {
+  DEFINITION       // "What is [X]?"
+  HOW_TO           // "How does [X] work?"
+  COMPARISON       // "[X] vs [Y]"
+  FAQ              // General FAQ cluster
+  USE_CASE         // "[X] for [audience]"
+  THOUGHT_LEADERSHIP
+}
+
+enum AeoPageStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+enum OfferingType {
+  PRODUCT
+  SERVICE
+  FEATURE
+  INTEGRATION
+  PLAN          // pricing tier e.g. "Pro Plan"
+}
+enum BountyStatus {
+  OPEN        // visible in UI, not yet hunted
+  IN_PROGRESS // page being generated
+  HUNTED      // AeoPage successfully published
+  DISMISSED   // company skipped it
+  EXPIRED     // no longer relevant
+}
+
+enum BountyDifficulty {
+  EASY    // very niche, near-zero competition
+  MEDIUM
+  HARD    // broader query, more competition
+}
+
+enum GeoSourceType {
+  FILE
+  TEXT
+  URL
+}
 
 // ============================================================
 // COMPANY
@@ -91,7 +132,12 @@ model Company {
   microAssets       MicroAsset[]
   assetIntelligence AssetIntelligence[]
   webinars          Webinar[]
-
+  aeoPages          AeoPage[]
+  contentClusters   ContentCluster[]
+  brandEntity       BrandEntity?
+  citationBounties CitationBounty[]
+  geoDataSources   GeoDataSource[]
+  aeoGenerationProfiles AeoGenerationProfile[]
 
   // ── Brand identity (optional 1-to-1) ─────────────
   branding          CompanyBranding?
@@ -103,6 +149,136 @@ model Company {
   @@map("companies")
 }
 
+model BrandEntity {
+  id        String  @id @default(cuid())
+  companyId String  @unique
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── Identity ──────────────────────────────────────
+  canonicalName String?  @db.VarChar(255)
+  aliases       String[] @default([])
+  entityType    String   @default("Organization") @db.VarChar(100)
+
+  // ── Descriptive layers ────────────────────────────
+  oneLiner String? @db.VarChar(500)  // ≤ 160 chars, citation-ready
+  about    String? @db.Text
+
+  // ── Structured company facts ──────────────────────
+  industry            String? @db.VarChar(100)
+  category            String? @db.VarChar(100)
+  headquartersCity    String? @db.VarChar(100)
+  headquartersCountry String? @db.VarChar(100)
+  foundedYear         Int?
+  employeeRange       String? @db.VarChar(50)   // "1-10", "11-50"
+  businessModel       String? @db.VarChar(50)   // "B2B", "B2C", "B2B2C"
+
+  // ── Topical authority ─────────────────────────────
+  topics          String[] @default([])   // ["video marketing", "AI clips"]
+  keywords        String[] @default([])
+  targetAudiences String[] @default([])
+
+  // ── GEO authority signals ─────────────────────────
+  authorityScore    Float?
+  citationCount     Int      @default(0)
+  lastCrawledAt     DateTime? @db.Timestamptz(3)
+
+  // ── Profile completeness ──────────────────────────
+  completenessScore Float     @default(0)
+  lastEnrichedAt    DateTime? @db.Timestamptz(3)
+  enrichmentSource  String?   @db.VarChar(50)   // "manual", "ai", "scrape"
+
+  // ── Relations ─────────────────────────────────────
+  sameAsLinks        EntitySameAsLink[]
+  offerings          EntityOffering[]
+  intelligence       EntityIntelligence?
+  generationProfiles AeoGenerationProfile[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([industry])
+  @@index([completenessScore])
+  @@map("brand_entities")
+}
+
+model EntityIntelligence {
+  id       String      @id @default(cuid())
+  entityId String      @unique
+  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  // ── Long-form intelligence texts ───────────────────
+  productDocs      String? @db.Text
+  marketResearch   String? @db.Text
+  customerFeedback String? @db.Text
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([entityId])
+  @@map("entity_intelligence")
+}
+
+
+model EntitySameAsLink {
+  id       String      @id @default(cuid())
+  entityId String
+  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  // ── Platform identity ─────────────────────────────
+  platform    String  @db.VarChar(100)  // "linkedin", "twitter", "crunchbase",
+                                        // "wikipedia", "g2", "trustpilot",
+                                        // "youtube", "instagram", "glassdoor"
+  url         String  @db.VarChar(1000)
+
+  // ── Verification ──────────────────────────────────
+  verified      Boolean   @default(false)
+  verifiedAt    DateTime? @db.Timestamptz(3)
+  verifiedBy    String?   @db.VarChar(50)  // "manual", "ai", "dns"
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([entityId, platform])  // one URL per platform per entity
+  @@index([entityId])
+  @@index([platform])
+  @@map("entity_same_as_links")
+}
+model EntityOffering {
+  id       String      @id @default(cuid())
+  entityId String
+  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  // ── Core ──────────────────────────────────────────
+  name         String      @db.VarChar(255)
+  slug         String      @db.VarChar(255)
+  description  String?     @db.Text
+  offeringType OfferingType @default(PRODUCT)
+
+  // ── Discoverability ───────────────────────────────
+  url          String?  @db.VarChar(1000)  // landing/feature page
+  keywords     String[] @default([])       // specific to this offering
+  useCases     String[] @default([])       // ["clip short-form", "repurpose webinars"]
+  targetAudiences String[] @default([])
+
+  // ── Flags ─────────────────────────────────────────
+  isPrimary    Boolean  @default(false)  // flagship offering
+  isActive     Boolean  @default(true)
+
+  // ── AEO utility ───────────────────────────────────
+  // These feed directly into COMPARISON and USE_CASE page generation
+  differentiators String[] @default([])  // ["no watermark", "AI-powered clips"]
+  competitors     String[] @default([])  // ["Opus Clip", "Vidyo.ai"] — for COMPARISON pages
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([entityId, slug])
+  @@index([entityId])
+  @@index([offeringType])
+  @@index([isPrimary])
+  @@index([isActive])
+  @@map("entity_offerings")
+}
 
 // ============================================================
 // COMPANY BRANDING  (optional 1-to-1 with Company)
@@ -201,6 +377,8 @@ model Asset {
   microAssets  MicroAsset[]         // VIDEO and DOCUMENT only; enforced at app layer
   description  AssetDescription?
   webinars     Webinar[]
+  aeoPageSources AeoPageSource[]
+  geoDataSource GeoDataSource?
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -352,6 +530,7 @@ model AssetIntelligence {
   // ── Company ───────────────────────────────────────
   companyId String
   company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aeoPageSources AeoPageSource[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
@@ -475,3 +654,223 @@ model Webinar {
   @@map("webinars")
 }
 
+// ============================================================
+// AEO PAGE — AI-generated content for Aeo pages
+// ============================================================
+
+model ContentCluster {
+  id          String  @id @default(cuid())
+  companyId   String
+  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name        String  @db.VarChar(255)   // e.g. "Video Marketing"
+  slug        String  @db.VarChar(255)
+  description String? @db.Text
+
+  // Pillar page (the canonical cluster root — 1 per cluster)
+  pillarPageId String?   @unique
+  pillarPage   AeoPage?  @relation("PillarPage", fields: [pillarPageId], references: [id], onDelete: SetNull)
+
+  pages        AeoPage[] @relation("ClusterPages")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+  @@map("content_clusters")
+}
+
+model AeoPage {
+  id        String @id @default(cuid())
+
+  // ── Tenant ────────────────────────────────────────
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── Routing ───────────────────────────────────────
+  slug   String @db.VarChar(255)
+  locale String @default("en") @db.VarChar(10) // "en", "fr", "hi"
+
+  // ── Type & Status ─────────────────────────────────
+  pageType AeoPageType   @default(DEFINITION)
+  status   AeoPageStatus @default(DRAFT)
+
+  // ── Content ───────────────────────────────────────
+  title       String @db.VarChar(500)
+  description String @db.Text
+
+  // ── Structured AEO blocks ─────────────────────────
+  facts          Json @default("[]")  // [{ text, source, confidence }]
+  faq            Json @default("[]")  // schema.org FAQPage items
+  claims         Json @default("[]")  // [{ claim, confidence, source }]
+  summary        Json @default("{}")  // { short, long, oneLiner }
+  knowledgeGraph Json @default("{}")  // schema.org @graph payload
+
+  // ── SEO meta ──────────────────────────────────────
+  seoTitle       String? @db.VarChar(500)
+  seoDescription String? @db.Text
+  canonicalUrl   String? @db.VarChar(1000)
+
+  // ── Topic cluster ─────────────────────────────────
+  clusterId String?
+  cluster   ContentCluster? @relation("ClusterPages", fields: [clusterId], references: [id], onDelete: SetNull)
+
+  // ── Source lineage (which asset seeded this page) ─
+  sources    AeoPageSource[]
+
+  // ── Internal linking (self-referential) ───────────
+  relatedPages    AeoPage[] @relation("RelatedAeoPages")
+  relatedPageRefs AeoPage[] @relation("RelatedAeoPages")
+
+  // ── Citation bounties ─────────────────────────────
+  citationBounties CitationBounty[]
+
+  // ── Publishing ────────────────────────────────────
+  publishedAt DateTime? @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  // Reverse relations
+  pillarFor ContentCluster? @relation("PillarPage")
+  generationProfiles AeoGenerationProfile[]
+
+  @@unique([companyId, slug, locale])
+  @@index([companyId])
+  @@index([status])
+  @@index([pageType])
+  @@index([clusterId])
+  @@index([companyId, status])
+  @@index([publishedAt(sort: Desc)])
+  @@map("aeo_pages")
+}
+
+model AeoGenerationProfile {
+  id        String @id @default(cuid())
+
+  // ── Tenant & relations ─────────────────────────────
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  brandEntityId String?
+  brandEntity   BrandEntity? @relation(fields: [brandEntityId], references: [id], onDelete: SetNull)
+
+  // ── Core generator config ──────────────────────────
+  baseUrl       String   @db.VarChar(1000)
+  locale        String   @default("en") @db.VarChar(10)
+  clusterId     String?  @db.VarChar(255)
+  existingSlugs String[] @default([])
+
+  // ── Defaults for generation ────────────────────────
+  defaultPageType AeoPageType @default(COMPARISON)
+  defaultQuery    String?     @db.Text
+  label           String?     @db.VarChar(255)
+  slug            String?     @db.VarChar(255)
+
+  // ── Last generation linkage ────────────────────────
+  lastGeneratedAeoPageId String?
+  lastGeneratedAeoPage   AeoPage? @relation(fields: [lastGeneratedAeoPageId], references: [id], onDelete: SetNull)
+  lastRunAt              DateTime? @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([companyId])
+  @@index([brandEntityId])
+  @@index([defaultPageType])
+  @@map("aeo_generation_profiles")
+}
+
+model AeoPageSource {
+  id      String  @id @default(cuid())
+  pageId  String
+  page    AeoPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  assetId           String?
+  asset             Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  intelligenceId    String?
+  intelligence      AssetIntelligence? @relation(fields: [intelligenceId], references: [id], onDelete: SetNull)
+
+  // How much this source contributed (for weighted regeneration)
+  contributionScore Float? // 0–1
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([pageId])
+  @@index([assetId])
+  @@map("aeo_page_sources")
+}
+
+model CitationBounty {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── The query ─────────────────────────────────────
+  query     String       @db.Text           // "edge compute startup in kerala india"
+  intent    String?      @db.VarChar(255)   // "find a regional infra provider"
+  pageType  AeoPageType                     // which page type to generate on hunt
+
+  // ── Scoring ───────────────────────────────────────
+  confidence     Float            // 0–100: how likely this gets the company cited
+  difficulty     BountyDifficulty @default(EASY)
+  estimatedReach Int?             // estimated monthly AI query volume
+
+  // ── Cluster suggestion ────────────────────────────
+  suggestedCluster String? @db.VarChar(255) // hint for ContentCluster assignment
+
+  // ── Status ────────────────────────────────────────
+  status   BountyStatus @default(OPEN)
+  huntedAt DateTime?    @db.Timestamptz(3)
+
+  // ── Output (populated after hunt) ────────────────
+  aeoPageId String?  @unique
+  aeoPage   AeoPage? @relation(fields: [aeoPageId], references: [id], onDelete: SetNull)
+
+  // ── Generation context snapshot ───────────────────
+  // Stores exactly what was fed to the LLM at mining time
+  // Used to detect if BrandEntity changed since bounty was generated
+  generationContext Json @default("{}")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([companyId])
+  @@index([status])
+  @@index([confidence])
+  @@index([difficulty])
+  @@index([companyId, status])
+  @@index([companyId, status, confidence])  // for sorted bounty feed UI
+  @@map("citation_bounties")
+}
+
+model GeoDataSource {
+  id        String        @id @default(cuid())
+
+  // ── Tenant ──────────────────────────────────────────
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // ── Source identity ─────────────────────────────────
+  sourceType GeoSourceType
+  label      String        @db.VarChar(255)
+
+  // ── File-based source (optional) ────────────────────
+  assetId String? @unique
+  asset   Asset?          @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  // ── Raw & processed content ─────────────────────────
+  rawContent       String? @db.Text
+  processedContent String? @db.Text
+
+  // ── Flags ───────────────────────────────────────────
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([companyId])
+  @@index([sourceType])
+  @@map("geo_data_sources")
+}
