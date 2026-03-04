@@ -19,8 +19,9 @@ export function middleware(request: NextRequest) {
   const isVideosDownloadApi =
     pathname.startsWith('/api/videos') && pathname.endsWith('/download');
   const isMicroservicesApi = pathname.startsWith('/api/receive-intel');
+  const isDataMineApi = pathname.startsWith('/api/geo/company-data');
   
-  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi;
+  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {

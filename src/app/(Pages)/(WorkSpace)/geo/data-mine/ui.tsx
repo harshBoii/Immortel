@@ -5,6 +5,7 @@ import { useUploadWithProgress } from "../../ingestion/useUploadWithProgress";
 import { AssetVideoModal } from "@/app/components/ingestion";
 import { ImagePreviewModal } from "@/app/components/general/ImagePreviewModal";
 import { DocumentPreviewModal } from "@/app/components/general/DocumentPreviewModal";
+import { ViewMoreDropdown } from "@/app/components/common/UI/ViewMoreDropdown";
 import type { AssetCardData } from "@/app/components/common/AssetCard";
 
 type GeoSourceType = "FILE" | "TEXT" | "URL";
@@ -33,9 +34,66 @@ type GeoDataSource = {
 
 type Props = {
   initialSources: GeoDataSource[];
+  initialCompany: {
+    id: string;
+    name: string;
+    description: string | null;
+    logoUrl: string | null;
+    website: string | null;
+    email: string;
+  } | null;
+  initialBrandEntity: {
+    id: string;
+    canonicalName: string | null;
+    aliases: string[];
+    entityType: string;
+    oneLiner: string | null;
+    about: string | null;
+    industry: string | null;
+    category: string | null;
+    headquartersCity: string | null;
+    headquartersCountry: string | null;
+    foundedYear: number | null;
+    employeeRange: string | null;
+    businessModel: string | null;
+    topics: string[];
+    keywords: string[];
+    targetAudiences: string[];
+  } | null;
+  initialOfferings: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    offeringType: string;
+    url: string | null;
+    keywords: string[];
+    useCases: string[];
+    targetAudiences: string[];
+    differentiators: string[];
+    competitors: string[];
+    isPrimary: boolean;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  initialBranding: {
+    id: string;
+    logoUrl: string | null;
+    faviconUrl: string | null;
+    banner: string | null;
+    themeMusic: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+    bgColor: string;
+    surfaceColor: string;
+    textColor: string;
+    companyAddress: string | null;
+  } | null;
 };
 
 type TabId = "file" | "text" | "url";
+type BrandSectionTab = "company" | "entity" | "offerings" | "branding" | "ingest" | "library";
 type FilterType = "ALL" | "FILE" | "TEXT" | "URL";
 type SortField = "date" | "label" | "type";
 type SortDir = "asc" | "desc";
@@ -114,9 +172,489 @@ function sourceTypeIcon(s: GeoDataSource) {
   return <IconFile />;
 }
 
-export default function DataMinePageClient({ initialSources }: Props) {
+function arrToText(arr: string[]) {
+  return (arr && arr.length) ? arr.join(", ") : "";
+}
+function textToArr(text: string) {
+  return text
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const inputClass = "w-full rounded-md border border-[var(--glass-border)] bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground";
+const labelClass = "text-xs font-medium text-muted-foreground";
+const btnPrimary = "inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60";
+
+function CompanyProfileForm({
+  company,
+  onSave,
+}: {
+  company: NonNullable<Props["initialCompany"]>;
+  onSave: (p: { description?: string; logoUrl?: string; website?: string; email?: string }) => void;
+}) {
+  const [description, setDescription] = useState(company.description ?? "");
+  const [logoUrl, setLogoUrl] = useState(company.logoUrl ?? "");
+  const [website, setWebsite] = useState(company.website ?? "");
+  const [email, setEmail] = useState(company.email ?? "");
+  const [saving, setSaving] = useState(false);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      try {
+        await onSave({ description: description.trim() || undefined, logoUrl: logoUrl.trim() || undefined, website: website.trim() || undefined, email: email.trim() });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [onSave, description, logoUrl, website, email]
+  );
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
+      <div className="space-y-1.5">
+        <label className={labelClass}>Company name</label>
+        <p className="text-sm text-foreground font-medium">{company.name}</p>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Description</label>
+        <textarea className={inputClass} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Company description" />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Logo URL</label>
+        <input className={inputClass} type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Website</label>
+        <input className={inputClass} type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://..." />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Email</label>
+        <input className={inputClass} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="contact@company.com" required />
+      </div>
+      <button type="submit" disabled={saving} className={btnPrimary}>Save profile</button>
+    </form>
+  );
+}
+
+function BrandEntityForm({
+  brandEntity,
+  onSave,
+}: {
+  brandEntity: Props["initialBrandEntity"];
+  onSave: (p: Record<string, unknown>) => void;
+}) {
+  const [canonicalName, setCanonicalName] = useState(brandEntity?.canonicalName ?? "");
+  const [oneLiner, setOneLiner] = useState(brandEntity?.oneLiner ?? "");
+  const [about, setAbout] = useState(brandEntity?.about ?? "");
+  const [industry, setIndustry] = useState(brandEntity?.industry ?? "");
+  const [category, setCategory] = useState(brandEntity?.category ?? "");
+  const [headquartersCity, setHeadquartersCity] = useState(brandEntity?.headquartersCity ?? "");
+  const [headquartersCountry, setHeadquartersCountry] = useState(brandEntity?.headquartersCountry ?? "");
+  const [foundedYear, setFoundedYear] = useState(brandEntity?.foundedYear ?? "");
+  const [employeeRange, setEmployeeRange] = useState(brandEntity?.employeeRange ?? "");
+  const [businessModel, setBusinessModel] = useState(brandEntity?.businessModel ?? "");
+  const [topicsText, setTopicsText] = useState(arrToText(brandEntity?.topics ?? []));
+  const [keywordsText, setKeywordsText] = useState(arrToText(brandEntity?.keywords ?? []));
+  const [targetAudiencesText, setTargetAudiencesText] = useState(arrToText(brandEntity?.targetAudiences ?? []));
+  const [saving, setSaving] = useState(false);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      try {
+        await onSave({
+          canonicalName: canonicalName.trim() || null,
+          oneLiner: oneLiner.trim() || null,
+          about: about.trim() || null,
+          industry: industry.trim() || null,
+          category: category.trim() || null,
+          headquartersCity: headquartersCity.trim() || null,
+          headquartersCountry: headquartersCountry.trim() || null,
+          foundedYear: foundedYear === "" ? null : Number(foundedYear),
+          employeeRange: employeeRange.trim() || null,
+          businessModel: businessModel.trim() || null,
+          topics: textToArr(topicsText),
+          keywords: textToArr(keywordsText),
+          targetAudiences: textToArr(targetAudiencesText),
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [onSave, canonicalName, oneLiner, about, industry, category, headquartersCity, headquartersCountry, foundedYear, employeeRange, businessModel, topicsText, keywordsText, targetAudiencesText]
+  );
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelClass}>Canonical name</label>
+          <input className={inputClass} value={canonicalName} onChange={(e) => setCanonicalName(e.target.value)} placeholder="Acme Inc." />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>One-liner (≤160 chars)</label>
+          <input className={inputClass} maxLength={500} value={oneLiner} onChange={(e) => setOneLiner(e.target.value)} placeholder="Short citation-ready description" />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>About</label>
+        <textarea className={inputClass} rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Longer description" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelClass}>Industry</label>
+          <input className={inputClass} value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. SaaS" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Category</label>
+          <input className={inputClass} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Marketing" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Headquarters city</label>
+          <input className={inputClass} value={headquartersCity} onChange={(e) => setHeadquartersCity(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Headquarters country</label>
+          <input className={inputClass} value={headquartersCountry} onChange={(e) => setHeadquartersCountry(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Founded year</label>
+          <input className={inputClass} type="number" min={1800} max={2100} value={foundedYear} onChange={(e) => setFoundedYear(e.target.value)} placeholder="2020" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Employee range</label>
+          <input className={inputClass} value={employeeRange} onChange={(e) => setEmployeeRange(e.target.value)} placeholder="1-10" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Business model</label>
+          <input className={inputClass} value={businessModel} onChange={(e) => setBusinessModel(e.target.value)} placeholder="B2B, B2C" />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Topics (comma or newline)</label>
+        <textarea className={inputClass} rows={2} value={topicsText} onChange={(e) => setTopicsText(e.target.value)} placeholder="video marketing, AI clips" />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Keywords (comma or newline)</label>
+        <textarea className={inputClass} rows={2} value={keywordsText} onChange={(e) => setKeywordsText(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Target audiences (comma or newline)</label>
+        <textarea className={inputClass} rows={2} value={targetAudiencesText} onChange={(e) => setTargetAudiencesText(e.target.value)} />
+      </div>
+      <button type="submit" disabled={saving} className={btnPrimary}>Save brand entity</button>
+    </form>
+  );
+}
+
+function OfferingsSection({
+  offerings,
+  hasBrandEntity,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: {
+  offerings: Props["initialOfferings"];
+  hasBrandEntity: boolean;
+  onCreate: (p: Record<string, unknown>) => void;
+  onUpdate: (id: string, p: Record<string, unknown>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [offeringType, setOfferingType] = useState("PRODUCT");
+  const [url, setUrl] = useState("");
+  const [differentiatorsText, setDifferentiatorsText] = useState("");
+  const [competitorsText, setCompetitorsText] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!name.trim()) return;
+      setSubmitting(true);
+      try {
+        await onCreate({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          offeringType,
+          url: url.trim() || undefined,
+          differentiators: textToArr(differentiatorsText),
+          competitors: textToArr(competitorsText),
+          isPrimary,
+        });
+        setName("");
+        setDescription("");
+        setUrl("");
+        setDifferentiatorsText("");
+        setCompetitorsText("");
+        setIsPrimary(false);
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [onCreate, name, description, offeringType, url, differentiatorsText, competitorsText, isPrimary]
+  );
+
+  if (!hasBrandEntity) {
+    return (
+      <div className="rounded-md border border-dashed border-[var(--glass-border)] p-4 text-xs text-muted-foreground">
+        Create and save a Brand identity in the &quot;Brand identity&quot; tab first, then add offerings here.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleCreate} className="space-y-4 max-w-xl p-4 rounded-lg bg-[var(--glass)] border border-[var(--glass-border)]">
+        <h3 className="text-xs font-semibold text-foreground">Add offering</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className={labelClass}>Name</label>
+            <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Product or service name" required />
+          </div>
+          <div className="space-y-1.5">
+            <label className={labelClass}>Type</label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-foreground">{offeringType === "PRODUCT" ? "Product" : offeringType === "SERVICE" ? "Service" : offeringType === "FEATURE" ? "Feature" : offeringType === "INTEGRATION" ? "Integration" : "Plan"}</span>
+              <ViewMoreDropdown tooltipContent="Offering type" align="left">
+                {(close) => (
+                  <div className="py-1">
+                    {(["PRODUCT", "SERVICE", "FEATURE", "INTEGRATION", "PLAN"] as const).map((t) => (
+                      <button key={t} type="button" onClick={() => { setOfferingType(t); close(); }} className={`w-full px-3 py-2 text-left text-sm ${offeringType === t ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>
+                        {t === "PRODUCT" ? "Product" : t === "SERVICE" ? "Service" : t === "FEATURE" ? "Feature" : t === "INTEGRATION" ? "Integration" : "Plan"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ViewMoreDropdown>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Description</label>
+          <textarea className={inputClass} rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>URL</label>
+          <input className={inputClass} type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Landing page" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Differentiators (comma or newline)</label>
+          <textarea className={inputClass} rows={2} value={differentiatorsText} onChange={(e) => setDifferentiatorsText(e.target.value)} placeholder="no watermark, AI-powered" />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Competitors (comma or newline)</label>
+          <textarea className={inputClass} rows={2} value={competitorsText} onChange={(e) => setCompetitorsText(e.target.value)} placeholder="Opus Clip, Vidyo.ai" />
+        </div>
+        <div className="flex items-center gap-2">
+          <input type="checkbox" id="isPrimary" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-[var(--glass-border)]" />
+          <label htmlFor="isPrimary" className={labelClass}>Primary offering</label>
+        </div>
+        <button type="submit" disabled={submitting || !name.trim()} className={btnPrimary}>Add offering</button>
+      </form>
+
+      <div>
+        <h3 className="text-xs font-semibold text-foreground mb-2">Offerings ({offerings.length})</h3>
+        {offerings.length === 0 ? (
+          <div className="rounded-md border border-dashed border-[var(--glass-border)] p-4 text-xs text-muted-foreground">No offerings yet.</div>
+        ) : (
+          <ul className="space-y-2">
+            {offerings.map((o) => (
+              <li key={o.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--glass)] px-3 py-2 text-xs border border-[var(--glass-border)]">
+                <div className="min-w-0">
+                  <span className="font-medium text-foreground">{o.name}</span>
+                  {o.isPrimary && <span className="ml-2 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">Primary</span>}
+                  <span className="text-muted-foreground ml-2">({o.offeringType})</span>
+                  {o.differentiators?.length ? <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{o.differentiators.join(", ")}</p> : null}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {editingId === o.id ? (
+                    <OfferingEditRow offering={o} onSave={(p) => { onUpdate(o.id, p); setEditingId(null); }} onCancel={() => setEditingId(null)} />
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => setEditingId(o.id)} className="text-muted-foreground hover:text-foreground">Edit</button>
+                      <button type="button" onClick={() => onDelete(o.id)} className="text-muted-foreground hover:text-destructive">Delete</button>
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OfferingEditRow({
+  offering,
+  onSave,
+  onCancel,
+}: {
+  offering: Props["initialOfferings"][0];
+  onSave: (p: Record<string, unknown>) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(offering.name);
+  const [description, setDescription] = useState(offering.description ?? "");
+  const [offeringType, setOfferingType] = useState(offering.offeringType);
+  const [url, setUrl] = useState(offering.url ?? "");
+  const [differentiatorsText, setDifferentiatorsText] = useState(arrToText(offering.differentiators ?? []));
+  const [competitorsText, setCompetitorsText] = useState(arrToText(offering.competitors ?? []));
+  const [isPrimary, setIsPrimary] = useState(offering.isPrimary);
+  const [isActive, setIsActive] = useState(offering.isActive);
+  const [saving, setSaving] = useState(false);
+  const handleSave = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      try {
+        await onSave({
+          name: name.trim(),
+          description: description.trim() || null,
+          offeringType,
+          url: url.trim() || null,
+          differentiators: textToArr(differentiatorsText),
+          competitors: textToArr(competitorsText),
+          isPrimary,
+          isActive,
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [onSave, name, description, offeringType, url, differentiatorsText, competitorsText, isPrimary, isActive]
+  );
+  return (
+    <form onSubmit={handleSave} className="flex flex-wrap items-end gap-2">
+      <input className="w-24 rounded border border-[var(--glass-border)] bg-background px-2 py-1 text-xs text-foreground" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-foreground">{offeringType === "PRODUCT" ? "Product" : offeringType === "SERVICE" ? "Service" : offeringType === "FEATURE" ? "Feature" : offeringType === "INTEGRATION" ? "Integration" : "Plan"}</span>
+        <ViewMoreDropdown tooltipContent="Offering type" align="left">
+          {(close) => (
+            <div className="py-1">
+              {(["PRODUCT", "SERVICE", "FEATURE", "INTEGRATION", "PLAN"] as const).map((t) => (
+                <button key={t} type="button" onClick={() => { setOfferingType(t); close(); }} className={`w-full px-3 py-2 text-left text-sm ${offeringType === t ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>
+                  {t === "PRODUCT" ? "Product" : t === "SERVICE" ? "Service" : t === "FEATURE" ? "Feature" : t === "INTEGRATION" ? "Integration" : "Plan"}
+                </button>
+              ))}
+            </div>
+          )}
+        </ViewMoreDropdown>
+      </div>
+      <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="rounded border-[var(--glass-border)]" /> Primary</label>
+      <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="rounded border-[var(--glass-border)]" /> Active</label>
+      <button type="submit" disabled={saving} className={btnPrimary}>Save</button>
+      <button type="button" onClick={onCancel} className="rounded-md border border-[var(--glass-border)] px-2 py-1 text-xs hover:bg-[var(--glass-hover)] text-foreground">Cancel</button>
+    </form>
+  );
+}
+
+function BrandingForm({
+  branding,
+  onSave,
+}: {
+  branding: Props["initialBranding"];
+  onSave: (p: Record<string, unknown>) => void;
+}) {
+  const [logoUrl, setLogoUrl] = useState(branding?.logoUrl ?? "");
+  const [faviconUrl, setFaviconUrl] = useState(branding?.faviconUrl ?? "");
+  const [banner, setBanner] = useState(branding?.banner ?? "");
+  const [themeMusic, setThemeMusic] = useState(branding?.themeMusic ?? "");
+  const [primaryColor, setPrimaryColor] = useState(branding?.primaryColor ?? "#D7765A");
+  const [secondaryColor, setSecondaryColor] = useState(branding?.secondaryColor ?? "#8B5CF6");
+  const [bgColor, setBgColor] = useState(branding?.bgColor ?? "#141414");
+  const [surfaceColor, setSurfaceColor] = useState(branding?.surfaceColor ?? "#181818");
+  const [textColor, setTextColor] = useState(branding?.textColor ?? "#FFFFFF");
+  const [companyAddress, setCompanyAddress] = useState(branding?.companyAddress ?? "");
+  const [saving, setSaving] = useState(false);
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      try {
+        await onSave({
+          logoUrl: logoUrl.trim() || null,
+          faviconUrl: faviconUrl.trim() || null,
+          banner: banner.trim() || null,
+          themeMusic: themeMusic.trim() || null,
+          primaryColor: primaryColor || "#D7765A",
+          secondaryColor: secondaryColor || "#8B5CF6",
+          bgColor: bgColor || "#141414",
+          surfaceColor: surfaceColor || "#181818",
+          textColor: textColor || "#FFFFFF",
+          companyAddress: companyAddress.trim() || null,
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [onSave, logoUrl, faviconUrl, banner, themeMusic, primaryColor, secondaryColor, bgColor, surfaceColor, textColor, companyAddress]
+  );
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelClass}>Logo URL</label>
+          <input className={inputClass} type="url" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Favicon URL</label>
+          <input className={inputClass} type="url" value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Banner URL</label>
+          <input className={inputClass} type="url" value={banner} onChange={(e) => setBanner(e.target.value)} placeholder="https://..." />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelClass}>Theme music URL</label>
+          <input className={inputClass} type="url" value={themeMusic} onChange={(e) => setThemeMusic(e.target.value)} placeholder="https://..." />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelClass}>Company address</label>
+        <input className={inputClass} value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="123 Main St, City, Country" />
+      </div>
+      <h3 className="text-xs font-semibold text-foreground pt-2">Colors</h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        {[
+          { label: "Primary", value: primaryColor, set: setPrimaryColor },
+          { label: "Secondary", value: secondaryColor, set: setSecondaryColor },
+          { label: "Background", value: bgColor, set: setBgColor },
+          { label: "Surface", value: surfaceColor, set: setSurfaceColor },
+          { label: "Text", value: textColor, set: setTextColor },
+        ].map(({ label, value, set }) => (
+          <div key={label} className="space-y-1.5">
+            <label className={labelClass}>{label}</label>
+            <div className="flex gap-2">
+              <input type="color" value={value} onChange={(e) => set(e.target.value)} className="h-9 w-12 rounded border border-[var(--glass-border)] cursor-pointer" />
+              <input className={inputClass} value={value} onChange={(e) => set(e.target.value)} placeholder="#hex" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <button type="submit" disabled={saving} className={btnPrimary}>Save branding</button>
+    </form>
+  );
+}
+
+export default function DataMinePageClient({
+  initialSources,
+  initialCompany,
+  initialBrandEntity,
+  initialOfferings,
+  initialBranding,
+}: Props) {
   const [activeTab, setActiveTab] = useState<TabId>("file");
+  const [brandSectionTab, setBrandSectionTab] = useState<BrandSectionTab>("company");
   const [sources, setSources] = useState<GeoDataSource[]>(initialSources);
+  const [company, setCompany] = useState(initialCompany);
+  const [brandEntity, setBrandEntity] = useState(initialBrandEntity);
+  const [offerings, setOfferings] = useState(initialOfferings);
+  const [branding, setBranding] = useState(initialBranding);
 
   const [fileLabel, setFileLabel] = useState("");
   const [textLabel, setTextLabel] = useState("");
@@ -263,6 +801,67 @@ export default function DataMinePageClient({ initialSources }: Props) {
     }
   }, []);
 
+  const saveCompanyProfile = useCallback(async (payload: { description?: string; logoUrl?: string; website?: string; email?: string }) => {
+    const res = await fetch("/api/geo/company-profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.success && data.company) setCompany(data.company);
+  }, []);
+
+  const saveBrandEntity = useCallback(async (payload: Record<string, unknown>) => {
+    const res = await fetch("/api/geo/brand-entity", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.success && data.brandEntity) setBrandEntity(data.brandEntity);
+  }, []);
+
+  const createOffering = useCallback(async (payload: Record<string, unknown>) => {
+    const res = await fetch("/api/geo/offerings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.success && data.offering) setOfferings((prev) => [...prev, data.offering]);
+  }, []);
+
+  const updateOffering = useCallback(async (id: string, payload: Record<string, unknown>) => {
+    const res = await fetch(`/api/geo/offerings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.success && data.offering) setOfferings((prev) => prev.map((o) => (o.id === id ? data.offering : o)));
+  }, []);
+
+  const deleteOffering = useCallback(async (id: string) => {
+    const res = await fetch(`/api/geo/offerings/${id}`, { method: "DELETE", credentials: "include" });
+    const data = await res.json();
+    if (data?.success) setOfferings((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
+  const saveBranding = useCallback(async (payload: Record<string, unknown>) => {
+    const res = await fetch("/api/geo/branding", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data?.success && data.branding) setBranding(data.branding);
+  }, []);
+
   const filteredSorted = useMemo(() => {
     let result = [...sources];
 
@@ -339,215 +938,214 @@ export default function DataMinePageClient({ initialSources }: Props) {
 
   return (
     <div className="space-y-8">
-      {/* Add data source */}
-      <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5">
-        <h2 className="text-sm font-semibold text-foreground">Add data source</h2>
+      {/* Data Mine — unified section with semantic sub-sections */}
+      <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="data-mine-heading">
+        <h2 id="data-mine-heading" className="text-sm font-semibold text-foreground">Data Mine</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Upload files, paste text, or add URLs that should be used as context when hunting GEO bounties.
+          Company profile, brand identity, offerings, visual branding, and content sources for GEO and AEO.
         </p>
-
-        <div className="mt-4 flex gap-2 border-b border-[var(--glass-border)] pb-2 text-xs">
-          {(["file", "text", "url"] as const).map((tab) => (
+        <div className="mt-4 flex flex-wrap gap-2 border-b border-[var(--glass-border)] pb-2 text-xs">
+          {(
+            [
+              { id: "company", label: "Company profile" },
+              { id: "entity", label: "Brand identity" },
+              { id: "offerings", label: "Products & offerings" },
+              { id: "branding", label: "Visual branding" },
+              { id: "ingest", label: "Ingest sources" },
+              { id: "library", label: "Source library" },
+            ] as const
+          ).map(({ id, label }) => (
             <button
-              key={tab}
+              key={id}
               type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1 rounded-md capitalize ${
-                activeTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-[var(--glass-hover)]"
+              onClick={() => setBrandSectionTab(id)}
+              className={`px-3 py-1.5 rounded-md ${
+                brandSectionTab === id ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-[var(--glass-hover)]"
               }`}
             >
-              {tab}
+              {label}
             </button>
           ))}
         </div>
 
         <div className="mt-4">
-          {activeTab === "file" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Label</label>
-                <input
-                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                  value={fileLabel}
-                  onChange={(e) => setFileLabel(e.target.value)}
-                  placeholder="e.g. Immortel AI product deck"
-                />
+          {brandSectionTab === "company" && (
+            company ? <CompanyProfileForm company={company} onSave={saveCompanyProfile} /> : <div className="text-xs text-muted-foreground">Company not found.</div>
+          )}
+          {brandSectionTab === "entity" && (
+            <BrandEntityForm brandEntity={brandEntity} onSave={saveBrandEntity} />
+          )}
+          {brandSectionTab === "offerings" && (
+            <OfferingsSection
+              offerings={offerings}
+              hasBrandEntity={!!brandEntity}
+              onCreate={createOffering}
+              onUpdate={updateOffering}
+              onDelete={deleteOffering}
+            />
+          )}
+          {brandSectionTab === "branding" && (
+            <BrandingForm branding={branding} onSave={saveBranding} />
+          )}
+
+          {/* Ingest sources — add files, text, URLs */}
+          {brandSectionTab === "ingest" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Upload files, paste text, or add URLs to use as context when hunting GEO bounties.
+              </p>
+              <div className="flex gap-2 border-b border-[var(--glass-border)] pb-2 text-xs">
+                {(["file", "text", "url"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1 rounded-md capitalize ${
+                      activeTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-[var(--glass-hover)]"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
-              <input
-                type="file"
-                multiple
-                className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length) handleFileUpload(files);
-                }}
-              />
-              {uploadItems.length > 0 && (
-                <div className="space-y-1">
-                  {uploadItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1 text-xs">
-                      <span className="truncate">{item.file.name}</span>
-                      <span className="text-muted-foreground">{item.progress}%</span>
+              {activeTab === "file" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Label</label>
+                    <input
+                      className={inputClass}
+                      value={fileLabel}
+                      onChange={(e) => setFileLabel(e.target.value)}
+                      placeholder="e.g. Product deck"
+                    />
+                  </div>
+                  <input
+                    type="file"
+                    multiple
+                    className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      if (files.length) handleFileUpload(files);
+                    }}
+                  />
+                  {uploadItems.length > 0 && (
+                    <div className="space-y-1">
+                      {uploadItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1 text-xs">
+                          <span className="truncate">{item.file.name}</span>
+                          <span className="text-muted-foreground">{item.progress}%</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                </div>
+              )}
+              {activeTab === "text" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Label</label>
+                    <input className={inputClass} value={textLabel} onChange={(e) => setTextLabel(e.target.value)} placeholder="e.g. Product docs" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Text</label>
+                    <textarea className={`${inputClass} h-40`} value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste context, specs, FAQs…" />
+                  </div>
+                  <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textLabel.trim() || !textContent.trim()} className={btnPrimary}>Save text source</button>
+                </div>
+              )}
+              {activeTab === "url" && (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>Label</label>
+                    <input className={inputClass} value={urlLabel} onChange={(e) => setUrlLabel(e.target.value)} placeholder="e.g. Marketing site" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={labelClass}>URL</label>
+                    <input className={inputClass} type="url" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." />
+                  </div>
+                  <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlLabel.trim() || !urlValue.trim()} className={btnPrimary}>Save URL source</button>
                 </div>
               )}
             </div>
           )}
 
-          {activeTab === "text" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Label</label>
-                <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={textLabel} onChange={(e) => setTextLabel(e.target.value)} placeholder="e.g. Product docs: Immortel AI" />
+          {/* Source library — list with filter & sort via ViewMoreDropdown */}
+          {brandSectionTab === "library" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">
+                Ingested sources used as context when hunting GEO bounties and generating AEO pages.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[160px]">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><IconSearch /></span>
+                  <input
+                    className="w-full rounded-md border border-[var(--glass-border)] bg-background pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground"
+                    placeholder="Search sources…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <ViewMoreDropdown tooltipContent="Filter & sort" align="right">
+                  {(close) => (
+                    <div className="py-1">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Type</div>
+                      {(["ALL", "FILE", "TEXT", "URL"] as const).map((t) => (
+                        <button key={t} type="button" onClick={() => { setFilterType(t); close(); }} className={`w-full px-3 py-2 text-left text-sm ${filterType === t ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>
+                          {t === "ALL" ? "All types" : t === "FILE" ? "Files" : t === "TEXT" ? "Text" : "URLs"}
+                        </button>
+                      ))}
+                      <div className="border-t border-[var(--glass-border)] my-1" />
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sort by</div>
+                      {(["date", "label", "type"] as const).map((s) => (
+                        <button key={s} type="button" onClick={() => { setSortField(s); close(); }} className={`w-full px-3 py-2 text-left text-sm capitalize ${sortField === s ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>
+                          {s}
+                        </button>
+                      ))}
+                      <div className="border-t border-[var(--glass-border)] my-1" />
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Order</div>
+                      <button type="button" onClick={() => { setSortDir("desc"); close(); }} className={`w-full px-3 py-2 text-left text-sm ${sortDir === "desc" ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>Newest</button>
+                      <button type="button" onClick={() => { setSortDir("asc"); close(); }} className={`w-full px-3 py-2 text-left text-sm ${sortDir === "asc" ? "text-primary font-medium bg-primary/10" : "text-foreground hover:bg-[var(--glass-hover)]"}`}>Oldest</button>
+                    </div>
+                  )}
+                </ViewMoreDropdown>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Text</label>
-                <textarea className="h-40 w-full rounded-md border bg-background px-3 py-2 text-xs" value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste any relevant context, specs, FAQs, etc." />
-              </div>
-              <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textLabel.trim() || !textContent.trim()} className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60">
-                Save text source
-              </button>
-            </div>
-          )}
-
-          {activeTab === "url" && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Label</label>
-                <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={urlLabel} onChange={(e) => setUrlLabel(e.target.value)} placeholder="e.g. Product marketing site" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">URL</label>
-                <input className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://example.com/docs" />
-              </div>
-              <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlLabel.trim() || !urlValue.trim()} className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:opacity-60">
-                Save URL source
-              </button>
+              {filteredSorted.length === 0 ? (
+                <div className="rounded-md border border-dashed border-[var(--glass-border)] p-4 text-xs text-muted-foreground">
+                  {sources.length === 0 ? "No sources yet. Use Ingest sources to add files, text, or URLs." : "No sources match your filters."}
+                </div>
+              ) : (
+                <ul className="space-y-2" role="list">
+                  {filteredSorted.map((source) => (
+                    <li
+                      key={source.id}
+                      className={`flex items-start gap-3 rounded-lg bg-[var(--glass)] px-3 py-2.5 text-xs transition-opacity border border-[var(--glass-border)] ${source.isActive ? "" : "opacity-50"}`}
+                    >
+                      <button type="button" onClick={() => handlePreview(source)} className="flex-shrink-0 hover:opacity-80 transition-opacity rounded-lg overflow-hidden">
+                        {renderThumbnail(source)}
+                      </button>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground" aria-hidden>{sourceTypeIcon(source)}</span>
+                          <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            {source.sourceType === "FILE" && source.asset ? source.asset.assetType : source.sourceType}
+                          </span>
+                          <span className="font-medium text-foreground truncate">{source.label}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate">{renderSourcePreview(source) || "No preview"}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatCreatedAt(source.createdAt)}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <button type="button" onClick={() => handlePreview(source)} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"> <IconEye /> Preview </button>
+                        <button type="button" onClick={() => handleToggleActive(source.id, source.isActive)} className="text-[10px] text-muted-foreground hover:text-foreground">{source.isActive ? "Disable" : "Enable"}</button>
+                        <button type="button" onClick={() => handleDelete(source.id)} className="text-[10px] text-muted-foreground hover:text-destructive">Delete</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
-      </section>
-
-      {/* Sources list with filters */}
-      <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5">
-        <h2 className="text-sm font-semibold text-foreground">Your data sources</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          These sources will be used as context when hunting GEO bounties and generating AEO pages.
-        </p>
-
-        {/* Filters bar */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[160px]">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"><IconSearch /></span>
-            <input
-              className="w-full rounded-md border bg-background pl-8 pr-3 py-1.5 text-xs"
-              placeholder="Search sources…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
-          {/* Type filter */}
-          <select
-            className="rounded-md border bg-background px-2 py-1.5 text-xs text-foreground"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as FilterType)}
-          >
-            <option value="ALL">All types</option>
-            <option value="FILE">Files</option>
-            <option value="TEXT">Text</option>
-            <option value="URL">URLs</option>
-          </select>
-
-          {/* Sort field */}
-          <select
-            className="rounded-md border bg-background px-2 py-1.5 text-xs text-foreground"
-            value={sortField}
-            onChange={(e) => setSortField(e.target.value as SortField)}
-          >
-            <option value="date">Date</option>
-            <option value="label">Label</option>
-            <option value="type">Type</option>
-          </select>
-
-          {/* Sort direction */}
-          <button
-            type="button"
-            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-            className="rounded-md border bg-background px-2 py-1.5 text-xs text-foreground hover:bg-[var(--glass-hover)]"
-          >
-            {sortDir === "desc" ? "Newest" : "Oldest"}
-          </button>
-        </div>
-
-        {/* Sources */}
-        {filteredSorted.length === 0 ? (
-          <div className="mt-4 rounded-md border border-dashed border-[var(--glass-border)] p-4 text-xs text-muted-foreground">
-            {sources.length === 0 ? "No data sources yet. Add files, text, or URLs above." : "No sources match your filters."}
-          </div>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {filteredSorted.map((source) => (
-              <div
-                key={source.id}
-                className={`flex items-start gap-3 rounded-lg bg-[var(--glass)] px-3 py-2.5 text-xs transition-opacity ${
-                  source.isActive ? "" : "opacity-50"
-                }`}
-              >
-                {/* Thumbnail */}
-                <button type="button" onClick={() => handlePreview(source)} className="flex-shrink-0 hover:opacity-80 transition-opacity">
-                  {renderThumbnail(source)}
-                </button>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{sourceTypeIcon(source)}</span>
-                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                      {source.sourceType === "FILE" && source.asset
-                        ? source.asset.assetType
-                        : source.sourceType}
-                    </span>
-                    <span className="font-medium text-foreground truncate">{source.label}</span>
-                  </div>
-                  <div className="text-[11px] text-muted-foreground truncate">
-                    {renderSourcePreview(source) || "No preview available"}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {formatCreatedAt(source.createdAt)}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handlePreview(source)}
-                    className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    <IconEye /> Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(source.id, source.isActive)}
-                    className="text-[10px] text-muted-foreground hover:text-foreground"
-                  >
-                    {source.isActive ? "Disable" : "Enable"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(source.id)}
-                    className="text-[10px] text-muted-foreground hover:text-destructive"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Video preview modal (reusing existing) */}

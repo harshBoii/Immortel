@@ -1,14 +1,9 @@
-R2 and stream Setup
-In Database incoroporate a special type of video called webinar , 
-Upload/start and upload/complete api , stream Processing api and cron job also a (/cron api route)
-Connect To Microservice (For Shorts Generation and Info Extraction)
-After upload is finished an assetgrid should be added with tag of processing , when procssing is done then it should be reflect as cta on assetgrid
-Api to set the times for webinar (webinar model will have this column)
+Data Mine 
+    BrandIdentity , Offerings -> Extract Out The Input Fields , preferrably through company's website url
 
-For Shorts Generation 
-
-We will send to api 
-    1. Number of shorts to generate
-    2. Duration of shorts 
-    3. Short Type (  EDUCATIONAL , FLASHY , CASUAL , STORY , PROMOTIONAL )
-
+    
+    Ingest Source Section
+        Add another dropdown as tickbox to choose the optimal target for the ingested asset (also add an auto option as default)
+    
+    Source Library 
+        Add a cta/chip next to each asset to mention the content of that is used for which area.        
