@@ -32,16 +32,16 @@ export async function PATCH(request: NextRequest) {
   const b = body as Record<string, unknown>;
   const str = (v: unknown, d?: string) => (v == null ? d : String(v).trim() || d);
   const data = {
-    logoUrl: b.logoUrl !== undefined ? str(b.logoUrl, null) ?? undefined : undefined,
-    faviconUrl: b.faviconUrl !== undefined ? str(b.faviconUrl, null) ?? undefined : undefined,
-    banner: b.banner !== undefined ? str(b.banner, null) ?? undefined : undefined,
-    themeMusic: b.themeMusic !== undefined ? str(b.themeMusic, null) ?? undefined : undefined,
+    logoUrl: b.logoUrl !== undefined ? str(b.logoUrl) ?? undefined : undefined,
+    faviconUrl: b.faviconUrl !== undefined ? str(b.faviconUrl) ?? undefined : undefined,
+    banner: b.banner !== undefined ? str(b.banner) ?? undefined : undefined,
+    themeMusic: b.themeMusic !== undefined ? str(b.themeMusic) ?? undefined : undefined,
     primaryColor: b.primaryColor !== undefined ? str(b.primaryColor, "#D7765A") ?? undefined : undefined,
     secondaryColor: b.secondaryColor !== undefined ? str(b.secondaryColor, "#8B5CF6") ?? undefined : undefined,
     bgColor: b.bgColor !== undefined ? str(b.bgColor, "#141414") ?? undefined : undefined,
     surfaceColor: b.surfaceColor !== undefined ? str(b.surfaceColor, "#181818") ?? undefined : undefined,
     textColor: b.textColor !== undefined ? str(b.textColor, "#FFFFFF") ?? undefined : undefined,
-    companyAddress: b.companyAddress !== undefined ? str(b.companyAddress, null) ?? undefined : undefined,
+    companyAddress: b.companyAddress !== undefined ? str(b.companyAddress) ?? undefined : undefined,
   };
   const filtered = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
   const branding = await prisma.companyBranding.upsert({
