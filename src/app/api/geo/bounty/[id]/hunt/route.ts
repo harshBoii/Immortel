@@ -1,21 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-type Params = {
-  params: {
-    id: string;
-  };
-};
-
-export async function POST(_request: Request, { params }: Params) {
+export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id: bountyId } = await context.params;
   const session = await getSession();
   if (!session?.companyId) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
   const companyId = session.companyId;
-  const bountyId = params.id;
 
   const bounty = await prisma.citationBounty.findFirst({
     where: { id: bountyId, companyId },
