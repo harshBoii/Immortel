@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUploadWithProgress } from "../../ingestion/useUploadWithProgress";
 import { AssetVideoModal } from "@/app/components/ingestion";
 import { ImagePreviewModal } from "@/app/components/general/ImagePreviewModal";
@@ -93,10 +93,20 @@ type Props = {
 };
 
 type TabId = "file" | "text" | "url";
-type BrandSectionTab = "company" | "entity" | "offerings" | "branding" | "ingest" | "library";
+type BrandSectionTab = "company" | "entity" | "offerings" | "branding" | "library";
 type FilterType = "ALL" | "FILE" | "TEXT" | "URL";
 type SortField = "date" | "label" | "type";
 type SortDir = "asc" | "desc";
+
+const SOURCE_LABEL_PRESETS = [
+  "Pitch deck",
+  "Product deck",
+  "LinkedIn",
+  "Website URL",
+  "Video/images",
+  "Others",
+] as const;
+type SourceLabelPreset = (typeof SOURCE_LABEL_PRESETS)[number];
 
 const IconFile = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -656,11 +666,10 @@ export default function DataMinePageClient({
   const [offerings, setOfferings] = useState(initialOfferings);
   const [branding, setBranding] = useState(initialBranding);
 
-  const [fileLabel, setFileLabel] = useState("");
-  const [textLabel, setTextLabel] = useState("");
   const [textContent, setTextContent] = useState("");
-  const [urlLabel, setUrlLabel] = useState("");
   const [urlValue, setUrlValue] = useState("");
+  const [selectedSourceLabel, setSelectedSourceLabel] = useState<SourceLabelPreset>("Product deck");
+  const [otherLabelSpecify, setOtherLabelSpecify] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filters
@@ -677,6 +686,15 @@ export default function DataMinePageClient({
 
   const { items: uploadItems, startUpload, clearItems } = useUploadWithProgress();
 
+  const effectiveLabel = selectedSourceLabel === "Others" ? (otherLabelSpecify.trim() || "Others") : selectedSourceLabel;
+
+  // Preselect URL tab when label implies URL (Website URL, LinkedIn)
+  useEffect(() => {
+    if (selectedSourceLabel === "Website URL" || selectedSourceLabel === "LinkedIn") {
+      setActiveTab("url");
+    }
+  }, [selectedSourceLabel]);
+
   const handleFileUpload = useCallback(
     async (files: File[]) => {
       if (!files.length) return;
@@ -689,7 +707,7 @@ export default function DataMinePageClient({
           credentials: "include",
           body: JSON.stringify({
             sourceType: "FILE",
-            label: fileLabel.trim() || item.file.name,
+            label: effectiveLabel || item.file.name,
             assetId: item.assetId,
           }),
         });
@@ -699,52 +717,51 @@ export default function DataMinePageClient({
         }
       }
       clearItems();
-      setFileLabel("");
     },
-    [startUpload, clearItems, fileLabel]
+    [startUpload, clearItems, effectiveLabel]
   );
 
   const handleCreateTextSource = useCallback(async () => {
-    if (!textLabel.trim() || !textContent.trim()) return;
+    if (!textContent.trim()) return;
+    const label = effectiveLabel;
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/geo/data-mine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sourceType: "TEXT", label: textLabel.trim(), rawContent: textContent }),
+        body: JSON.stringify({ sourceType: "TEXT", label, rawContent: textContent }),
       });
       const data = await res.json();
       if (data?.success && data.source) {
         setSources((prev) => [data.source as GeoDataSource, ...prev]);
-        setTextLabel("");
         setTextContent("");
       }
     } finally {
       setIsSubmitting(false);
     }
-  }, [textLabel, textContent]);
+  }, [effectiveLabel, textContent]);
 
   const handleCreateUrlSource = useCallback(async () => {
-    if (!urlLabel.trim() || !urlValue.trim()) return;
+    if (!urlValue.trim()) return;
+    const label = effectiveLabel;
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/geo/data-mine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ sourceType: "URL", label: urlLabel.trim(), rawContent: urlValue.trim() }),
+        body: JSON.stringify({ sourceType: "URL", label, rawContent: urlValue.trim() }),
       });
       const data = await res.json();
       if (data?.success && data.source) {
         setSources((prev) => [data.source as GeoDataSource, ...prev]);
-        setUrlLabel("");
         setUrlValue("");
       }
     } finally {
       setIsSubmitting(false);
     }
-  }, [urlLabel, urlValue]);
+  }, [effectiveLabel, urlValue]);
 
   const handleToggleActive = useCallback(async (id: string, isActive: boolean) => {
     const res = await fetch(`/api/geo/data-mine/${id}`, {
@@ -937,13 +954,14 @@ export default function DataMinePageClient({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Data Mine — unified section with semantic sub-sections */}
-      <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="data-mine-heading">
-        <h2 id="data-mine-heading" className="text-sm font-semibold text-foreground">Data Mine</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Company profile, brand identity, offerings, visual branding, and content sources for GEO and AEO.
-        </p>
+    <div className="flex gap-6 lg:gap-8">
+      {/* Left: main content (~70%) */}
+      <div className="flex-1 min-w-0">
+        <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="data-mine-heading">
+          <h2 id="data-mine-heading" className="text-sm font-semibold text-foreground">Data Mine</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Company profile, brand identity, offerings, visual branding, and source library for GEO and AEO.
+          </p>
         <div className="mt-4 flex flex-wrap gap-2 border-b border-[var(--glass-border)] pb-2 text-xs">
           {(
             [
@@ -951,7 +969,6 @@ export default function DataMinePageClient({
               { id: "entity", label: "Brand identity" },
               { id: "offerings", label: "Products & offerings" },
               { id: "branding", label: "Visual branding" },
-              { id: "ingest", label: "Ingest sources" },
               { id: "library", label: "Source library" },
             ] as const
           ).map(({ id, label }) => (
@@ -988,88 +1005,7 @@ export default function DataMinePageClient({
             <BrandingForm branding={branding} onSave={saveBranding} />
           )}
 
-          {/* Ingest sources — add files, text, URLs */}
-          {brandSectionTab === "ingest" && (
-            <div className="space-y-4">
-              <p className="text-xs text-muted-foreground">
-                Upload files, paste text, or add URLs to use as context when hunting GEO bounties.
-              </p>
-              <div className="flex gap-2 border-b border-[var(--glass-border)] pb-2 text-xs">
-                {(["file", "text", "url"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1 rounded-md capitalize ${
-                      activeTab === tab ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-[var(--glass-hover)]"
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              {activeTab === "file" && (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Label</label>
-                    <input
-                      className={inputClass}
-                      value={fileLabel}
-                      onChange={(e) => setFileLabel(e.target.value)}
-                      placeholder="e.g. Product deck"
-                    />
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    className="block w-full text-xs text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files ?? []);
-                      if (files.length) handleFileUpload(files);
-                    }}
-                  />
-                  {uploadItems.length > 0 && (
-                    <div className="space-y-1">
-                      {uploadItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1 text-xs">
-                          <span className="truncate">{item.file.name}</span>
-                          <span className="text-muted-foreground">{item.progress}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              {activeTab === "text" && (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Label</label>
-                    <input className={inputClass} value={textLabel} onChange={(e) => setTextLabel(e.target.value)} placeholder="e.g. Product docs" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Text</label>
-                    <textarea className={`${inputClass} h-40`} value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste context, specs, FAQs…" />
-                  </div>
-                  <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textLabel.trim() || !textContent.trim()} className={btnPrimary}>Save text source</button>
-                </div>
-              )}
-              {activeTab === "url" && (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Label</label>
-                    <input className={inputClass} value={urlLabel} onChange={(e) => setUrlLabel(e.target.value)} placeholder="e.g. Marketing site" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>URL</label>
-                    <input className={inputClass} type="url" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." />
-                  </div>
-                  <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlLabel.trim() || !urlValue.trim()} className={btnPrimary}>Save URL source</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Source library — list with filter & sort via ViewMoreDropdown */}
+          {/* Source library */}
           {brandSectionTab === "library" && (
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground">
@@ -1111,7 +1047,7 @@ export default function DataMinePageClient({
               </div>
               {filteredSorted.length === 0 ? (
                 <div className="rounded-md border border-dashed border-[var(--glass-border)] p-4 text-xs text-muted-foreground">
-                  {sources.length === 0 ? "No sources yet. Use Ingest sources to add files, text, or URLs." : "No sources match your filters."}
+                  {sources.length === 0 ? "No sources yet. Add sources from the panel on the right." : "No sources match your filters."}
                 </div>
               ) : (
                 <ul className="space-y-2" role="list">
@@ -1147,6 +1083,88 @@ export default function DataMinePageClient({
           )}
         </div>
       </section>
+      </div>
+
+      {/* Right: source ingestion sidebar (~30%) */}
+      <aside className="w-full lg:w-[32%] xl:max-w-[400px] shrink-0">
+        <div className="lg:sticky lg:top-6">
+          <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="ingest-heading">
+            <h2 id="ingest-heading" className="text-sm font-semibold text-foreground">Add source</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Upload files, paste text, or add URLs. Choose a label below.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div className="space-y-1.5">
+                <label className={labelClass}>Label</label>
+                <select
+                  className={inputClass}
+                  value={selectedSourceLabel}
+                  onChange={(e) => setSelectedSourceLabel(e.target.value as SourceLabelPreset)}
+                  aria-label="Source category"
+                >
+                  {SOURCE_LABEL_PRESETS.map((preset) => (
+                    <option key={preset} value={preset}>{preset}</option>
+                  ))}
+                </select>
+                {selectedSourceLabel === "Others" && (
+                  <input
+                    type="text"
+                    className={inputClass}
+                    value={otherLabelSpecify}
+                    onChange={(e) => setOtherLabelSpecify(e.target.value)}
+                    placeholder="please specify"
+                    aria-label="Custom label"
+                  />
+                )}
+              </div>
+              <div className="flex gap-1.5 border-b border-[var(--glass-border)] pb-2 text-xs">
+                {(["file", "text", "url"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 px-2 py-1.5 rounded-md capitalize ${activeTab === tab ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-[var(--glass-hover)]"}`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              {activeTab === "file" && (
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    multiple
+                    className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                    onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length) handleFileUpload(files); }}
+                  />
+                  {uploadItems.length > 0 && (
+                    <div className="space-y-1">
+                      {uploadItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1.5 text-xs">
+                          <span className="truncate">{item.file.name}</span>
+                          <span className="text-muted-foreground tabular-nums">{item.progress}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTab === "text" && (
+                <div className="space-y-3">
+                  <textarea className={`${inputClass} h-32 resize-y min-h-[80px]`} value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste context, specs, FAQs…" />
+                  <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textContent.trim()} className={`${btnPrimary} w-full`}>Save text source</button>
+                </div>
+              )}
+              {activeTab === "url" && (
+                <div className="space-y-3">
+                  <input className={inputClass} type="url" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." />
+                  <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlValue.trim()} className={`${btnPrimary} w-full`}>Save URL source</button>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </aside>
 
       {/* Video preview modal (reusing existing) */}
       <AssetVideoModal
