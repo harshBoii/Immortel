@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
@@ -59,10 +60,11 @@ export async function PATCH(request: NextRequest) {
   if (b.keywords !== undefined) update.keywords = arr(b.keywords);
   if (b.targetAudiences !== undefined) update.targetAudiences = arr(b.targetAudiences);
 
+  const filtered = Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined));
   const entity = await prisma.brandEntity.upsert({
     where: { companyId: session.companyId },
-    create: { companyId: session.companyId, ...(Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined)) as Parameters<typeof prisma.brandEntity.create>[0]["data"]) },
-    update: Object.fromEntries(Object.entries(update).filter(([, v]) => v !== undefined)) as Parameters<typeof prisma.brandEntity.update>[0]["data"],
+    create: { companyId: session.companyId, ...filtered } as Prisma.BrandEntityUncheckedCreateInput,
+    update: filtered as Prisma.BrandEntityUpdateInput,
   });
   const serialized = {
     ...entity,
