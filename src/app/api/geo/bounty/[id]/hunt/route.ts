@@ -169,7 +169,7 @@ export async function POST(_request: Request, { params }: Params) {
         knowledgeGraph: (page.jsonLd as any) ?? {},
         seoTitle: page.seoTitle ?? null,
         seoDescription: page.seoDescription ?? null,
-        canonicalUrl: baseUrl && slug ? `${baseUrl.replace(/\\/$/, "")}/${slug}` : null,
+        canonicalUrl: baseUrl && slug ? `${baseUrl.replace(/\/$/, "")}/${slug}` : null,
       },
     });
 
