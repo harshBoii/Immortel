@@ -14,7 +14,7 @@ export default async function InfoSpreadContent() {
     );
   }
 
-  const [pages, bounties] = await Promise.all([
+  const [rawPages, rawBounties] = await Promise.all([
     prisma.aeoPage.findMany({
       where: { companyId },
       orderBy: { createdAt: "desc" },
@@ -44,6 +44,15 @@ export default async function InfoSpreadContent() {
       },
     }),
   ]);
+
+  const pages = rawPages.map((p) => ({
+    ...p,
+    publishedAt: p.publishedAt ? p.publishedAt.toISOString() : null,
+  }));
+
+  const bounties = rawBounties.map((b) => ({
+    ...b,
+  }));
 
   return <InfoSpreadClient pages={pages} bounties={bounties} />;
 }
