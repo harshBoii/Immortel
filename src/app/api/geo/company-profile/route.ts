@@ -32,10 +32,10 @@ export async function PATCH(request: NextRequest) {
     website?: string | null;
     email?: string | null;
   };
-  const data: { description?: string; logoUrl?: string; website?: string; email?: string } = {};
-  if (description !== undefined) data.description = description == null ? "" : String(description).trim() || null;
-  if (logoUrl !== undefined) data.logoUrl = logoUrl == null ? "" : String(logoUrl).trim() || null;
-  if (website !== undefined) data.website = website == null ? "" : String(website).trim() || null;
+  const data: { description?: string | null; logoUrl?: string | null; website?: string | null; email?: string } = {};
+  if (description !== undefined) data.description = description == null ? null : String(description).trim() || null;
+  if (logoUrl !== undefined) data.logoUrl = logoUrl == null ? null : String(logoUrl).trim() || null;
+  if (website !== undefined) data.website = website == null ? null : String(website).trim() || null;
   if (email !== undefined) {
     const e = String(email).trim();
     if (!e) {
