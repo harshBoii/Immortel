@@ -1,20 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-type Params = {
-  params: {
-    id: string;
-  };
-};
-
-export async function PATCH(request: Request, { params }: Params) {
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   const session = await getSession();
   if (!session?.companyId) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
-  const { id } = params;
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ success: false, error: "Invalid body" }, { status: 400 });
@@ -41,13 +35,12 @@ export async function PATCH(request: Request, { params }: Params) {
   return NextResponse.json({ success: true, source: updated });
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
   const session = await getSession();
   if (!session?.companyId) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
-
-  const { id } = params;
 
   const existing = await prisma.geoDataSource.findFirst({
     where: { id, companyId: session.companyId },
