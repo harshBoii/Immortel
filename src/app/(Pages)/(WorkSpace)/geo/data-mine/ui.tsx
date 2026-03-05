@@ -379,6 +379,7 @@ function OfferingsSection({
   const [isPrimary, setIsPrimary] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewOffering, setViewOffering] = useState<Props["initialOfferings"][0] | null>(null);
 
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
@@ -473,20 +474,62 @@ function OfferingsSection({
         ) : (
           <ul className="space-y-2">
             {offerings.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-2 rounded-lg bg-[var(--glass)] px-3 py-2 text-xs border border-[var(--glass-border)]">
+              <li
+                key={o.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-[var(--glass)]/90 to-[var(--glass)] px-3.5 py-2.5 text-xs border border-[var(--glass-border)] shadow-sm"
+              >
                 <div className="min-w-0">
-                  <span className="font-medium text-foreground">{o.name}</span>
-                  {o.isPrimary && <span className="ml-2 rounded bg-primary/20 px-1.5 py-0.5 text-[10px] text-primary">Primary</span>}
-                  <span className="text-muted-foreground ml-2">({o.offeringType})</span>
-                  {o.differentiators?.length ? <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{o.differentiators.join(", ")}</p> : null}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-foreground truncate">{o.name}</span>
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                      {o.offeringType.toLowerCase()}
+                    </span>
+                    {o.isPrimary && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+                        Primary
+                      </span>
+                    )}
+                    {!o.isActive && (
+                      <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  {o.differentiators?.length ? (
+                    <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                      {o.differentiators.join(", ")}
+                    </p>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1.5 flex-shrink-0">
                   {editingId === o.id ? (
                     <OfferingEditRow offering={o} onSave={(p) => { onUpdate(o.id, p); setEditingId(null); }} onCancel={() => setEditingId(null)} />
                   ) : (
                     <>
-                      <button type="button" onClick={() => setEditingId(o.id)} className="text-muted-foreground hover:text-foreground">Edit</button>
-                      <button type="button" onClick={() => onDelete(o.id)} className="text-muted-foreground hover:text-destructive">Delete</button>
+                      <button
+                        type="button"
+                        onClick={() => setViewOffering(o)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-background/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-foreground/60" />
+                        View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(o.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-background/40 px-2.5 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(o.id)}
+                        className="inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/5 px-2.5 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/10"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                        Delete
+                      </button>
                     </>
                   )}
                 </div>
@@ -495,6 +538,114 @@ function OfferingsSection({
           </ul>
         )}
       </div>
+      {viewOffering && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          onClick={() => setViewOffering(null)}
+        >
+          <div
+            className="w-full max-w-3xl glass-card rounded-3xl overflow-hidden flex flex-col border border-[var(--glass-border)]/80 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between px-6 py-4 border-b border-[var(--glass-border)]/80 bg-gradient-to-r from-background/80 to-background/40">
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-semibold text-foreground truncate">{viewOffering.name}</p>
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
+                    {viewOffering.offeringType}
+                  </span>
+                  {viewOffering.isPrimary && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-400">
+                      Primary
+                    </span>
+                  )}
+                  {!viewOffering.isActive && (
+                    <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">
+                      Inactive
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewOffering(null)}
+                className="p-2 rounded-full hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-foreground"
+                aria-label="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-auto text-xs text-foreground">
+              {viewOffering.description && (
+                <div className="rounded-xl bg-[var(--glass)]/70 border border-[var(--glass-border)]/70 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1.5">Description</p>
+                  <p className="leading-relaxed text-foreground/90">{viewOffering.description}</p>
+                </div>
+              )}
+              {viewOffering.url && (
+                <div className="rounded-xl bg-[var(--glass)]/70 border border-[var(--glass-border)]/70 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1.5">URL</p>
+                  <a
+                    href={viewOffering.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline break-all"
+                  >
+                    {viewOffering.url}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                </div>
+              )}
+              {viewOffering.differentiators?.length > 0 && (
+                <div className="rounded-xl bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1">Differentiators</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {viewOffering.differentiators.map((d, idx) => (
+                      <li key={idx}>{d}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {viewOffering.useCases?.length > 0 && (
+                <div className="rounded-xl bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1">Use cases</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {viewOffering.useCases.map((u, idx) => (
+                      <li key={idx}>{u}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {viewOffering.targetAudiences?.length > 0 && (
+                <div className="rounded-xl bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1">Target audiences</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {viewOffering.targetAudiences.map((t, idx) => (
+                      <li key={idx}>{t}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {viewOffering.competitors?.length > 0 && (
+                <div className="rounded-xl bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-3.5">
+                  <p className="font-medium text-[11px] text-muted-foreground mb-1">Competitors</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {viewOffering.competitors.map((c, idx) => (
+                      <li key={idx}>{c}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -665,6 +816,8 @@ export default function DataMinePageClient({
   const [brandEntity, setBrandEntity] = useState(initialBrandEntity);
   const [offerings, setOfferings] = useState(initialOfferings);
   const [branding, setBranding] = useState(initialBranding);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
 
   const [textContent, setTextContent] = useState("");
   const [urlValue, setUrlValue] = useState("");
@@ -694,6 +847,40 @@ export default function DataMinePageClient({
       setActiveTab("url");
     }
   }, [selectedSourceLabel]);
+
+  const handleAutoFillFromGeo = useCallback(async () => {
+    setIsAutoFilling(true);
+    setAutoFillMessage(null);
+    try {
+      const res = await fetch("/api/geo/auto-seed", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data?.success) {
+        const msg: string =
+          data?.error ??
+          (data?.missing
+            ? "Website URL and LinkedIn URL are required before auto-filling."
+            : "Failed to auto-fill company data.");
+        setAutoFillMessage(msg);
+        return;
+      }
+
+      if (data.company) setCompany(data.company);
+      if (data.brandEntity) setBrandEntity(data.brandEntity);
+      if (Array.isArray(data.offerings)) setOfferings(data.offerings);
+      if (data.branding) setBranding(data.branding);
+
+      setAutoFillMessage("Company profile, brand entity, offerings, and branding were updated from GEO.");
+    } catch (err) {
+      console.error("Auto-fill error", err);
+      setAutoFillMessage("Something went wrong while auto-filling. Please try again.");
+    } finally {
+      setIsAutoFilling(false);
+    }
+  }, []);
 
   const handleFileUpload = useCallback(
     async (files: File[]) => {
@@ -1088,81 +1275,131 @@ export default function DataMinePageClient({
       {/* Right: source ingestion sidebar (~30%) */}
       <aside className="w-full lg:w-[32%] xl:max-w-[400px] shrink-0">
         <div className="lg:sticky lg:top-6">
-          <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="ingest-heading">
-            <h2 id="ingest-heading" className="text-sm font-semibold text-foreground">Add source</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Upload files, paste text, or add URLs. Choose a label below.
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="space-y-1.5">
-                <label className={labelClass}>Label</label>
-                <select
-                  className={inputClass}
-                  value={selectedSourceLabel}
-                  onChange={(e) => setSelectedSourceLabel(e.target.value as SourceLabelPreset)}
-                  aria-label="Source category"
-                >
-                  {SOURCE_LABEL_PRESETS.map((preset) => (
-                    <option key={preset} value={preset}>{preset}</option>
-                  ))}
-                </select>
-                {selectedSourceLabel === "Others" && (
-                  <input
-                    type="text"
-                    className={inputClass}
-                    value={otherLabelSpecify}
-                    onChange={(e) => setOtherLabelSpecify(e.target.value)}
-                    placeholder="please specify"
-                    aria-label="Custom label"
-                  />
-                )}
-              </div>
-              <div className="flex gap-1.5 border-b border-[var(--glass-border)] pb-2 text-xs">
-                {(["file", "text", "url"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`flex-1 px-2 py-1.5 rounded-md capitalize ${activeTab === tab ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-[var(--glass-hover)]"}`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-              {activeTab === "file" && (
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    multiple
-                    className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                    onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length) handleFileUpload(files); }}
-                  />
-                  {uploadItems.length > 0 && (
-                    <div className="space-y-1">
-                      {uploadItems.map((item) => (
-                        <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1.5 text-xs">
-                          <span className="truncate">{item.file.name}</span>
-                          <span className="text-muted-foreground tabular-nums">{item.progress}%</span>
+          <div className="space-y-4">
+            <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="ingest-heading">
+              <h2 id="ingest-heading" className="text-sm font-semibold text-foreground">Add source</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Upload files, paste text, or add URLs. Choose a label below.
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="space-y-1.5">
+                  {/* <label className={labelClass}>Label</label> */}
+                  <div className="inline-flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">
+                      {selectedSourceLabel === "Others"
+                        ? otherLabelSpecify.trim() || "Others"
+                        : selectedSourceLabel}
+                    </span>
+                    <ViewMoreDropdown tooltipContent="Select label" align="left">
+                      {(close) => (
+                        <div className="py-1">
+                          {SOURCE_LABEL_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => {
+                                setSelectedSourceLabel(preset);
+                                if (preset !== "Others") {
+                                  setOtherLabelSpecify("");
+                                }
+                                close();
+                              }}
+                              className={`w-full px-3 py-1.5 text-left text-xs ${
+                                selectedSourceLabel === preset
+                                  ? "text-primary font-medium bg-primary/10"
+                                  : "text-foreground hover:bg-[var(--glass-hover)]"
+                              }`}
+                            >
+                              {preset}
+                            </button>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </ViewMoreDropdown>
+                  </div>
+                  {selectedSourceLabel === "Others" && (
+                    <input
+                      type="text"
+                      className={inputClass}
+                      value={otherLabelSpecify}
+                      onChange={(e) => setOtherLabelSpecify(e.target.value)}
+                      placeholder="please specify"
+                      aria-label="Custom label"
+                    />
                   )}
                 </div>
-              )}
-              {activeTab === "text" && (
-                <div className="space-y-3">
-                  <textarea className={`${inputClass} h-32 resize-y min-h-[80px]`} value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste context, specs, FAQs…" />
-                  <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textContent.trim()} className={`${btnPrimary} w-full`}>Save text source</button>
+                <div className="flex gap-1.5 border-b border-[var(--glass-border)] pb-2 text-xs">
+                  {(["file", "text", "url"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex-1 px-2 py-1.5 rounded-md capitalize ${activeTab === tab ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-[var(--glass-hover)]"}`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
                 </div>
+                {activeTab === "file" && (
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      multiple
+                      className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1.5 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                      onChange={(e) => { const files = Array.from(e.target.files ?? []); if (files.length) handleFileUpload(files); }}
+                    />
+                    {uploadItems.length > 0 && (
+                      <div className="space-y-1">
+                        {uploadItems.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between rounded-md bg-[var(--glass)] px-2 py-1.5 text-xs">
+                            <span className="truncate">{item.file.name}</span>
+                            <span className="text-muted-foreground tabular-nums">{item.progress}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTab === "text" && (
+                  <div className="space-y-3">
+                    <textarea className={`${inputClass} h-32 resize-y min-h-[80px]`} value={textContent} onChange={(e) => setTextContent(e.target.value)} placeholder="Paste context, specs, FAQs…" />
+                    <button type="button" onClick={handleCreateTextSource} disabled={isSubmitting || !textContent.trim()} className={`${btnPrimary} w-full`}>Save text source</button>
+                  </div>
+                )}
+                {activeTab === "url" && (
+                  <div className="space-y-3">
+                    <input className={inputClass} type="url" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." />
+                    <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlValue.trim()} className={`${btnPrimary} w-full`}>Save URL source</button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="auto-fill-heading">
+              <h2 id="auto-fill-heading" className="text-sm font-semibold text-foreground">Auto-fill GEO profile</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Use your Sources to prefill company profile, brand entity, offerings, and branding.
+              </p>
+              <button
+                type="button"
+                onClick={handleAutoFillFromGeo}
+                disabled={isAutoFilling}
+                className={`${btnPrimary} mt-3 w-full justify-center`}
+              >
+                {isAutoFilling ? "Filling from GEO…" : "Auto-fill Using Immortel AI"}
+              </button>
+              {autoFillMessage && (
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  {autoFillMessage}
+                </p>
               )}
-              {activeTab === "url" && (
-                <div className="space-y-3">
-                  <input className={inputClass} type="url" value={urlValue} onChange={(e) => setUrlValue(e.target.value)} placeholder="https://..." />
-                  <button type="button" onClick={handleCreateUrlSource} disabled={isSubmitting || !urlValue.trim()} className={`${btnPrimary} w-full`}>Save URL source</button>
-                </div>
+              {!company?.website && (
+                <p className="mt-2 text-[11px] text-amber-400">
+                  Add your website URL in the Company profile tab before running auto-fill.
+                </p>
               )}
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
       </aside>
 
