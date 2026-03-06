@@ -419,7 +419,7 @@ function OfferingsSection({
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleCreate} className="space-y-4 max-w-xl p-4 rounded-lg bg-[var(--glass)] border border-[var(--glass-border)]">
+      <form onSubmit={handleCreate} className="space-y-4 max-w-xl p-4 rounded-lg bg-[var(--glass)] card-anime-float">
         <h3 className="text-xs font-semibold text-foreground">Add offering</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
@@ -476,7 +476,7 @@ function OfferingsSection({
             {offerings.map((o) => (
               <li
                 key={o.id}
-                className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-[var(--glass)]/90 to-[var(--glass)] px-3.5 py-2.5 text-xs border border-[var(--glass-border)] shadow-sm"
+                className="flex items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-[var(--glass)]/90 to-[var(--glass)] px-3.5 py-2.5 text-xs card-anime-float"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -1144,7 +1144,7 @@ export default function DataMinePageClient({
     <div className="flex gap-6 lg:gap-8">
       {/* Left: main content (~70%) */}
       <div className="flex-1 min-w-0">
-        <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="data-mine-heading">
+        <section className="glass-card card-anime-float rounded-xl p-5" aria-labelledby="data-mine-heading">
           <h2 id="data-mine-heading" className="text-sm font-semibold text-foreground">Data Mine</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             Company profile, brand identity, offerings, visual branding, and source library for GEO and AEO.
@@ -1241,7 +1241,7 @@ export default function DataMinePageClient({
                   {filteredSorted.map((source) => (
                     <li
                       key={source.id}
-                      className={`flex items-start gap-3 rounded-lg bg-[var(--glass)] px-3 py-2.5 text-xs transition-opacity border border-[var(--glass-border)] ${source.isActive ? "" : "opacity-50"}`}
+                      className={`flex items-start gap-3 rounded-lg bg-[var(--glass)] px-3 py-2.5 text-xs transition-opacity card-anime-float ${source.isActive ? "" : "opacity-50"}`}
                     >
                       <button type="button" onClick={() => handlePreview(source)} className="flex-shrink-0 hover:opacity-80 transition-opacity rounded-lg overflow-hidden">
                         {renderThumbnail(source)}
@@ -1276,7 +1276,7 @@ export default function DataMinePageClient({
       <aside className="w-full lg:w-[32%] xl:max-w-[400px] shrink-0">
         <div className="lg:sticky lg:top-6">
           <div className="space-y-4">
-            <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="ingest-heading">
+            <section className="glass-card card-anime-float rounded-xl p-5" aria-labelledby="ingest-heading">
               <h2 id="ingest-heading" className="text-sm font-semibold text-foreground">Add source</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Upload files, paste text, or add URLs. Choose a label below.
@@ -1375,7 +1375,7 @@ export default function DataMinePageClient({
               </div>
             </section>
 
-            <section className="glass-card rounded-xl border border-[var(--glass-border)] p-5" aria-labelledby="auto-fill-heading">
+            <section className="glass-card card-anime-float rounded-xl p-5" aria-labelledby="auto-fill-heading">
               <h2 id="auto-fill-heading" className="text-sm font-semibold text-foreground">Auto-fill GEO profile</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Use your Sources to prefill company profile, brand entity, offerings, and branding.

@@ -26,7 +26,7 @@ export function WebinarCard({ webinar }: WebinarCardProps) {
       : '—';
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden p-4 hover:shadow-lg transition-shadow">
+    <div className="glass-card card-anime-float rounded-xl overflow-hidden p-4 hover:shadow-lg transition-shadow">
       <p className="text-sm font-medium text-foreground truncate" title={webinar.title}>
         {webinar.title}
       </p>

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Tooltip } from '../Tooltip';
 import { PixelatedButton } from './Buttons';
 
@@ -26,12 +27,49 @@ export function ViewMoreDropdown({
   align = 'right',
 }: ViewMoreDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    const el = containerRef.current;
+    if (!el || typeof document === 'undefined') return;
+    const rect = el.getBoundingClientRect();
+    const menuWidth = 160;
+    setPosition({
+      top: rect.bottom + 4,
+      left: align === 'right' ? rect.right - menuWidth : rect.left,
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    const handleResize = () => updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [open, align]);
+
+  useLayoutEffect(() => {
+    if (open) updatePosition();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const handleOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const container = containerRef.current;
+      const menu = ref.current;
+      if (
+        container && !container.contains(e.target as Node) &&
+        menu && !menu.contains(e.target as Node)
+      ) {
+        setOpen(false);
+        setPosition(null);
+      }
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
@@ -49,37 +87,44 @@ export function ViewMoreDropdown({
     </PixelatedButton>
   );
 
-  const close = () => setOpen(false);
+  const close = () => {
+    setOpen(false);
+    setPosition(null);
+  };
   const menuContent = typeof children === 'function' ? children(close) : children;
 
-  return (
-    <div ref={ref} className={`relative ${className}`.trim()}>
-      {tooltipContent ? (
-        <Tooltip content={tooltipContent}>{trigger}</Tooltip>
-      ) : (
-        trigger
-      )}
-      {open && (
-        <div
-          className={`absolute top-full mt-1 min-w-[160px] py-1 z-[100] ${
-            align === 'left' ? 'left-0' : 'right-0'
-          }`}
-          style={{
-            backgroundColor: 'rgba(219, 234, 254, 0.08)',   // blue-100 tint
-            border: '1px solid rgba(147, 197, 253, 0.25)',   // blue-300
-            boxShadow: `
-              2px 2px 0 0 rgba(59, 130, 246, 0.10),
-              0 4px 20px rgba(37, 99, 235, 0.08)
-            `,
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            borderRadius: '6px',
-          }}
-          role="menu"
-        >
-          {menuContent}
-        </div>
-      )}
+  const menuStyle: React.CSSProperties = {
+    top: position?.top ?? 0,
+    left: position?.left ?? 0,
+    backgroundColor: 'rgba(219, 234, 254, 0.08)',
+    border: '1px solid rgba(147, 197, 253, 0.25)',
+    boxShadow: '2px 2px 0 0 rgba(59, 130, 246, 0.10), 0 4px 20px rgba(37, 99, 235, 0.08)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    borderRadius: '6px',
+  };
+
+  const menuEl = open && typeof document !== 'undefined' && position && (
+    <div
+      ref={ref}
+      className="fixed min-w-[160px] py-1 z-[9999]"
+      style={menuStyle}
+      role="menu"
+    >
+      {menuContent}
     </div>
+  );
+
+  return (
+    <>
+      <div ref={containerRef} className={`relative ${className}`.trim()}>
+        {tooltipContent ? (
+          <Tooltip content={tooltipContent}>{trigger}</Tooltip>
+        ) : (
+          trigger
+        )}
+      </div>
+      {menuEl && createPortal(menuEl, document.body)}
+    </>
   );
 }

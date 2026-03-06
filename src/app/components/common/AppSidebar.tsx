@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTheme } from './ThemeProvider';
 
 /* ============================================
    ICONS (inline SVG to avoid extra deps)
@@ -74,6 +75,30 @@ const IconGlobe = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconRadar = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2a10 10 0 0 1 10 10" />
+    <path d="M12 2a10 10 0 0 0-10 10" />
+    <path d="M12 2v20" />
+    <path d="M2 12h20" />
+    <path d="M12 6a6 6 0 0 1 6 6" />
+    <path d="M12 6a6 6 0 0 0-6 6" />
+  </svg>
+);
+
+const IconSun = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
+  </svg>
+);
+
+const IconMoon = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
@@ -98,20 +123,18 @@ const PrimarySidebarIcon = ({
   onClick: () => void;
 }) => (
   <div className="flex flex-col items-center w-full select-none">
-    <button
-      type="button"
-      onClick={onClick}
-      title={label}
-      className={`
+        <button
+          type="button"
+          onClick={onClick}
+          title={label}
+          className={`
         relative flex items-center justify-center
-        w-10 h-10 rounded-xl
+        w-10 h-10 rounded-xl sidebar-icon
         transition-all duration-200
-        ${isActive
-          ? 'bg-primary/10 text-primary'
-          : 'text-muted-foreground hover:text-foreground'
-        }
+        ${isActive ? 'active' : ''}
+        ${isActive ? 'text-[var(--sibling-primary)]' : 'text-muted-foreground hover:text-foreground'}
       `}
-    >
+        >
       <Icon className="w-5 h-5" />
     </button>
     <span className="mt-0.5 text-[10px] leading-none text-center text-muted-foreground">
@@ -147,7 +170,7 @@ const SecondaryNavItem = ({
         }
       `}
     >
-      {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-primary' : ''}`} />}
+      {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[var(--sibling-primary)]' : ''}`} />}
       <span className="flex-1 truncate">{label}</span>
     </Link>
   );
@@ -155,7 +178,7 @@ const SecondaryNavItem = ({
 
 const SectionLabel = ({ label }: { label: string }) => (
   <div className="flex items-center justify-between px-3 pt-4 pb-1.5">
-    <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+    <span className="text-[11px] font-semibold text-[var(--sibling-accent)] uppercase tracking-wider">
       {label}
     </span>
   </div>
@@ -187,6 +210,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SectionLabel label="GEO" />
           <SecondaryNavItem icon={IconLayoutDashboard} label="Data Mine" href="/geo/data-mine" />
           <SecondaryNavItem icon={IconLayoutDashboard} label="Info Spread" href="/geo/info-spread" />
+          <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
         </>
       );
     default:
@@ -205,6 +229,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -252,12 +277,12 @@ export default function AppSidebar() {
       {/* Primary Sidebar */}
       <aside className="w-16 flex-shrink-0 glass-sidebar flex flex-col items-center py-4 z-20">
         <div className="mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--sibling-primary)] to-[var(--sibling-primary-dark)] flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg">
             I
           </div>
         </div>
 
-        <div className="w-8 h-px bg-[var(--glass-border)] mb-4" />
+        <div className="w-8 h-px bg-[var(--sidebar-glass-border)] mb-4" />
 
         <nav className="flex-1 flex flex-col items-center gap-2">
           {MAIN_SECTIONS.map((section) => (
@@ -274,9 +299,20 @@ export default function AppSidebar() {
         <div className="mt-auto pt-4 flex flex-col items-center gap-2">
           <button
             type="button"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+          >
+            {theme === 'dark' ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
+          </button>
+          <span className="text-[10px] leading-none text-center text-muted-foreground">
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </span>
+          <button
+            type="button"
             onClick={handleLogout}
             title="Log out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
+            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           >
             <IconLogOut className="w-5 h-5" />
           </button>
@@ -290,14 +326,14 @@ export default function AppSidebar() {
           className="flex-shrink-0 glass-sidebar-secondary flex flex-col h-screen overflow-hidden w-56"
           style={{ minWidth: 224 }}
         >
-          <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between">
+          <div className="p-4 nav-section-header flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
               {currentSection?.label ?? 'Navigation'}
             </h2>
             <button
               type="button"
               onClick={() => setSidebarCollapsed(true)}
-              className="p-1 rounded hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1 rounded hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
               title="Collapse sidebar"
             >
               <IconChevronLeft className="w-4 h-4" />
@@ -308,7 +344,7 @@ export default function AppSidebar() {
             <SecondarySidebarContent activeSection={activeSection} />
           </nav>
 
-          <div className="p-3 border-t border-[var(--glass-border)]">
+          <div className="p-3 border-t border-[var(--sidebar-secondary-glass-border)]">
             <button
               type="button"
               onClick={handleLogout}

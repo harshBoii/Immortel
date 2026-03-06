@@ -49,7 +49,7 @@ export function UploadSection({ onFilesSelected, disabled }: UploadSectionProps)
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={`
-        glass-card p-6 rounded-xl border-2 border-dashed transition-all
+        glass-card card-anime-float p-6 rounded-xl border-2 border-dashed transition-all
         ${isDragging ? 'border-primary/50 bg-primary/5' : 'border-[var(--glass-border)]'}
         ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
       `}

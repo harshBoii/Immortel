@@ -51,14 +51,14 @@ const variantStyles: Record<
     hoverText: '#7f1d1d',   // red-900
   },
   viewMore: {
-    bg: 'rgba(196, 181, 253, 0.06)',
-    border: 'rgba(196, 181, 253, 0.22)',
-    hoverBorder: 'rgba(124, 58, 237, 0.55)',    // violet-600
-    shadow: 'rgba(167, 139, 250, 0.10)',
-    hoverBg: 'rgba(196, 181, 253, 0.11)',
-    activeShadow: 'rgba(139, 92, 246, 0.16)',
-    text: '#4c1d95',        // violet-900 — dark indigo at rest
-    hoverText: '#3b0764',   // even deeper on hover
+    bg: 'color-mix(in oklch, var(--sibling-primary) 12%, transparent)',
+    border: 'color-mix(in oklch, var(--sibling-primary) 35%, transparent)',
+    hoverBorder: 'var(--sibling-primary)',
+    shadow: 'color-mix(in oklch, var(--sibling-primary) 22%, transparent)',
+    hoverBg: 'color-mix(in oklch, var(--sibling-primary) 20%, transparent)',
+    activeShadow: 'color-mix(in oklch, var(--sibling-primary) 32%, transparent)',
+    text: 'var(--sibling-primary)',
+    hoverText: 'var(--sibling-primary-dark)',
   },
 };
 

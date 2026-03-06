@@ -59,7 +59,7 @@ export function ReelCard({ reel, onApprove, onReject }: ReelCardProps) {
   const isRejected = reel.approved === false;
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden group hover:shadow-lg transition-shadow">
+    <div className="glass-card card-anime-float rounded-xl overflow-hidden group hover:shadow-lg transition-shadow">
       <div className="aspect-video bg-muted/50 relative">
         {reel.thumbnailUrl ? (
           <img

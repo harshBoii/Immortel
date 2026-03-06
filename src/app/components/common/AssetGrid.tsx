@@ -14,7 +14,7 @@ type AssetGridProps = {
 export function AssetGrid({ assets, onApprove, onReject, onAssetClick, onViewVideo }: AssetGridProps) {
   if (assets.length === 0) {
     return (
-      <div className="glass-card rounded-xl p-12 text-center">
+      <div className="glass-card card-anime-float rounded-xl p-12 text-center">
         <p className="text-muted-foreground text-sm">No assets yet</p>
         <p className="text-xs text-muted-foreground mt-1">Upload videos, images, or documents above</p>
       </div>

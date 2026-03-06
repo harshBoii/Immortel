@@ -138,6 +138,8 @@ model Company {
   citationBounties CitationBounty[]
   geoDataSources   GeoDataSource[]
   aeoGenerationProfiles AeoGenerationProfile[]
+  Citations Citation[]
+  LlmRadarMetrics LlmRadarMetric[]
 
   // ── Brand identity (optional 1-to-1) ─────────────
   branding          CompanyBranding?
@@ -873,4 +875,111 @@ model GeoDataSource {
   @@index([companyId])
   @@index([sourceType])
   @@map("geo_data_sources")
+}
+
+// ============================================================
+// Citation
+// ============================================================
+
+model Prompt {
+  id        String @id @default(cuid())
+
+  query     String @db.Text
+
+  topic     String? @db.VarChar(255)
+  topicId   String?
+  llmTopic  LlmTopic? @relation("LlmTopicPrompts", fields: [topicId], references: [id], onDelete: SetNull)
+  intent    String? @db.VarChar(100)
+
+  isActive  Boolean @default(true)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  executions PromptExecution[]
+
+  @@index([intent])
+  @@index([topic])
+  @@index([topicId])
+  @@map("llm_prompts")
+}
+
+model PromptExecution {
+  id        String @id @default(cuid())
+
+  promptId  String
+  prompt    Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  model     String  @db.VarChar(100)   // gpt, claude, gemini
+  response  String  @db.Text
+
+  executedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  citations Citation[]
+
+  @@index([promptId])
+  @@index([model])
+  @@index([executedAt])
+  @@map("llm_prompt_executions")
+}
+
+  model Citation {
+  id String @id @default(cuid())
+
+  executionId String
+  execution   PromptExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  mentionedName String @db.VarChar(255)
+
+  rank Int?
+
+  context String? @db.VarChar(100)
+
+  confidence Float?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([executionId])
+  @@index([companyId])
+  @@index([rank])
+  @@map("llm_citations")
+}
+
+model LlmTopic {
+  id String @id @default(cuid())
+
+  name        String  @unique @db.VarChar(255)
+  description String? @db.Text
+
+  prompts Prompt[] @relation("LlmTopicPrompts")
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@map("llm_topics")
+}
+
+model LlmRadarMetric {
+  id String @id @default(cuid())
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  model String @db.VarChar(100) // GPT, Claude etc
+
+  shareOfVoice    Float?
+  top3Rate        Float?
+  queryCoverage   Float?
+  avgRank         Float?
+  competitorRank  Float?
+  topicAuthority  Float?
+
+  calculatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([companyId])
+  @@index([model])
+  @@index([companyId, calculatedAt(sort: Desc)])
+  @@map("llm_radar_metrics")
 }

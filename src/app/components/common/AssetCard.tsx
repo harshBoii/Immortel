@@ -93,7 +93,7 @@ export function AssetCard({ asset, onApprove, onReject, onClick, onViewVideo }: 
       tabIndex={canOpenModal ? 0 : undefined}
       onClick={canOpenModal ? () => onClick?.(asset) : undefined}
       onKeyDown={canOpenModal ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(asset); } } : undefined}
-      className={`glass-card rounded-xl group hover:shadow-lg transition-shadow ${canOpenModal ? 'cursor-pointer' : ''}`}
+      className={`glass-card card-anime-float rounded-xl group hover:shadow-lg transition-shadow ${canOpenModal ? 'cursor-pointer' : ''}`}
     >
       {/* Thumbnail */}
       <div className="aspect-video bg-muted/50 relative overflow-hidden rounded-t-xl">

@@ -26,7 +26,7 @@ function formatDate(value: string | Date | undefined) {
 
 export function RecentHistory({ items }: RecentHistoryProps) {
   return (
-    <div className="glass-card rounded-xl overflow-hidden h-fit">
+    <div className="glass-card card-anime-float rounded-xl overflow-hidden h-fit">
       <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Recent history</h3>
       </div>

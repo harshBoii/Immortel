@@ -186,7 +186,7 @@ export default function IngestionPage() {
             />
             <div className="mt-4">
               {loading ? (
-                <div className="glass-card rounded-xl p-12 text-center text-muted-foreground text-sm">Loading…</div>
+                <div className="glass-card card-anime-float rounded-xl p-12 text-center text-muted-foreground text-sm">Loading…</div>
               ) : viewMode === 'raw' ? (
                 <AssetGrid
                   assets={assets}
@@ -214,12 +214,12 @@ export default function IngestionPage() {
         </div>
 
         <aside className="lg:w-96 flex-shrink-0 space-y-6">
-          <div className="glass-card rounded-xl p-4">
+          <div className="glass-card card-anime-float rounded-xl p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">Content usage</h3>
             <p className="text-xs text-muted-foreground mb-3">Webinar vs Shorts by subpath</p>
             <WebinarVsShortsChart data={contentUsage} />
           </div>
-          <div className="glass-card rounded-xl p-4">
+          <div className="glass-card card-anime-float rounded-xl p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">Asset approval</h3>
             <p className="text-xs text-muted-foreground mb-3">Approved vs Rejected vs Pending</p>
             <ApprovedAssetsPieChart data={approvalStats} />

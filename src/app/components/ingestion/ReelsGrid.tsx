@@ -37,7 +37,7 @@ export function ReelsGrid({ reels, onApprove, onReject, onViewVideo }: ReelsGrid
 
   if (reels.length === 0) {
     return (
-      <div className="glass-card rounded-xl p-12 text-center">
+      <div className="glass-card card-anime-float rounded-xl p-12 text-center">
         <p className="text-muted-foreground text-sm">No reels yet</p>
         <p className="text-xs text-muted-foreground mt-1">Generate shorts from a video with intelligence ready</p>
       </div>
