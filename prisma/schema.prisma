@@ -110,6 +110,11 @@ enum GeoSourceType {
   URL
 }
 
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
 // ============================================================
 // COMPANY
 // ============================================================
@@ -953,6 +958,8 @@ model LlmTopic {
 
   name        String  @unique @db.VarChar(255)
   description String? @db.Text
+
+  difficulty  Difficulty @default(MEDIUM)
 
   prompts Prompt[] @relation("LlmTopicPrompts")
 

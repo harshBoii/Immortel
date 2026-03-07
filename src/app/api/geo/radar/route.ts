@@ -200,6 +200,19 @@ export async function POST() {
     })),
   });
 
+  // Persist output.topics into LlmTopic (upsert by name)
+  const topicNames = [...new Set((radarOutput.topics ?? []).filter((t): t is string => Boolean(t?.trim())))];
+  const topicIdMap = new Map<string, string>();
+  for (const name of topicNames) {
+    const topic = await prisma.llmTopic.upsert({
+      where: { name },
+      create: { name, description: null },
+      update: {},
+      select: { id: true },
+    });
+    topicIdMap.set(name, topic.id);
+  }
+
   const uniquePrompts = [...new Set(radarOutput.citations.map((c) => c.prompt))];
   const existingPrompts = uniquePrompts.length
     ? await prisma.prompt.findMany({
@@ -215,10 +228,12 @@ export async function POST() {
 
   for (const promptQuery of uniquePrompts) {
     if (promptMap.has(promptQuery)) continue;
+    const topicId = topicIdMap.get(promptQuery) ?? null;
     const created = await prisma.prompt.create({
       data: {
         query: promptQuery,
         topic: promptQuery,
+        topicId,
         isActive: true,
       },
     });
