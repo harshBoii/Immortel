@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
   // Shop hasn't completed OAuth yet → kick off the install flow
   if (!shopRecord || shopRecord.status !== "installed") {
     console.log("[Shopify Auth] Shop not installed, redirecting to install:", shop);
-    const installUrl = new URL("/api/shopify/install", request.url);
+    const installUrl = new URL("/shopify/install", request.url);
     installUrl.searchParams.set("shop", shop);
     return NextResponse.redirect(installUrl.toString());
   }

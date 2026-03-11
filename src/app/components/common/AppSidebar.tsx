@@ -249,7 +249,7 @@ export default function AppSidebar() {
     if (!confirm('Disconnect your Shopify store? You can reconnect later.')) return;
     setDisconnecting(true);
     try {
-      const res = await fetch('/api/shopify/disconnect', { method: 'POST', credentials: 'include' });
+      const res = await fetch('/shopify/disconnect', { method: 'POST', credentials: 'include' });
       if (res.ok) {
         refetch();
       } else {
