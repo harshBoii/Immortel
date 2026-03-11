@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
 
   const installUrl = buildInstallUrl(shop, state);
 
+  console.log("[Shopify Install] shop:", shop);
+  console.log("[Shopify Install] redirect URL (installUrl):", installUrl);
+
   return NextResponse.redirect(installUrl);
 }
 

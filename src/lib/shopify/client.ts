@@ -22,6 +22,8 @@ export function buildInstallUrl(shopDomain: string, state: string): string {
   const { SHOPIFY_API_KEY, scopes, redirectUri } = getShopifyConfig();
   const shop = normalizeShopDomain(shopDomain);
 
+  console.log("[Shopify buildInstallUrl] redirect_uri being used:", redirectUri);
+
   const url = new URL(`https://${shop}/admin/oauth/authorize`);
   url.searchParams.set("client_id", SHOPIFY_API_KEY);
   url.searchParams.set("scope", scopes.join(","));
