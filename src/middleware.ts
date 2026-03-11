@@ -21,8 +21,9 @@ export function middleware(request: NextRequest) {
   const isMicroservicesApi = pathname.startsWith('/api/receive-intel');
   const isDataMineApi = pathname.startsWith('/api/geo/company-data');
   const isShopifyOAuth = pathname.startsWith('/shopify/');
+  const isShopifyApi = pathname.startsWith('/api/shopify/');
   
-  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi || isShopifyOAuth;
+  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi || isShopifyOAuth || isShopifyApi;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {

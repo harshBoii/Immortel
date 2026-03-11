@@ -19,15 +19,17 @@ type AppContextState = {
   error: string | null;
   company: CompanySummary | null;
   shopify: ShopifySummary | null;
+  refetch: () => void;
 };
 
 export function useCurrentContext(): AppContextState {
-  const [state, setState] = useState<AppContextState>({
+  const [state, setState] = useState<Omit<AppContextState, 'refetch'>>({
     loading: true,
     error: null,
     company: null,
     shopify: null,
   });
+  const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,8 +74,11 @@ export function useCurrentContext(): AppContextState {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchKey]);
 
-  return state;
+  return {
+    ...state,
+    refetch: () => setFetchKey((k) => k + 1),
+  };
 }
 

@@ -242,7 +242,25 @@ export default function AppSidebar() {
   const { theme, toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-   const { company, shopify } = useCurrentContext();
+   const { company, shopify, refetch } = useCurrentContext();
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const handleDisconnectShopify = async () => {
+    if (!confirm('Disconnect your Shopify store? You can reconnect later.')) return;
+    setDisconnecting(true);
+    try {
+      const res = await fetch('/api/shopify/disconnect', { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        refetch();
+      } else {
+        console.error('Disconnect failed');
+      }
+    } catch (err) {
+      console.error('Disconnect error:', err);
+    } finally {
+      setDisconnecting(false);
+    }
+  };
 
   const getFirstRoute = (sectionId: string) => {
     switch (sectionId) {
@@ -369,16 +387,26 @@ export default function AppSidebar() {
                 <div className="truncate text-[11px] text-muted-foreground/90">
                   {company.email}
                 </div>
-                <div className="mt-2 text-[11px] flex items-center justify-between gap-2">
+                <div className="mt-2 text-[11px]">
                   {shopify ? (
-                    <>
-                      <span className="font-semibold text-emerald-400">
-                        Shopify
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium truncate">
-                        {shopify.shopDomain}
-                      </span>
-                    </>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-emerald-400">
+                          Shopify
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium truncate">
+                          {shopify.shopDomain}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleDisconnectShopify}
+                        disabled={disconnecting}
+                        className="w-full text-[10px] font-medium text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-md py-1 transition-colors disabled:opacity-50"
+                      >
+                        {disconnecting ? 'Disconnecting…' : 'Disconnect store'}
+                      </button>
+                    </div>
                   ) : (
                     <Link
                       href="/connect-shopify"
