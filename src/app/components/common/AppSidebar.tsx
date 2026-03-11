@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from './ThemeProvider';
+import { useCurrentContext } from './useCurrentContext';
 
 /* ============================================
    ICONS (inline SVG to avoid extra deps)
@@ -241,6 +242,7 @@ export default function AppSidebar() {
   const { theme, toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+   const { company, shopify } = useCurrentContext();
 
   const getFirstRoute = (sectionId: string) => {
     switch (sectionId) {
@@ -353,7 +355,42 @@ export default function AppSidebar() {
             <SecondarySidebarContent activeSection={activeSection} />
           </nav>
 
-          <div className="p-3 border-t border-[var(--sidebar-secondary-glass-border)]">
+          <div className="p-3 border-t border-[var(--sidebar-secondary-glass-border)] space-y-3 bg-[var(--glass-hover)]/40">
+            {company && (
+              <div className="text-xs text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="font-semibold text-foreground truncate">
+                    {company.name}
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)]">
+                    Workspace
+                  </span>
+                </div>
+                <div className="truncate text-[11px] text-muted-foreground/90">
+                  {company.email}
+                </div>
+                <div className="mt-2 text-[11px] flex items-center justify-between gap-2">
+                  {shopify ? (
+                    <>
+                      <span className="font-semibold text-emerald-400">
+                        Shopify
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium truncate">
+                        {shopify.shopDomain}
+                      </span>
+                    </>
+                  ) : (
+                    <Link
+                      href="/connect-shopify"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      <span>Connect Shopify store</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={handleLogout}

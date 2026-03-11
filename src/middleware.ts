@@ -20,8 +20,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/api/videos') && pathname.endsWith('/download');
   const isMicroservicesApi = pathname.startsWith('/api/receive-intel');
   const isDataMineApi = pathname.startsWith('/api/geo/company-data');
+  const isShopifyOAuth = pathname.startsWith('/shopify/');
   
-  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi;
+  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi || isShopifyOAuth;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {

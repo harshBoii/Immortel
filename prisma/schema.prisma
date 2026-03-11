@@ -145,6 +145,7 @@ model Company {
   aeoGenerationProfiles AeoGenerationProfile[]
   Citations Citation[]
   LlmRadarMetrics LlmRadarMetric[]
+  shopifyShops    ShopifyShop[]
 
   // ── Brand identity (optional 1-to-1) ─────────────
   branding          CompanyBranding?
@@ -989,4 +990,32 @@ model LlmRadarMetric {
   @@index([model])
   @@index([companyId, calculatedAt(sort: Desc)])
   @@map("llm_radar_metrics")
+}
+
+// ============================================================
+// SHOPIFY INTEGRATION
+// ============================================================
+
+model ShopifyShop {
+  id          String   @id @default(cuid())
+
+  // Tenant / ownership
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Shopify identifiers & credentials
+  shopDomain  String   @unique @db.VarChar(255) // e.g. "my-store.myshopify.com"
+  accessToken String   @db.VarChar(500)
+  scopes      String[] @default([])
+
+  // Lifecycle
+  status        String   @default("installed") @db.VarChar(50) // installed, uninstalled, paused, etc.
+  installedAt   DateTime @default(now()) @db.Timestamptz(3)
+  uninstalledAt DateTime? @db.Timestamptz(3)
+
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([companyId])
+  @@map("shopify_shops")
 }
