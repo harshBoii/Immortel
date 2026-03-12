@@ -108,6 +108,14 @@ const IconMoon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconShop = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 9l1-5h16l1 5" />
+    <path d="M5 9l1 11h12l1-11" />
+    <path d="M9 13h6" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
@@ -115,6 +123,7 @@ const MAIN_SECTIONS = [
   { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
   { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
+  { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
 ];
 
 /* ============================================
@@ -223,6 +232,13 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
         </>
       );
+    case 'shop':
+      return (
+        <>
+          <SectionLabel label="Shop Intel" />
+          <SecondaryNavItem icon={IconLayoutDashboard} label="Products" href="/shop/products" />
+        </>
+      );
     default:
       return (
         <>
@@ -270,6 +286,8 @@ export default function AppSidebar() {
         return '/ingestion';
       case 'geo':
         return '/geo/data-mine';
+      case 'shop':
+        return '/shop/products';
       default:
         return '/';
     }
@@ -295,6 +313,7 @@ export default function AppSidebar() {
     if (pathname === '/') setActiveSection('home');
     else if (pathname?.startsWith('/ingestion')) setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo')) setActiveSection('geo');
+    else if (pathname?.startsWith('/shop')) setActiveSection('shop');
     else setActiveSection('home');
   }, [pathname]);
 
