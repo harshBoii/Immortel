@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
 
@@ -15,9 +15,7 @@ export async function GET(
     );
   }
 
-  const {
-    params: { id },
-  } = context;
+  const { id } = await context.params;
 
   const product = await (prisma as any).shopifyProduct.findFirst({
     where: {
