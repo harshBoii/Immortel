@@ -1,14 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-type RouteParams = {
-  params: {
-    id: string;
-  };
-};
-
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(
+  _request: NextRequest,
+  context: { params: { id: string } }
+) {
   const session = await getSession();
 
   if (!session?.companyId) {
@@ -18,7 +15,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
     );
   }
 
-  const { id } = await params;
+  const {
+    params: { id },
+  } = context;
 
   const product = await (prisma as any).shopifyProduct.findFirst({
     where: {
