@@ -146,6 +146,7 @@ model Company {
   Citations Citation[]
   LlmRadarMetrics LlmRadarMetric[]
   shopifyShops    ShopifyShop[]
+  shopifyProducts ShopifyProduct[]
 
   // ── Brand identity (optional 1-to-1) ─────────────
   branding          CompanyBranding?
@@ -1016,6 +1017,45 @@ model ShopifyShop {
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
+  products   ShopifyProduct[]
+
   @@index([companyId])
   @@map("shopify_shops")
+}
+
+model ShopifyProduct {
+  id            String   @id @default(cuid())
+
+  // Link back to shop and company
+  shopId        String
+  shop          ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  companyId     String
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  // Shopify identifiers
+  shopifyGid    String   @unique @db.VarChar(255) // e.g. gid://shopify/Product/123
+
+  // Core fields
+  title         String   @db.VarChar(500)
+  status        String   @db.VarChar(50)
+  handle        String   @db.VarChar(255)
+  totalInventory Int      @default(0)
+  onlineStoreUrl String? @db.VarChar(1000)
+
+  // Pricing snapshot
+  priceMinAmount String? @db.VarChar(64)
+  priceMaxAmount String? @db.VarChar(64)
+  currencyCode   String? @db.VarChar(10)
+
+  // Shopify timestamps
+  shopifyCreatedAt DateTime @db.Timestamptz(3)
+  shopifyUpdatedAt DateTime @db.Timestamptz(3)
+
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([shopId])
+  @@index([companyId])
+  @@index([status])
+  @@map("shopify_products")
 }

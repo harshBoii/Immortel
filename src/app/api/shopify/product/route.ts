@@ -36,18 +36,34 @@ export async function GET() {
             id
             title
             status
-            handle
             totalInventory
             onlineStoreUrl
             createdAt
             updatedAt
+            priceRangeV2 {
+              minVariantPrice {
+                amount
+                currencyCode
+              }
+              maxVariantPrice {
+                amount
+                currencyCode
+              }
+            }
+            variants(first: 1) {
+              edges {
+                node {
+                  price
+                }
+              }
+            }
           }
         }
       }
     }
   `;
 
-  let responseJson: unknown;
+  let responseJson: any;
 
   try {
     const res = await fetch(url, {
@@ -81,6 +97,52 @@ export async function GET() {
       { success: false, error: "Failed to contact Shopify API" },
       { status: 502 }
     );
+  }
+
+  // Persist/update products snapshot in DB for this shop & company
+  try {
+    const edges: any[] = responseJson?.data?.products?.edges ?? [];
+
+    for (const edge of edges) {
+      const node = edge?.node;
+      if (!node?.id) continue;
+
+      const priceMin = node.priceRangeV2?.minVariantPrice;
+      const priceMax = node.priceRangeV2?.maxVariantPrice;
+
+      await (prisma as any).shopifyProduct.upsert({
+        where: { shopifyGid: node.id as string },
+        create: {
+          shopifyGid: node.id as string,
+          shopId: shop.id,
+          companyId: shop.companyId,
+          title: node.title ?? "",
+          status: node.status ?? "UNKNOWN",
+          handle: node.handle ?? "",
+          totalInventory: node.totalInventory ?? 0,
+          onlineStoreUrl: node.onlineStoreUrl ?? null,
+          priceMinAmount: priceMin?.amount ?? null,
+          priceMaxAmount: priceMax?.amount ?? null,
+          currencyCode: priceMin?.currencyCode ?? priceMax?.currencyCode ?? null,
+          shopifyCreatedAt: new Date(node.createdAt),
+          shopifyUpdatedAt: new Date(node.updatedAt),
+        },
+        update: {
+          title: node.title ?? "",
+          status: node.status ?? "UNKNOWN",
+          handle: node.handle ?? "",
+          totalInventory: node.totalInventory ?? 0,
+          onlineStoreUrl: node.onlineStoreUrl ?? null,
+          priceMinAmount: priceMin?.amount ?? null,
+          priceMaxAmount: priceMax?.amount ?? null,
+          currencyCode: priceMin?.currencyCode ?? priceMax?.currencyCode ?? null,
+          shopifyCreatedAt: new Date(node.createdAt),
+          shopifyUpdatedAt: new Date(node.updatedAt),
+        },
+      });
+    }
+  } catch (err) {
+    console.error("Failed to upsert Shopify products into DB:", err);
   }
 
   return NextResponse.json({

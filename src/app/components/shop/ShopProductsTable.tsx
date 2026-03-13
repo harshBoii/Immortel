@@ -7,8 +7,11 @@ type ProductNode = {
   handle: string;
   totalInventory: number;
   onlineStoreUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
+  priceMinAmount: string | null;
+  priceMaxAmount: string | null;
+  currencyCode: string | null;
+  shopifyCreatedAt: string;
+  shopifyUpdatedAt: string;
 };
 
 type Props = {
@@ -38,8 +41,8 @@ export function ShopProductsTable({ products }: Props) {
             <tr>
               <Th>Title</Th>
               <Th>Status</Th>
+              <Th>Price</Th>
               <Th>Inventory</Th>
-              <Th>Handle</Th>
               <Th>Created</Th>
               <Th>Updated</Th>
             </tr>
@@ -49,6 +52,16 @@ export function ShopProductsTable({ products }: Props) {
               const statusClass =
                 statusBadgeClasses[p.status] ?? 'bg-[var(--glass-hover)] text-foreground border-transparent';
               const isOutOfStock = p.status === 'ACTIVE' && (p.totalInventory ?? 0) === 0;
+
+              const currency = p.currencyCode ?? '';
+              const priceMin = p.priceMinAmount ? parseFloat(p.priceMinAmount) : null;
+              const priceMax = p.priceMaxAmount ? parseFloat(p.priceMaxAmount) : null;
+              const priceDisplay =
+                priceMin != null && priceMax != null
+                  ? priceMin === priceMax
+                    ? `${currency} ${priceMin.toFixed(2)}`
+                    : `${currency} ${priceMin.toFixed(2)} – ${priceMax.toFixed(2)}`
+                  : '—';
 
               return (
                 <tr
@@ -78,6 +91,11 @@ export function ShopProductsTable({ products }: Props) {
                     </span>
                   </Td>
                   <Td>
+                    <span className="font-medium text-foreground text-sm">
+                      {priceDisplay}
+                    </span>
+                  </Td>
+                  <Td>
                     <span
                       className={
                         isOutOfStock
@@ -88,13 +106,8 @@ export function ShopProductsTable({ products }: Props) {
                       {p.totalInventory}
                     </span>
                   </Td>
-                  <Td>
-                    <code className="text-[11px] bg-[var(--glass-hover)] px-2 py-0.5 rounded-md">
-                      {p.handle}
-                    </code>
-                  </Td>
-                  <Td>{new Date(p.createdAt).toLocaleDateString()}</Td>
-                  <Td>{new Date(p.updatedAt).toLocaleDateString()}</Td>
+                  <Td>{new Date(p.shopifyCreatedAt).toLocaleDateString()}</Td>
+                  <Td>{new Date(p.shopifyUpdatedAt).toLocaleDateString()}</Td>
                 </tr>
               );
             })}

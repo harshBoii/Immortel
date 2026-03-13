@@ -7,25 +7,23 @@ import { ShopProductsTable } from '@/app/components/shop/ShopProductsTable';
 
 type ProductNode = {
   id: string;
+  shopifyGid: string;
   title: string;
   status: string;
   handle: string;
   totalInventory: number;
   onlineStoreUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
+  priceMinAmount: string | null;
+  priceMaxAmount: string | null;
+  currencyCode: string | null;
+  shopifyCreatedAt: string;
+  shopifyUpdatedAt: string;
 };
 
 type ApiResponse =
   | {
       success: true;
-      data: {
-        data?: {
-          products?: {
-            edges?: { node: ProductNode }[];
-          };
-        };
-      };
+      data: ProductNode[];
     }
   | {
       success: false;
@@ -36,6 +34,7 @@ export default function ShopProductsPage() {
   const [products, setProducts] = useState<ProductNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +43,7 @@ export default function ShopProductsPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/api/shopify/product', { credentials: 'include' });
+        const res = await fetch('/api/shop/products', { credentials: 'include' });
         const json: ApiResponse = await res.json();
 
         if (!res.ok || !json.success) {
@@ -53,10 +52,8 @@ export default function ShopProductsPage() {
           return;
         }
 
-        const edges = json.data?.data?.products?.edges ?? [];
-        const nodes = edges.map((e) => e.node);
         if (!cancelled) {
-          setProducts(nodes);
+          setProducts(json.data);
         }
       } catch (err) {
         console.error('Failed to fetch Shopify products', err);
@@ -73,6 +70,32 @@ export default function ShopProductsPage() {
     };
   }, []);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      // Trigger a fresh sync from Shopify into our DB
+      await fetch('/api/shopify/product', { credentials: 'include' });
+      // Then reload from our products table
+      const res = await fetch('/api/shop/products', { credentials: 'include' });
+      const json: ApiResponse = await res.json();
+      if (!res.ok || !json.success) {
+        const message =
+          (!res.ok && 'Failed to refresh products') ||
+          ('error' in json && json.error) ||
+          'Failed to refresh products';
+        setError(message);
+        return;
+      }
+      setProducts(json.data);
+    } catch (err) {
+      console.error('Failed to refresh Shopify products', err);
+      setError('Failed to refresh Shopify products');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto min-h-[60vh] px-6 pb-6 pt-2">
       <div className="flex items-start justify-between gap-4">
@@ -83,6 +106,16 @@ export default function ShopProductsPage() {
           <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
             Live snapshot of your connected Shopify catalog, with product status and inventory insights.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="px-3 py-2 rounded-lg text-xs font-medium border border-[var(--glass-border)] bg-[var(--glass-hover)] hover:bg-[var(--glass-hover)]/80 text-foreground transition-colors disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh feed'}
+          </button>
         </div>
       </div>
 
