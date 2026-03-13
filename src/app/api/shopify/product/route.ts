@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeShopDomain } from "@/lib/shopify/client";
+import { indexProduct } from "@/lib/productsIndex";
 
 const API_VERSION = "2024-10";
 
@@ -110,7 +111,7 @@ export async function GET() {
       const priceMin = node.priceRangeV2?.minVariantPrice;
       const priceMax = node.priceRangeV2?.maxVariantPrice;
 
-      await (prisma as any).shopifyProduct.upsert({
+      const product = await (prisma as any).shopifyProduct.upsert({
         where: { shopifyGid: node.id as string },
         create: {
           shopifyGid: node.id as string,
@@ -140,6 +141,12 @@ export async function GET() {
           shopifyUpdatedAt: new Date(node.updatedAt),
         },
       });
+
+      try {
+        await indexProduct(product);
+      } catch (err) {
+        console.error("Failed to index Shopify product in Elasticsearch:", err);
+      }
     }
   } catch (err) {
     console.error("Failed to upsert Shopify products into DB:", err);
