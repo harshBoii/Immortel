@@ -153,7 +153,6 @@ export async function searchProductsInElasticsearch(params: {
 
   const hits = response.hits.hits.map((hit) => {
     return {
-      id: hit._id,
       ...(hit._source as ShopifyProduct),
     };
   });
