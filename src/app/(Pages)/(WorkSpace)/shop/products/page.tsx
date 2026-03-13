@@ -35,6 +35,8 @@ export default function ShopProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +98,69 @@ export default function ShopProductsPage() {
     }
   };
 
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) {
+      // If query is cleared, reload base list from products table
+      setSearching(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/shop/products', { credentials: 'include' });
+        const json: ApiResponse = await res.json();
+        if (!res.ok || !json.success) {
+          const message =
+            (!res.ok && 'Failed to load products') ||
+            ('error' in json && json.error) ||
+            'Failed to load products';
+          setError(message);
+          return;
+        }
+        setProducts(json.data);
+      } catch (err) {
+        console.error('Failed to fetch Shopify products', err);
+        setError('Failed to fetch Shopify products');
+      } finally {
+        setSearching(false);
+      }
+      return;
+    }
+
+    setSearching(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/mcp/products/search', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          query,
+          page: 1,
+          pageSize: 50,
+        }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        const message =
+          (!res.ok && 'Failed to search products') ||
+          (json && json.error) ||
+          'Failed to search products';
+        setError(message);
+        return;
+      }
+
+      setProducts(json.data as ProductNode[]);
+    } catch (err) {
+      console.error('Failed to search products', err);
+      setError('Failed to search products');
+    } finally {
+      setSearching(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto min-h-[60vh] px-6 pb-6 pt-2">
       <div className="flex items-start justify-between gap-4">
@@ -107,7 +172,23 @@ export default function ShopProductsPage() {
             Live snapshot of your connected Shopify catalog, with product status and inventory insights.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <form onSubmit={handleSearch} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder='Search products (e.g. "black shoes", "shoes under 5000")'
+              className="px-3 py-2 rounded-lg text-xs bg-[var(--glass-hover)] border border-[var(--glass-border)] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)] min-w-[260px]"
+            />
+            <button
+              type="submit"
+              disabled={searching}
+              className="px-3 py-2 rounded-lg text-xs font-medium border border-[var(--glass-border)] bg-[var(--sibling-primary)]/90 hover:bg-[var(--sibling-primary)] text-white transition-colors disabled:opacity-50"
+            >
+              {searching ? 'Searching…' : 'Search'}
+            </button>
+          </form>
           <button
             type="button"
             onClick={handleRefresh}
