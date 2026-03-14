@@ -23,7 +23,10 @@ export function middleware(request: NextRequest) {
   const isShopifyOAuth = pathname.startsWith('/shopify/');
   const isShopifyApi = pathname.startsWith('/api/shopify/');
   
-  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi || isShopifyOAuth || isShopifyApi;
+  const isMcpApi = pathname.startsWith('/api/mcp/');
+  const isPayPage = pathname.startsWith('/pay/');
+
+  const isPublic = isLoginPage || isAuthApi || isCronApi || isVideosDownloadApi || isMicroservicesApi || isDataMineApi || isShopifyOAuth || isShopifyApi || isMcpApi || isPayPage;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { resolveCompany } from "@/lib/mcpCompanyResolver";
 import { searchProductsInElasticsearch } from "@/lib/productSearch";
 
 type SearchBody = {
   query: string;
+  companyId?: string;
+  companyName?: string;
   page?: number;
   pageSize?: number;
   status?: string[];
@@ -14,15 +16,6 @@ type SearchBody = {
 };
 
 export async function POST(request: Request) {
-  const session = await getSession();
-
-  if (!session?.companyId) {
-    return NextResponse.json(
-      { success: false, error: "Not authenticated" },
-      { status: 401 }
-    );
-  }
-
   let body: SearchBody;
   try {
     body = (await request.json()) as SearchBody;
@@ -40,6 +33,28 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!body.companyId && !body.companyName) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Provide `companyId` or `companyName` in the request body",
+      },
+      { status: 400 }
+    );
+  }
+
+  const company = await resolveCompany({
+    companyId: body.companyId,
+    companyName: body.companyName,
+  });
+
+  if (!company) {
+    return NextResponse.json(
+      { success: false, error: "Company not found" },
+      { status: 404 }
+    );
+  }
+
   const page = body.page && body.page > 0 ? body.page : 1;
   const pageSize =
     body.pageSize && body.pageSize > 0 && body.pageSize <= 200
@@ -48,7 +63,7 @@ export async function POST(request: Request) {
 
   try {
     const { hits, total } = await searchProductsInElasticsearch({
-      companyId: session.companyId,
+      companyId: company.id,
       query: body.query,
       page,
       pageSize,
@@ -61,22 +76,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      company: { id: company.id, name: company.name, slug: company.slug },
       data: hits,
-      pagination: {
-        page,
-        pageSize,
-        total,
-      },
+      pagination: { page, pageSize, total },
     });
   } catch (error) {
     console.error("Error searching products in Elasticsearch:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Search failed due to an internal error",
-      },
+      { success: false, error: "Search failed due to an internal error" },
       { status: 502 }
     );
   }
 }
-

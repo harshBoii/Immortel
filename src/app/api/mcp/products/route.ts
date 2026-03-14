@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveCompany } from "@/lib/mcpCompanyResolver";
 
 export async function GET(request: Request) {
-  const session = await getSession();
+  const { searchParams } = new URL(request.url);
 
-  if (!session?.companyId) {
+  const companyId = searchParams.get("companyId") ?? undefined;
+  const companyName = searchParams.get("companyName") ?? undefined;
+  const page = Number(searchParams.get("page") ?? "1");
+  const pageSize = Number(searchParams.get("pageSize") ?? "50");
+
+  if (!companyId && !companyName) {
     return NextResponse.json(
-      { success: false, error: "Not authenticated" },
-      { status: 401 }
+      {
+        success: false,
+        error: "Provide `companyId` or `companyName` as a query parameter",
+      },
+      { status: 400 }
     );
   }
 
-  const { searchParams } = new URL(request.url);
-  const page = Number(searchParams.get("page") ?? "1");
-  const pageSize = Number(searchParams.get("pageSize") ?? "50");
+  const company = await resolveCompany({ companyId, companyName });
+  if (!company) {
+    return NextResponse.json(
+      { success: false, error: "Company not found" },
+      { status: 404 }
+    );
+  }
 
   const safePage = Number.isFinite(page) && page > 0 ? page : 1;
   const safePageSize =
@@ -27,30 +39,20 @@ export async function GET(request: Request) {
 
   const [products, total] = await Promise.all([
     (prisma as any).shopifyProduct.findMany({
-      where: {
-        companyId: session.companyId,
-      },
-      orderBy: {
-        shopifyUpdatedAt: "desc",
-      },
+      where: { companyId: company.id },
+      orderBy: { shopifyUpdatedAt: "desc" },
       skip,
       take,
     }),
     (prisma as any).shopifyProduct.count({
-      where: {
-        companyId: session.companyId,
-      },
+      where: { companyId: company.id },
     }),
   ]);
 
   return NextResponse.json({
     success: true,
+    company: { id: company.id, name: company.name, slug: company.slug },
     data: products,
-    pagination: {
-      page: safePage,
-      pageSize: safePageSize,
-      total,
-    },
+    pagination: { page: safePage, pageSize: safePageSize, total },
   });
 }
-

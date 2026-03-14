@@ -1,27 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { resolveCompany } from "@/lib/mcpCompanyResolver";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession();
+  const { id } = await context.params;
+  const { searchParams } = new URL(request.url);
 
-  if (!session?.companyId) {
+  const companyId = searchParams.get("companyId") ?? undefined;
+  const companyName = searchParams.get("companyName") ?? undefined;
+
+  if (!companyId && !companyName) {
     return NextResponse.json(
-      { success: false, error: "Not authenticated" },
-      { status: 401 }
+      {
+        success: false,
+        error: "Provide `companyId` or `companyName` as a query parameter",
+      },
+      { status: 400 }
     );
   }
 
-  const { id } = await context.params;
+  const company = await resolveCompany({ companyId, companyName });
+  if (!company) {
+    return NextResponse.json(
+      { success: false, error: "Company not found" },
+      { status: 404 }
+    );
+  }
 
   const product = await (prisma as any).shopifyProduct.findFirst({
-    where: {
-      id,
-      companyId: session.companyId,
-    },
+    where: { id, companyId: company.id },
   });
 
   if (!product) {
@@ -33,7 +43,7 @@ export async function GET(
 
   return NextResponse.json({
     success: true,
+    company: { id: company.id, name: company.name, slug: company.slug },
     data: product,
   });
 }
-

@@ -1,0 +1,414 @@
+openapi: 3.1.0
+info:
+  title: MCP Product API
+  description: |
+    Public API for products, search, checkout, and reindexing.
+    All routes require either `companyId` or `companyName` to identify the company
+    whose product catalog to query (e.g. "find me best snowboards from MoonFlare").
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+  - url: https://immortel.vercel.app
+    description: Production
+
+paths:
+  /api/mcp/products:
+    get:
+      operationId: list_products
+      summary: List products
+      description: |
+        Returns paginated products for a company.
+        Provide either `companyId` or `companyName` to identify the company.
+      parameters:
+        - name: companyId
+          in: query
+          description: Company ID (Prisma cuid)
+          required: false
+          schema:
+            type: string
+        - name: companyName
+          in: query
+          description: Company name or slug (case-insensitive, e.g. "MoonKnight" or "moonknight")
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number (default 1)
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          description: Items per page (default 50, max 200)
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - company
+                  - data
+                  - pagination
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  company:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      total:
+                        type: integer
+        "400":
+          description: Missing companyId or companyName
+        "404":
+          description: Company not found
+
+  /api/mcp/products/{id}:
+    get:
+      operationId: get_product_details
+      summary: Get product details
+      description: Retrieve full details for a single product.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Product ID
+          schema:
+            type: string
+        - name: companyId
+          in: query
+          description: Company ID
+          required: false
+          schema:
+            type: string
+        - name: companyName
+          in: query
+          description: Company name or slug
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - company
+                  - data
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  company:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                  data:
+                    $ref: "#/components/schemas/Product"
+        "400":
+          description: Missing companyId or companyName
+        "404":
+          description: Company or product not found
+
+  /api/mcp/products/search:
+    post:
+      operationId: search_products
+      summary: Search products
+      description: |
+        Full-text search over products (Elasticsearch).
+        Supports natural-language queries like "black shoes" or "shoes under 5000".
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Search query (e.g. "best snowboards", "shoes under 5000")
+                  example: "find me best snowboards from MoonFlare"
+                companyId:
+                  type: string
+                  description: Company ID
+                companyName:
+                  type: string
+                  description: Company name or slug
+                page:
+                  type: integer
+                  default: 1
+                pageSize:
+                  type: integer
+                  default: 20
+                  maximum: 200
+                status:
+                  type: array
+                  items:
+                    type: string
+                  description: Filter by status (e.g. ACTIVE, DRAFT)
+                priceMin:
+                  type: number
+                  description: Minimum price filter
+                priceMax:
+                  type: number
+                  description: Maximum price filter
+                inventoryMin:
+                  type: integer
+                inventoryMax:
+                  type: integer
+            oneOf:
+              - required: [companyId]
+              - required: [companyName]
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - company
+                  - data
+                  - pagination
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  company:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+                      total:
+                        type: integer
+        "400":
+          description: Missing query or company identifier
+        "404":
+          description: Company not found
+        "502":
+          description: Search backend error
+
+  /api/mcp/products/checkout:
+    post:
+      operationId: create_checkout
+      summary: Create checkout session
+      description: Create a checkout session and return a payment portal URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productIds
+              properties:
+                companyId:
+                  type: string
+                companyName:
+                  type: string
+                productIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Product IDs to checkout
+            oneOf:
+              - required: [companyId]
+              - required: [companyName]
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - success
+                  - checkoutUrl
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  sessionId:
+                    type: string
+                  checkoutUrl:
+                    type: string
+                    format: uri
+                    description: Payment portal URL
+                  company:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        price:
+                          type: string
+                        currency:
+                          type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+        "400":
+          description: Missing company or productIds
+        "404":
+          description: Company or products not found
+
+  /api/mcp/products/reindex:
+    post:
+      operationId: reindex_products
+      summary: Reindex products
+      description: |
+        Bulk index products into Elasticsearch for the given company.
+        If REINDEX_SECRET is set server-side, the request body must include
+        a matching `secret` for authorization.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                companyId:
+                  type: string
+                companyName:
+                  type: string
+                secret:
+                  type: string
+                  description: Required if REINDEX_SECRET env is set
+            oneOf:
+              - required: [companyId]
+              - required: [companyName]
+      responses:
+        "200":
+          description: Reindex completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  company:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                  indexed:
+                    type: integer
+        "400":
+          description: Missing company identifier
+        "401":
+          description: Invalid or missing secret (when REINDEX_SECRET is set)
+        "404":
+          description: Company not found
+
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        shopifyGid:
+          type: string
+        shopId:
+          type: string
+        companyId:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, DRAFT, ARCHIVED]
+        handle:
+          type: string
+        totalInventory:
+          type: integer
+        onlineStoreUrl:
+          type: string
+          format: uri
+          nullable: true
+        priceMinAmount:
+          type: string
+          nullable: true
+        priceMaxAmount:
+          type: string
+          nullable: true
+        currencyCode:
+          type: string
+          nullable: true
+        shopifyCreatedAt:
+          type: string
+          format: date-time
+        shopifyUpdatedAt:
+          type: string
+          format: date-time
