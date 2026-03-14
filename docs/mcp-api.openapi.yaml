@@ -2,10 +2,14 @@ openapi: 3.1.0
 info:
   title: MCP Product API
   description: |
-    Public API for products, search, checkout, and reindexing.
-    All routes require either `companyId` or `companyName` to identify the company
-    whose product catalog to query (e.g. "find me best snowboards from MoonFlare").
-  version: 1.0.0
+    API for searching products, retrieving product details, and creating checkout sessions
+    from moonknight or moonflare product catalogs for MCP.
+
+    Each request must specify the target company using either `companyName` or `companyId`.
+    Example user queries include:
+    - "find me the best snowboards from MoonFlare"
+    - "show running shoes from Nike"
+    - "buy this product from Adidas"  version: 1.0.0
 
 servers:
   - url: http://localhost:3000
