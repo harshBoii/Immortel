@@ -1042,6 +1042,9 @@ model ShopifyProduct {
   totalInventory Int      @default(0)
   onlineStoreUrl String? @db.VarChar(1000)
 
+  // Product description snapshot
+  description   String?  @db.Text
+
   // Featured image snapshot
   featuredImageUrl     String? @db.VarChar(2000)
   featuredImageAltText String? @db.VarChar(500)
