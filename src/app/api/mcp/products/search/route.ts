@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveCompany } from "@/lib/mcpCompanyResolver";
 import { searchProductsInElasticsearch } from "@/lib/productSearch";
+import { getProxiedImageUrl } from "@/lib/imageProxy";
 
 type SearchBody = {
   query: string;
@@ -74,21 +75,25 @@ export async function POST(request: Request) {
       inventoryMax: body.inventoryMax,
     });
 
-    const formatted = hits.map((p: any) => ({
-      ...p,
-      featuredImage: p.featuredImageUrl
-        ? {
-            url: p.featuredImageUrl,
-            altText: p.featuredImageAltText,
-            width: p.featuredImageWidth,
-            height: p.featuredImageHeight,
-          }
-        : null,
-      featuredImageUrl: undefined,
-      featuredImageAltText: undefined,
-      featuredImageWidth: undefined,
-      featuredImageHeight: undefined,
-    }));
+    const formatted = hits.map((p: any) => {
+      const proxiedUrl = getProxiedImageUrl(p.featuredImageUrl);
+
+      return {
+        ...p,
+        featuredImage: proxiedUrl
+          ? {
+              url: proxiedUrl,
+              altText: p.featuredImageAltText,
+              width: p.featuredImageWidth,
+              height: p.featuredImageHeight,
+            }
+          : null,
+        featuredImageUrl: undefined,
+        featuredImageAltText: undefined,
+        featuredImageWidth: undefined,
+        featuredImageHeight: undefined,
+      };
+    });
 
     return NextResponse.json({
       success: true,

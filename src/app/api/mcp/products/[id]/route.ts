@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveCompany } from "@/lib/mcpCompanyResolver";
+import { getProxiedImageUrl } from "@/lib/imageProxy";
 
 export async function GET(
   request: NextRequest,
@@ -41,14 +42,16 @@ export async function GET(
     );
   }
 
+  const proxiedUrl = getProxiedImageUrl((product as any).featuredImageUrl);
+
   const formatted: any = {
     ...product,
-    featuredImage: product.featuredImageUrl
+    featuredImage: proxiedUrl
       ? {
-          url: product.featuredImageUrl,
-          altText: product.featuredImageAltText,
-          width: product.featuredImageWidth,
-          height: product.featuredImageHeight,
+          url: proxiedUrl,
+          altText: (product as any).featuredImageAltText,
+          width: (product as any).featuredImageWidth,
+          height: (product as any).featuredImageHeight,
         }
       : null,
     featuredImageUrl: undefined,

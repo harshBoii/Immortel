@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { resolveCompany } from "@/lib/mcpCompanyResolver";
+import { getProxiedImageUrl } from "@/lib/imageProxy";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -49,21 +50,25 @@ export async function GET(request: Request) {
     }),
   ]);
 
-  const formatted = products.map((p: any) => ({
-    ...p,
-    featuredImage: p.featuredImageUrl
-      ? {
-          url: p.featuredImageUrl,
-          altText: p.featuredImageAltText,
-          width: p.featuredImageWidth,
-          height: p.featuredImageHeight,
-        }
-      : null,
-    featuredImageUrl: undefined,
-    featuredImageAltText: undefined,
-    featuredImageWidth: undefined,
-    featuredImageHeight: undefined,
-  }));
+  const formatted = products.map((p: any) => {
+    const proxiedUrl = getProxiedImageUrl(p.featuredImageUrl);
+
+    return {
+      ...p,
+      featuredImage: proxiedUrl
+        ? {
+            url: proxiedUrl,
+            altText: p.featuredImageAltText,
+            width: p.featuredImageWidth,
+            height: p.featuredImageHeight,
+          }
+        : null,
+      featuredImageUrl: undefined,
+      featuredImageAltText: undefined,
+      featuredImageWidth: undefined,
+      featuredImageHeight: undefined,
+    };
+  });
 
   return NextResponse.json({
     success: true,
