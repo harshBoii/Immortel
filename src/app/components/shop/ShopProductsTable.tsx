@@ -7,6 +7,8 @@ type ProductNode = {
   handle: string;
   totalInventory: number;
   onlineStoreUrl: string | null;
+  featuredImageUrl?: string | null;
+  featuredImageAltText?: string | null;
   priceMinAmount: string | null;
   priceMaxAmount: string | null;
   currencyCode: string | null;
@@ -69,18 +71,31 @@ export function ShopProductsTable({ products }: Props) {
                   className="border-t border-[var(--glass-border)] hover:bg-[var(--glass-hover)]/60 transition-colors"
                 >
                   <Td>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{p.title}</span>
-                      {p.onlineStoreUrl && (
-                        <a
-                          href={p.onlineStoreUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] text-[var(--sibling-primary)] hover:underline"
-                        >
-                          View in store
-                        </a>
+                    <div className="flex items-center gap-3">
+                      {p.featuredImageUrl && (
+                        <div className="h-10 w-10 rounded-md overflow-hidden border border-[var(--glass-border)] flex-shrink-0 bg-[var(--glass-hover)]">
+                          <img
+                            src={p.featuredImageUrl}
+                            alt={p.featuredImageAltText ?? p.title}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                       )}
+                      <div className="flex flex-col">
+                        <span className="font-medium text-foreground line-clamp-2">
+                          {p.title}
+                        </span>
+                        {p.onlineStoreUrl && (
+                          <a
+                            href={p.onlineStoreUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-[var(--sibling-primary)] hover:underline"
+                          >
+                            View in store
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </Td>
                   <Td>

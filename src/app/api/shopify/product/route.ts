@@ -41,6 +41,12 @@ export async function GET() {
             onlineStoreUrl
             createdAt
             updatedAt
+            featuredImage {
+              url
+              altText
+              width
+              height
+            }
             priceRangeV2 {
               minVariantPrice {
                 amount
@@ -110,6 +116,7 @@ export async function GET() {
 
       const priceMin = node.priceRangeV2?.minVariantPrice;
       const priceMax = node.priceRangeV2?.maxVariantPrice;
+      const featuredImage = node.featuredImage;
 
       const product = await (prisma as any).shopifyProduct.upsert({
         where: { shopifyGid: node.id as string },
@@ -122,6 +129,10 @@ export async function GET() {
           handle: node.handle ?? "",
           totalInventory: node.totalInventory ?? 0,
           onlineStoreUrl: node.onlineStoreUrl ?? null,
+          featuredImageUrl: featuredImage?.url ?? null,
+          featuredImageAltText: featuredImage?.altText ?? null,
+          featuredImageWidth: featuredImage?.width ?? null,
+          featuredImageHeight: featuredImage?.height ?? null,
           priceMinAmount: priceMin?.amount ?? null,
           priceMaxAmount: priceMax?.amount ?? null,
           currencyCode: priceMin?.currencyCode ?? priceMax?.currencyCode ?? null,
@@ -134,6 +145,10 @@ export async function GET() {
           handle: node.handle ?? "",
           totalInventory: node.totalInventory ?? 0,
           onlineStoreUrl: node.onlineStoreUrl ?? null,
+          featuredImageUrl: featuredImage?.url ?? null,
+          featuredImageAltText: featuredImage?.altText ?? null,
+          featuredImageWidth: featuredImage?.width ?? null,
+          featuredImageHeight: featuredImage?.height ?? null,
           priceMinAmount: priceMin?.amount ?? null,
           priceMaxAmount: priceMax?.amount ?? null,
           currencyCode: priceMin?.currencyCode ?? priceMax?.currencyCode ?? null,
