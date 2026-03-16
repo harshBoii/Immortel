@@ -74,10 +74,26 @@ export async function POST(request: Request) {
       inventoryMax: body.inventoryMax,
     });
 
+    const formatted = hits.map((p: any) => ({
+      ...p,
+      featuredImage: p.featuredImageUrl
+        ? {
+            url: p.featuredImageUrl,
+            altText: p.featuredImageAltText,
+            width: p.featuredImageWidth,
+            height: p.featuredImageHeight,
+          }
+        : null,
+      featuredImageUrl: undefined,
+      featuredImageAltText: undefined,
+      featuredImageWidth: undefined,
+      featuredImageHeight: undefined,
+    }));
+
     return NextResponse.json({
       success: true,
       company: { id: company.id, name: company.name, slug: company.slug },
-      data: hits,
+      data: formatted,
       pagination: { page, pageSize, total },
     });
   } catch (error) {

@@ -49,10 +49,26 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  const formatted = products.map((p: any) => ({
+    ...p,
+    featuredImage: p.featuredImageUrl
+      ? {
+          url: p.featuredImageUrl,
+          altText: p.featuredImageAltText,
+          width: p.featuredImageWidth,
+          height: p.featuredImageHeight,
+        }
+      : null,
+    featuredImageUrl: undefined,
+    featuredImageAltText: undefined,
+    featuredImageWidth: undefined,
+    featuredImageHeight: undefined,
+  }));
+
   return NextResponse.json({
     success: true,
     company: { id: company.id, name: company.name, slug: company.slug },
-    data: products,
+    data: formatted,
     pagination: { page: safePage, pageSize: safePageSize, total },
   });
 }

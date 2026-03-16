@@ -41,9 +41,25 @@ export async function GET(
     );
   }
 
+  const formatted: any = {
+    ...product,
+    featuredImage: product.featuredImageUrl
+      ? {
+          url: product.featuredImageUrl,
+          altText: product.featuredImageAltText,
+          width: product.featuredImageWidth,
+          height: product.featuredImageHeight,
+        }
+      : null,
+    featuredImageUrl: undefined,
+    featuredImageAltText: undefined,
+    featuredImageWidth: undefined,
+    featuredImageHeight: undefined,
+  };
+
   return NextResponse.json({
     success: true,
     company: { id: company.id, name: company.name, slug: company.slug },
-    data: product,
+    data: formatted,
   });
 }
