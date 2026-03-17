@@ -21,25 +21,31 @@ export default function ProductList() {
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      console.log("[ProductList] message received:", event.data); // debug
+      // Log ALL messages — no filtering yet
+      console.log("[Widget] RAW message:", {
+        source: event.source,
+        origin: event.origin,
+        data: event.data,
+        isParent: event.source === window.parent,
+      });
+  
       const msg = event.data;
       if (!msg || msg.jsonrpc !== "2.0") return;
       if (msg.method !== "ui/notifications/tool-result") return;
       const payload = msg.params?.structuredContent;
       if (payload) setData(payload);
     };
-
-    // ✅ Listener attached FIRST
+  
     window.addEventListener("message", onMessage);
-
-    // ✅ Ready signal sent AFTER listener is ready
+  
     window.parent.postMessage(
       { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
       "*"
     );
-
+  
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  
 
   if (!data) {
     return (

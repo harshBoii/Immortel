@@ -21729,7 +21729,12 @@
     const [data, setData] = (0, import_react.useState)(null);
     (0, import_react.useEffect)(() => {
       const onMessage = (event) => {
-        console.log("[ProductList] message received:", event.data);
+        console.log("[Widget] RAW message:", {
+          source: event.source,
+          origin: event.origin,
+          data: event.data,
+          isParent: event.source === window.parent
+        });
         const msg = event.data;
         if (!msg || msg.jsonrpc !== "2.0") return;
         if (msg.method !== "ui/notifications/tool-result") return;
