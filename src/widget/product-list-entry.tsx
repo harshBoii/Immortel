@@ -7,12 +7,12 @@ const container =
 
 createRoot(container).render(<ProductList />);
 
-// ✅ Required — tell ChatGPT the widget is ready to receive tool results
-window.parent.postMessage(
-  {
-    jsonrpc: "2.0",
-    method: "ui/notifications/ready",
-    params: {},
-  },
-  "*"
-);
+// // ✅ Required — tell ChatGPT the widget is ready to receive tool results
+// window.parent.postMessage(
+//   {
+//     jsonrpc: "2.0",
+//     method: "ui/notifications/ready",
+//     params: {},
+//   },
+//   "*"
+// );

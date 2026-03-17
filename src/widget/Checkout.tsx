@@ -25,10 +25,9 @@ type MessagePayload = {
 export default function Checkout() {
   const [data, setData] = useState<CheckoutPayload | null>(null);
 
-  // ✅ FIX — postMessage listener instead of window.openai.on
   useEffect(() => {
     const onMessage = (event: MessageEvent<MessagePayload>) => {
-      if (event.source !== window.parent) return;
+      console.log("[Checkout] message received:", event.data); // debug
       const msg = event.data;
       if (!msg || msg.jsonrpc !== "2.0") return;
       if (msg.method !== "ui/notifications/tool-result") return;
@@ -36,7 +35,15 @@ export default function Checkout() {
       if (payload) setData(payload);
     };
 
+    // ✅ Listener attached FIRST
     window.addEventListener("message", onMessage);
+
+    // ✅ Ready signal sent AFTER listener is ready
+    window.parent.postMessage(
+      { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
+      "*"
+    );
+
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
