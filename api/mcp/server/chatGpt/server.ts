@@ -71,7 +71,7 @@ export function createServer(): McpServer {
       // ────────────────────────────────────────────────────────────────────
 
       return {
-        content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} products.` }],
+        content: [{ type: "text" as const, text: JSON.stringify(data) }],
         structuredContent: data,
       };
     }) as any
@@ -115,7 +115,7 @@ export function createServer(): McpServer {
       console.log(`[get_product] ✓ "${data.data?.title}" → featuredImage:`, data.data?.featuredImage ?? "NULL");
 
       return {
-        content: [{ type: "text" as const, text: `Loaded: ${data.data?.title ?? id}` }],
+        content: [{ type: "text" as const, text: JSON.stringify(data)  }],
         structuredContent: data,
       };
     }) as any
@@ -174,7 +174,7 @@ export function createServer(): McpServer {
       // ────────────────────────────────────────────────────────────────────
 
       return {
-        content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} results.` }],
+        content: [{ type: "text" as const, text: JSON.stringify(data)  }],
         structuredContent: data,
       };
     }) as any
@@ -222,7 +222,7 @@ export function createServer(): McpServer {
       console.log("[create_checkout] ✓ checkoutUrl:", data.checkoutUrl ?? "MISSING");
 
       return {
-        content: [{ type: "text" as const, text: "Checkout ready." }],
+        content: [{ type: "text" as const, text: JSON.stringify(data)  }],
         structuredContent: data,
       };
     }) as any

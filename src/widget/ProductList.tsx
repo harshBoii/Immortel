@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,124 +42,144 @@ type ProductListPayload = {
   pagination?: Pagination | null;
 };
 
-// ── Design tokens (inlined for iframe isolation) ─────────────────────────────
+// ── Design tokens ─────────────────────────────────────────────────────────────
 
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Share+Tech+Mono&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --parchment:      #FAF8F2;
-    --parchment-2:    #F5F2EA;
-    --navy:           #151D35;
-    --navy-mid:       #2A3560;
-    --navy-grey:      #606678;
-    --orange:         #C4550A;
-    --orange-hover:   #D4620F;
-    --orange-dark:    #A04208;
-    --border:         rgba(21, 29, 53, 0.09);
-    --border-top:     rgba(255, 255, 255, 0.88);
-    --shadow-card:    3px 3px 0 0 rgba(10, 13, 25, 0.20), 1.5px 1.5px 0 0 rgba(21, 29, 53, 0.06);
-    --shadow-hover:   4px 5px 0 0 rgba(21, 29, 53, 0.14), 2px 2.5px 0 0 rgba(21, 29, 53, 0.07);
-    --radius:         12px;
-    --radius-sm:      8px;
-    --font-heading:   'Playfair Display', Georgia, serif;
+    --black:          #080808;
+    --black-2:        #111111;
+    --black-3:        #1a1a1a;
+    --black-4:        #222222;
+    --green:          #00FF88;
+    --green-dim:      #00CC6A;
+    --green-dark:     #008F4A;
+    --green-glow:     rgba(0, 255, 136, 0.18);
+    --green-glow-lg:  rgba(0, 255, 136, 0.32);
+    --white:          #F0F0F0;
+    --grey:           #888888;
+    --grey-dim:       #555555;
+    --border:         rgba(0, 255, 136, 0.14);
+    --border-bright:  rgba(0, 255, 136, 0.35);
+    --shadow-card:    0 0 0 1px rgba(0,255,136,0.10), 3px 3px 0 0 rgba(0,0,0,0.6);
+    --shadow-hover:   0 0 0 1px rgba(0,255,136,0.30), 0 0 20px rgba(0,255,136,0.15), 3px 3px 0 0 rgba(0,0,0,0.8);
+    --radius:         10px;
+    --radius-sm:      6px;
+    --font-mono:      'Share Tech Mono', 'Courier New', monospace;
     --font-body:      'Outfit', system-ui, sans-serif;
     --font-label:     'DM Sans', system-ui, sans-serif;
   }
 
   html, body {
-    background: var(--parchment);
-    color: var(--navy);
+    background: var(--black);
+    color: var(--white);
     font-family: var(--font-body);
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
 
-  #root { padding: 16px; }
+  #root { padding: 14px; }
 
   /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(21,29,53,0.15); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(196,85,10,0.4); }
+  ::-webkit-scrollbar { height: 4px; width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--black-3); }
+  ::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green); box-shadow: 0 0 6px var(--green); }
 
   /* ── Header ── */
   .header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 10px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .header-title {
-    font-family: var(--font-heading);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.02em;
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--green);
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 12px rgba(0,255,136,0.5);
   }
+  .header-title::before { content: "> "; opacity: 0.5; }
   .header-count {
-    font-family: var(--font-label);
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--navy-grey);
-    background: rgba(21,29,53,0.06);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--green-dim);
+    background: rgba(0,255,136,0.06);
     padding: 2px 8px;
     border-radius: 20px;
-    border: 1px solid rgba(21,29,53,0.08);
+    border: 1px solid var(--border);
   }
 
-  /* ── Grid ── */
+  /* ── Horizontal scroll strip ── */
   .grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 8px;
+    padding-right: 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
   }
+  .grid::-webkit-scrollbar { height: 3px; }
+  .grid::-webkit-scrollbar-track { background: var(--black-3); border-radius: 4px; }
+  .grid::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 4px; }
+  .grid::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
   /* ── Card ── */
   .card {
     position: relative;
     overflow: hidden;
-    background: rgba(250, 248, 242, 0.72);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    border: 1.5px solid var(--border);
-    border-top-color: var(--border-top);
+    background: var(--black-2);
+    border: 1px solid var(--border);
+    border-top-color: rgba(0,255,136,0.22);
     border-radius: var(--radius);
     box-shadow: var(--shadow-card);
     display: flex;
     flex-direction: column;
-    transition: box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
+    transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
     cursor: default;
+
+    /* Fixed width — shows ~2.5 cards hinting scroll */
+    flex: 0 0 190px;
+    width: 190px;
+    scroll-snap-align: start;
   }
   .card:hover {
-    background: rgba(250, 248, 242, 0.88);
+    border-color: var(--border-bright);
     box-shadow: var(--shadow-hover);
-    transform: translate(-1px, -1px);
+    transform: translate(-1px, -2px);
   }
 
-  /* Bokeh orbs on card */
+  /* Neon corner glow orbs */
   .card::before, .card::after {
     content: "";
     position: absolute;
     border-radius: 50%;
     pointer-events: none;
     z-index: 0;
-    filter: blur(36px);
-    opacity: 0.5;
+    filter: blur(30px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
   .card::before {
-    width: 90px; height: 90px;
-    top: -20px; left: -15px;
-    background: radial-gradient(circle, rgba(196,85,10,0.22) 0%, transparent 70%);
+    width: 80px; height: 80px;
+    top: -20px; left: -10px;
+    background: radial-gradient(circle, rgba(0,255,136,0.25) 0%, transparent 70%);
   }
   .card::after {
-    width: 80px; height: 80px;
-    bottom: -20px; right: -15px;
-    background: radial-gradient(circle, rgba(21,29,53,0.14) 0%, transparent 70%);
+    width: 60px; height: 60px;
+    bottom: -15px; right: -10px;
+    background: radial-gradient(circle, rgba(0,255,136,0.15) 0%, transparent 70%);
   }
+  .card:hover::before, .card:hover::after { opacity: 1; }
   .card > * { position: relative; z-index: 1; }
 
   /* ── Image ── */
@@ -167,40 +187,60 @@ const STYLES = `
     width: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
-    border-radius: calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0 0;
-    background: var(--parchment-2);
+    border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
+    background: var(--black-3);
     flex-shrink: 0;
+    position: relative;
+  }
+  /* Neon scan-line overlay on image */
+  .card-img-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
   }
   .card-img {
     width: 100%; height: 100%;
     object-fit: cover;
     display: block;
     transition: transform 0.4s ease;
+    filter: saturate(0.9) brightness(0.95);
   }
-  .card:hover .card-img { transform: scale(1.04); }
+  .card:hover .card-img {
+    transform: scale(1.05);
+    filter: saturate(1.1) brightness(1.0);
+  }
   .card-img-placeholder {
     width: 100%; height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, rgba(250,248,242,0.8) 0%, rgba(224,226,236,0.5) 100%);
-    color: var(--navy-grey);
+    background: var(--black-3);
+    color: var(--grey-dim);
     font-size: 28px;
   }
 
   /* ── Card body ── */
   .card-body {
-    padding: 12px 12px 14px;
+    padding: 10px 10px 8px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
     flex: 1;
   }
   .card-title {
     font-family: var(--font-label);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--navy);
+    color: var(--white);
     line-height: 1.3;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -208,37 +248,45 @@ const STYLES = `
     overflow: hidden;
   }
   .card-price {
-    font-family: var(--font-label);
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--orange-dark);
-    letter-spacing: -0.01em;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--green);
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 8px rgba(0,255,136,0.4);
   }
   .card-meta {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
   }
   .badge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 11px;
+    gap: 3px;
+    font-size: 10px;
     font-weight: 500;
-    font-family: var(--font-label);
-    padding: 2px 7px;
-    border-radius: 20px;
+    font-family: var(--font-mono);
+    padding: 1px 6px;
+    border-radius: 3px;
   }
   .badge-stock {
-    background: rgba(21,29,53,0.05);
-    color: var(--navy-grey);
-    border: 1px solid rgba(21,29,53,0.08);
+    background: rgba(0,255,136,0.07);
+    color: var(--green-dim);
+    border: 1px solid rgba(0,255,136,0.15);
   }
   .badge-out {
-    background: rgba(196,85,10,0.07);
-    color: var(--orange);
-    border: 1px solid rgba(196,85,10,0.15);
+    background: rgba(255,60,60,0.08);
+    color: #FF6060;
+    border: 1px solid rgba(255,60,60,0.2);
+  }
+
+  /* ── Divider ── */
+  .card-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0,255,136,0.12), transparent);
+    margin: 0 10px;
   }
 
   /* ── Button ── */
@@ -248,36 +296,36 @@ const STYLES = `
     justify-content: center;
     gap: 6px;
     width: 100%;
-    padding: 9px 14px;
-    margin-top: auto;
-    background: var(--orange);
-    color: var(--parchment);
-    border: 1px solid var(--orange-dark);
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--green);
+    border: 1px solid var(--green-dark);
     border-radius: var(--radius-sm);
-    font-family: var(--font-label);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
     cursor: pointer;
-    box-shadow: 0 1px 5px rgba(196,85,10,0.32), inset 0 1px 0 rgba(255,255,255,0.20);
-    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease;
+    box-shadow: inset 0 0 0 0 var(--green-glow);
+    transition: background 0.18s ease, box-shadow 0.18s ease,
+                border-color 0.18s ease, transform 0.14s ease, color 0.18s ease;
   }
   .btn-primary:hover {
-    background: var(--orange-hover);
-    box-shadow: 0 4px 16px rgba(196,85,10,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
+    background: var(--green-glow);
+    border-color: var(--green);
+    color: #ffffff;
+    box-shadow: 0 0 12px var(--green-glow-lg), inset 0 0 8px var(--green-glow);
     transform: translateY(-1px);
   }
   .btn-primary:active { transform: translateY(1px); }
-  .btn-primary:disabled { opacity: 0.5; pointer-events: none; }
-
-  /* ── Divider ── */
-  .card-divider {
-    height: 1px;
-    background: linear-gradient(to right, transparent, rgba(21,29,53,0.08), transparent);
-    margin: 0 12px;
+  .btn-primary:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    color: var(--grey-dim);
+    border-color: var(--grey-dim);
   }
 
-  /* ── Empty / loading state ── */
+  /* ── State boxes ── */
   .state-box {
     display: flex;
     flex-direction: column;
@@ -285,19 +333,20 @@ const STYLES = `
     justify-content: center;
     padding: 48px 24px;
     gap: 12px;
-    color: var(--navy-grey);
-    font-family: var(--font-label);
+    font-family: var(--font-mono);
   }
-  .state-icon { font-size: 32px; opacity: 0.5; }
-  .state-text { font-size: 14px; font-weight: 500; }
-  .state-sub  { font-size: 12px; opacity: 0.7; }
+  .state-icon { font-size: 32px; opacity: 0.4; }
+  .state-text { font-size: 13px; color: var(--green-dim); }
+  .state-sub  { font-size: 11px; color: var(--grey); }
 `;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ProductList() {
   const [data, setData] = useState<ProductListPayload | null>(
-    () => (window as any).openai?.toolOutput ?? null
+    () => (window as any).openai?.toolOutput
+       ?? (window as any).claude?.toolOutput
+       ?? null
   );
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -305,17 +354,27 @@ export default function ProductList() {
     const onSetGlobals = (event: Event) => {
       const e = event as CustomEvent;
       const toolOutput =
-        e.detail?.globals?.toolOutput ?? (window as any).openai?.toolOutput;
+        e.detail?.globals?.toolOutput ??
+        (window as any).openai?.toolOutput ??
+        (window as any).claude?.toolOutput;
       if (toolOutput) setData(toolOutput);
     };
+
     window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
-    return () => window.removeEventListener("openai:set_globals", onSetGlobals);
+    window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
+    return () => {
+      window.removeEventListener("openai:set_globals", onSetGlobals);
+      window.removeEventListener("claude:set_globals", onSetGlobals);
+    };
   }, []);
 
   const handleBuyNow = async (product: Product) => {
     setLoadingId(product.id);
     try {
-      await (window as any).openai?.callTool?.("create_checkout", {
+      const callTool =
+        (window as any).openai?.callTool ??
+        (window as any).claude?.callTool;
+      await callTool?.("create_checkout", {
         companyName: data?.company?.slug ?? data?.company?.name,
         productIds: [product.id],
       });
@@ -325,10 +384,8 @@ export default function ProductList() {
   };
 
   const formatPrice = (p: Product) => {
-    if (!p.priceMinAmount) return "Price unavailable";
-    const amount = parseFloat(p.priceMinAmount).toFixed(2);
-    const currency = p.currencyCode ?? "USD";
-    return `$${amount} ${currency}`;
+    if (!p.priceMinAmount) return "N/A";
+    return `$${parseFloat(p.priceMinAmount).toFixed(2)} ${p.currencyCode ?? "USD"}`;
   };
 
   const products = data?.data ?? [];
@@ -340,14 +397,14 @@ export default function ProductList() {
       {!data ? (
         <div className="state-box">
           <div className="state-icon">🏂</div>
-          <div className="state-text">Loading products…</div>
-          <div className="state-sub">Fetching from Immortel catalog</div>
+          <div className="state-text">// loading products...</div>
+          <div className="state-sub">fetching from immortel catalog</div>
         </div>
       ) : products.length === 0 ? (
         <div className="state-box">
           <div className="state-icon">📭</div>
-          <div className="state-text">No products found</div>
-          <div className="state-sub">Try a different search or company</div>
+          <div className="state-text">// no results found</div>
+          <div className="state-sub">try a different search or company</div>
         </div>
       ) : (
         <>
@@ -369,7 +426,6 @@ export default function ProductList() {
 
               return (
                 <div key={product.id} className="card">
-                  {/* Image */}
                   <div className="card-img-wrap">
                     {product.featuredImage?.url ? (
                       <img
@@ -383,18 +439,15 @@ export default function ProductList() {
                     )}
                   </div>
 
-                  {/* Body */}
                   <div className="card-body">
                     <h3 className="card-title">{product.title}</h3>
                     <p className="card-price">{formatPrice(product)}</p>
-
                     <div className="card-meta">
                       {typeof product.totalInventory === "number" && (
                         <span className={`badge ${inStock ? "badge-stock" : "badge-out"}`}>
-                          {inStock ? "📦" : "⚠️"}{" "}
                           {inStock
-                            ? `${product.totalInventory} in stock`
-                            : "Out of stock"}
+                            ? `● ${product.totalInventory} in stock`
+                            : `✕ out of stock`}
                         </span>
                       )}
                     </div>
@@ -402,19 +455,17 @@ export default function ProductList() {
 
                   <div className="card-divider" />
 
-                  <div style={{ padding: "10px 12px 12px" }}>
+                  <div style={{ padding: "8px 10px 10px" }}>
                     <button
                       className="btn-primary"
                       onClick={() => handleBuyNow(product)}
                       disabled={loadingId === product.id || !inStock}
                     >
-                      {loadingId === product.id ? (
-                        <>⏳ Adding…</>
-                      ) : inStock ? (
-                        <>🛒 Buy Now</>
-                      ) : (
-                        <>Unavailable</>
-                      )}
+                      {loadingId === product.id
+                        ? "// adding..."
+                        : inStock
+                        ? "> buy_now()"
+                        : "// unavailable"}
                     </button>
                   </div>
                 </div>
