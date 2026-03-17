@@ -1,106 +1,117 @@
 import { useEffect, useState } from "react";
-import { Button } from "@openai/apps-sdk-ui/components/Button";
-
-type CheckoutSummary = {
-  total?: number | string | null;
-  totalAmount?: number | string | null;
-  currency?: string | null;
-  currencyCode?: string | null;
-  url?: string | null;
-};
 
 type CheckoutPayload = {
-  total?: number | string | null;
-  currency?: string | null;
-  currencyCode?: string | null;
+  success?: boolean;
+  sessionId?: string;
   checkoutUrl?: string | null;
-  url?: string | null;
-  summary?: CheckoutSummary | null;
+  expiresAt?: string | null;
+  company?: { id?: string; name?: string } | null;
+  products?: Array<{
+    id: string;
+    title: string;
+    price: string;
+    currency: string;
+  }> | null;
 };
 
-type ToolResult = {
-  toolName?: string;
-  structuredContent?: CheckoutPayload;
+type MessagePayload = {
+  jsonrpc: "2.0";
+  method: string;
+  params?: {
+    structuredContent?: CheckoutPayload;
+  };
 };
-
-declare global {
-  interface Window {
-    openai?: {
-      on?: (event: string, handler: (result: any) => void) => void;
-      off?: (event: string, handler: (result: any) => void) => void;
-    };
-  }
-}
-
-const openai = window.openai;
 
 export default function Checkout() {
   const [data, setData] = useState<CheckoutPayload | null>(null);
 
+  // ✅ FIX — postMessage listener instead of window.openai.on
   useEffect(() => {
-    if (!openai?.on) return;
-
-    const handler = (result: ToolResult) => {
-      if (result.toolName === "create_checkout" && result.structuredContent) {
-        setData(result.structuredContent);
-      }
+    const onMessage = (event: MessageEvent<MessagePayload>) => {
+      if (event.source !== window.parent) return;
+      const msg = event.data;
+      if (!msg || msg.jsonrpc !== "2.0") return;
+      if (msg.method !== "ui/notifications/tool-result") return;
+      const payload = msg.params?.structuredContent;
+      if (payload) setData(payload);
     };
 
-    openai.on("ui/notifications/tool-result", handler);
-
-    return () => {
-      openai.off?.("ui/notifications/tool-result", handler);
-    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
   }, []);
 
   if (!data) {
-    return <div>Waiting for checkout data…</div>;
+    return (
+      <div style={{ padding: 16, color: "#666", fontFamily: "sans-serif" }}>
+        Waiting for checkout data…
+      </div>
+    );
   }
 
-  const summary = data.summary ?? {};
-  const total =
-    summary.total ??
-    summary.totalAmount ??
-    data.total ??
-    (data as any).totalAmount ??
-    null;
-
-  const currency =
-    summary.currency ??
-    summary.currencyCode ??
-    data.currency ??
-    data.currencyCode ??
-    null;
-
-  const checkoutUrl = data.checkoutUrl ?? data.url ?? summary.url ?? null;
+  const checkoutUrl = data.checkoutUrl ?? null;
+  const products = data.products ?? [];
+  const companyName = data.company?.name ?? null;
 
   return (
-    <div className="border border-gray-200 rounded-xl p-3 flex flex-col gap-3">
-      <h3 className="font-semibold text-base">Checkout</h3>
+    <div
+      style={{
+        border: "1px solid #eee",
+        borderRadius: 12,
+        padding: 16,
+        fontFamily: "sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+        🛒 Checkout {companyName ? `— ${companyName}` : ""}
+      </h3>
 
-      {total != null && (
-        <p className="font-medium">
-          Total: {currency ? `${currency} ` : ""}
-          {total}
+      {products.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {products.map((p) => (
+            <div
+              key={p.id}
+              style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}
+            >
+              <span>{p.title}</span>
+              <span style={{ fontWeight: 600 }}>
+                {p.currency} {p.price}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.expiresAt && (
+        <p style={{ margin: 0, fontSize: 12, color: "#999" }}>
+          ⏳ Expires: {new Date(data.expiresAt).toLocaleString()}
         </p>
       )}
 
       {checkoutUrl ? (
-        <Button
-          onClick={() => {
-            try {
-              window.open(checkoutUrl, "_blank");
-            } catch (e) {
-              console.error("Failed to open checkout URL:", e);
-            }
+        <button
+          onClick={() => window.open(checkoutUrl, "_blank")}
+          style={{
+            background: "#000",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "10px 16px",
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 600,
+            width: "100%",
           }}
         >
-          Open Checkout
-        </Button>
+          Complete Purchase →
+        </button>
       ) : (
-        <p className="text-sm text-gray-500">No checkout URL available.</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#999" }}>
+          No checkout URL available.
+        </p>
       )}
     </div>
   );
 }
-
