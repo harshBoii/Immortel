@@ -1,0 +1,946 @@
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Indicator/CircularProgress.module.css */
+@layer components {
+  .CircularProgress_Container {
+    position: relative;
+    width: var(--circular-progress-size, 28px);
+    height: var(--circular-progress-size, 28px);
+  }
+  .CircularProgress_Container circle {
+    stroke-width: var(--circular-progress-stroke, 2px);
+  }
+  .CircularProgress_Track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    stroke: var(--circular-progress-track-color, light-dark(#deede9, var(--green-a50)));
+    transition: stroke 0.15s ease;
+  }
+  .CircularProgress_TrackProgress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    stroke: var(--circular-progress-track-active-color, var(--green-500));
+    stroke-dasharray: 50px;
+    stroke-dashoffset: 50px;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transition: stroke-dashoffset 0.3s ease;
+    will-change: transform;
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Indicator/LoadingDots.module.css */
+@layer components {
+  .LoadingDots_LoadingDots {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    height: var(--font-text-md-line-height);
+  }
+  .LoadingDots_Dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 100%;
+    animation: LoadingDots_pulse 1s infinite both;
+    background-color: currentcolor;
+  }
+  .LoadingDots_Dot:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .LoadingDots_Dot:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  @keyframes LoadingDots_pulse {
+    0% {
+      opacity: 0.15;
+    }
+    20% {
+      opacity: 0.4;
+    }
+    100% {
+      opacity: 0.15;
+    }
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Indicator/LoadingIndicator.module.css */
+@layer components {
+  .LoadingIndicator_LoadingIndicator {
+    position: relative;
+    width: var(--indicator-size, 1em);
+    height: var(--indicator-size, 1em);
+    animation: LoadingIndicator_rotate var(--indicator-rotate-duration, 0.8s) linear infinite;
+    transition: opacity 0.15s ease;
+  }
+  .LoadingIndicator_LoadingIndicator::before {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border: var(--indicator-stroke, 2px) solid var(--indicator-color, currentcolor);
+    border-radius: 50%;
+    content: "";
+    -webkit-mask-image: conic-gradient(rgb(0 0 0 / 0%), rgb(0 0 0));
+    mask-image: conic-gradient(rgb(0 0 0 / 0%), rgb(0 0 0));
+  }
+  .LoadingIndicator_LoadingIndicator::after {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    display: block;
+    width: var(--indicator-stroke, 2px);
+    height: var(--indicator-stroke, 2px);
+    border-radius: 100%;
+    margin-left: calc(var(--indicator-stroke, 2px) * -1 / 2);
+    background-color: var(--indicator-color, currentcolor);
+    content: "";
+  }
+  @keyframes LoadingIndicator_rotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(1turn);
+    }
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Transition/TransitionGroup.module.css */
+@layer components {
+  .TransitionGroup_TransitionGroupChild {
+    display: block;
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Button/Button.module.css */
+@layer components {
+  .Button_Button {
+    position: relative;
+    display: inline-block;
+    gap: var(--button-gap);
+    flex-shrink: 0;
+    height: var(--button-size);
+    padding: 0 var(--button-gutter);
+    border-radius: var(--button-radius);
+    cursor: pointer;
+    font-size: var(--button-font-size);
+    font-weight: var(--button-font-weight);
+    line-height: 1;
+    transition-duration: var(--transition-duration-basic);
+    transition-property: opacity, color;
+    transition-timing-function: var(--transition-ease-basic);
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .Button_Button::before {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border-radius: inherit;
+    content: "";
+    transition-duration: var(--transition-duration-basic);
+    transition-property:
+      opacity,
+      background-color,
+      transform,
+      box-shadow,
+      border-color;
+    transition-timing-function: var(--transition-ease-basic);
+    will-change: transform;
+  }
+  .Button_Button::after {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border-radius: inherit;
+    content: "";
+    pointer-events: none;
+    transition-duration: var(--transition-duration-basic);
+    transition-property: transform;
+    transition-timing-function: var(--transition-ease-basic);
+    will-change: transform;
+  }
+  .Button_Button:focus {
+    outline: none;
+  }
+  .Button_Button:focus-visible::after {
+    outline: 2px solid var(--button-ring-color, var(--color-ring));
+    outline-offset: var(--button-ring-offset, 2px);
+  }
+  .Button_Button svg:where(:not([data-no-autosize])) {
+    width: var(--button-icon-size);
+    height: var(--button-icon-size);
+  }
+  :where(.Button_Button svg:where(:not([data-no-autosize])):first-child:not(:only-child)) {
+    margin-left: var(--button-icon-offset, -1px);
+  }
+  :where(.Button_Button svg:where(:not([data-no-autosize])):last-child:not(:only-child)) {
+    margin-right: var(--button-icon-offset, -1px);
+  }
+  .Button_Button:where([data-optically-align=start]) {
+    margin-inline-start: calc(var(--button-gutter) * -1);
+  }
+  .Button_Button:where([data-optically-align=end]) {
+    margin-inline-end: calc(var(--button-gutter) * -1);
+  }
+  .Button_Button:where([data-optically-align=start][data-uniform]) {
+    margin-inline-start: calc(((var(--button-size) - var(--button-icon-size)) / 2) * -1);
+  }
+  .Button_Button:where([data-optically-align=end][data-uniform]) {
+    margin-inline-end: calc(((var(--button-size) - var(--button-icon-size)) / 2) * -1);
+  }
+  .Button_Button:where([data-size="3xs"]) {
+    --button-size: var(--control-size-3xs);
+    --button-gutter: var(--control-gutter-2xs);
+    --button-font-size: var(--control-font-size-sm);
+    --button-icon-size: var(--control-icon-size-xs);
+    --button-gap: var(--button-gap-sm);
+    --button-radius: var(--control-radius-sm);
+    --button-icon-offset: -1px;
+    --indicator-size: 11px;
+    --circular-progress-size: 11px;
+  }
+  .Button_Button:where([data-size="2xs"]) {
+    --button-size: var(--control-size-2xs);
+    --button-gutter: var(--control-gutter-xs);
+    --button-font-size: var(--control-font-size-sm);
+    --button-icon-size: var(--control-icon-size-sm);
+    --button-gap: var(--button-gap-md);
+    --button-radius: var(--control-radius-sm);
+    --button-icon-offset: -1px;
+    --indicator-size: 12px;
+    --circular-progress-size: 12px;
+  }
+  .Button_Button:where([data-size=xs]) {
+    --button-size: var(--control-size-xs);
+    --button-gutter: var(--control-gutter-xs);
+    --button-font-size: var(--control-font-size-md);
+    --button-icon-size: var(--control-icon-size-sm);
+    --button-gap: var(--button-gap-md);
+    --button-radius: var(--control-radius-sm);
+    --button-icon-offset: -1px;
+    --indicator-size: 13px;
+    --circular-progress-size: 14px;
+  }
+  .Button_Button:where([data-size=sm]) {
+    --button-size: var(--control-size-sm);
+    --button-gutter: var(--control-gutter-sm);
+    --button-font-size: var(--control-font-size-md);
+    --button-icon-size: var(--control-icon-size-md);
+    --button-gap: var(--button-gap-md);
+    --button-radius: var(--control-radius-sm);
+    --button-icon-offset: -1px;
+    --indicator-size: 15px;
+    --circular-progress-size: 15px;
+  }
+  .Button_Button:where([data-size=md]) {
+    --button-size: var(--control-size-md);
+    --button-gutter: var(--control-gutter-md);
+    --button-font-size: var(--control-font-size-md);
+    --button-icon-size: var(--control-icon-size-md);
+    --button-gap: var(--button-gap-lg);
+    --button-radius: var(--control-radius-md);
+    --button-icon-offset: -1px;
+    --indicator-size: 16px;
+    --circular-progress-size: 16px;
+  }
+  .Button_Button:where([data-size=lg]) {
+    --button-size: var(--control-size-lg);
+    --button-gutter: var(--control-gutter-md);
+    --button-font-size: var(--control-font-size-md);
+    --button-icon-size: var(--control-icon-size-md);
+    --button-gap: var(--button-gap-lg);
+    --button-radius: var(--control-radius-md);
+    --button-icon-offset: -1px;
+    --indicator-size: 16px;
+    --circular-progress-size: 16px;
+  }
+  .Button_Button:where([data-size=xl]) {
+    --button-size: var(--control-size-xl);
+    --button-gutter: var(--control-gutter-lg);
+    --button-font-size: var(--control-font-size-md);
+    --button-icon-size: var(--control-icon-size-md);
+    --button-gap: var(--button-gap-lg);
+    --button-radius: var(--control-radius-lg);
+    --button-icon-offset: -1px;
+    --indicator-size: 18px;
+    --circular-progress-size: 18px;
+  }
+  .Button_Button:where([data-size="2xl"]) {
+    --button-size: var(--control-size-2xl);
+    --button-gutter: var(--control-gutter-lg);
+    --button-font-size: var(--control-font-size-lg);
+    --button-icon-size: var(--control-icon-size-lg);
+    --button-gap: var(--button-gap-lg);
+    --button-radius: var(--control-radius-xl);
+    --button-icon-offset: -2px;
+    --indicator-size: 18px;
+    --circular-progress-size: 18px;
+  }
+  .Button_Button:where([data-size="3xl"]) {
+    --button-size: var(--control-size-3xl);
+    --button-gutter: var(--control-gutter-xl);
+    --button-font-size: var(--control-font-size-lg);
+    --button-icon-size: var(--control-icon-size-lg);
+    --button-gap: var(--button-gap-lg);
+    --button-radius: var(--control-radius-xl);
+    --button-icon-offset: -2px;
+    --indicator-size: 20px;
+    --circular-progress-size: 20px;
+  }
+  .Button_Button:where([data-gutter-size="2xs"]) {
+    --button-gutter: var(--control-gutter-2xs);
+  }
+  .Button_Button:where([data-gutter-size=xs]) {
+    --button-gutter: var(--control-gutter-xs);
+  }
+  .Button_Button:where([data-gutter-size=sm]) {
+    --button-gutter: var(--control-gutter-sm);
+  }
+  .Button_Button:where([data-gutter-size=md]) {
+    --button-gutter: var(--control-gutter-md);
+  }
+  .Button_Button:where([data-gutter-size=lg]) {
+    --button-gutter: var(--control-gutter-lg);
+  }
+  .Button_Button:where([data-gutter-size=xl]) {
+    --button-gutter: var(--control-gutter-xl);
+  }
+  .Button_Button:where([data-icon-size=sm]) {
+    --button-icon-size: var(--control-icon-size-sm);
+  }
+  .Button_Button:where([data-icon-size=md]) {
+    --button-icon-size: var(--control-icon-size-md);
+  }
+  .Button_Button:where([data-icon-size=lg]) {
+    --button-icon-size: var(--control-icon-size-lg);
+  }
+  .Button_Button:where([data-icon-size=xl]) {
+    --button-icon-size: var(--control-icon-size-xl);
+  }
+  .Button_Button:where([data-icon-size="2xl"]) {
+    --button-icon-size: var(--control-icon-size-2xl);
+  }
+  .Button_Button:where([data-pill]) {
+    --button-radius: var(--radius-full);
+    padding: 0 calc(var(--button-gutter) * var(--control-gutter-pill-scaling));
+  }
+  .Button_Button:where([data-block]) {
+    width: 100%;
+  }
+  .Button_Button[data-uniform] {
+    --button-gutter: 0;
+    width: var(--button-size);
+  }
+  .Button_Button[data-variant=ghost] {
+    --button-ring-offset: -1px;
+    color: var(--button-text-color);
+  }
+  .Button_Button[data-variant=ghost]::before {
+    background-color: var(--button-background-color);
+    opacity: 0;
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=ghost][aria-expanded=true],
+  .Button_Button[data-variant=ghost][data-state=open] {
+    color: var(--button-text-color-hover);
+  }
+  .Button_Button[data-variant=ghost][aria-expanded=true]::before,
+  .Button_Button[data-variant=ghost][data-state=open]::before {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  .Button_Button[data-variant=ghost][data-selected] {
+    color: var(--button-text-color-hover);
+  }
+  .Button_Button[data-variant=ghost][data-selected]::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .Button_Button[data-variant=ghost]:where(:not([data-disabled])):hover {
+      color: var(--button-text-color-hover);
+    }
+    .Button_Button[data-variant=ghost]:where(:not([data-disabled])):hover::before {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  .Button_Button[data-variant=ghost]:where(:not([data-disabled])):active::before {
+    background-color: var(--button-background-color-active);
+    opacity: 1;
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=ghost]:where(:not([data-disabled])):active::after {
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=primary]) {
+    --button-background-color: var(--color-background-primary-ghost-hover);
+    --button-background-color-active: var(--color-background-primary-ghost-active);
+    --button-text-color: var(--color-text-primary-ghost);
+    --button-text-color-hover: var(--color-text-primary-ghost-hover);
+    --button-ring-color: var(--color-ring-primary-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=secondary]) {
+    --button-background-color: var(--color-background-secondary-ghost-hover);
+    --button-background-color-active: var(--color-background-secondary-ghost-active);
+    --button-text-color: var(--color-text-secondary-ghost);
+    --button-text-color-hover: var(--color-text-secondary-ghost-hover);
+    --button-ring-color: var(--color-ring-secondary-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=danger]) {
+    --button-background-color: var(--color-background-danger-ghost-hover);
+    --button-background-color-active: var(--color-background-danger-ghost-active);
+    --button-text-color: var(--color-text-danger-ghost);
+    --button-text-color-hover: var(--color-text-danger-ghost-hover);
+    --button-ring-color: var(--color-ring-danger-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=success]) {
+    --button-background-color: var(--color-background-success-ghost-hover);
+    --button-background-color-active: var(--color-background-success-ghost-active);
+    --button-text-color: var(--color-text-success-ghost);
+    --button-text-color-hover: var(--color-text-success-ghost-hover);
+    --button-ring-color: var(--color-ring-success-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=warning]) {
+    --button-background-color: var(--color-background-warning-ghost-hover);
+    --button-background-color-active: var(--color-background-warning-ghost-active);
+    --button-text-color: var(--color-text-warning-ghost);
+    --button-text-color-hover: var(--color-text-warning-ghost-hover);
+    --button-ring-color: var(--color-ring-warning-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=caution]) {
+    --button-background-color: var(--color-background-caution-ghost-hover);
+    --button-background-color-active: var(--color-background-caution-ghost-active);
+    --button-text-color: var(--color-text-caution-ghost);
+    --button-text-color-hover: var(--color-text-caution-ghost-hover);
+    --button-ring-color: var(--color-ring-caution-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=info]) {
+    --button-background-color: var(--color-background-info-ghost-hover);
+    --button-background-color-active: var(--color-background-info-ghost-active);
+    --button-text-color: var(--color-text-info-ghost);
+    --button-text-color-hover: var(--color-text-info-ghost-hover);
+    --button-ring-color: var(--color-ring-info-ghost);
+  }
+  .Button_Button[data-variant=ghost]:where([data-color=discovery]) {
+    --button-background-color: var(--color-background-discovery-ghost-hover);
+    --button-background-color-active: var(--color-background-discovery-ghost-active);
+    --button-text-color: var(--color-text-discovery-ghost);
+    --button-text-color-hover: var(--color-text-discovery-ghost-hover);
+    --button-ring-color: var(--color-ring-discovery-ghost);
+  }
+  .Button_Button[data-variant=solid] {
+    color: var(--button-text-color);
+  }
+  .Button_Button[data-variant=solid]::before {
+    background-color: var(--button-background-color);
+  }
+  .Button_Button[data-variant=solid][aria-expanded=true]::before,
+  .Button_Button[data-variant=solid][data-state=open]::before,
+  .Button_Button[data-variant=solid][data-selected]::before {
+    background-color: var(--button-background-color-hover);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .Button_Button[data-variant=solid]:where(:not([data-disabled])):hover::before {
+      background-color: var(--button-background-color-hover);
+    }
+  }
+  .Button_Button[data-variant=solid]:where(:not([data-disabled])):active::before {
+    background-color: var(--button-background-color-active);
+  }
+  .Button_Button[data-variant=solid]:where(:not([data-disabled])):active::before,
+  .Button_Button[data-variant=solid]:where(:not([data-disabled])):active::after {
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=solid]:where([data-color=primary]) {
+    --button-background-color: var(--color-background-primary-solid);
+    --button-background-color-hover: var(--color-background-primary-solid-hover);
+    --button-background-color-active: var(--color-background-primary-solid-active);
+    --button-text-color: var(--color-text-primary-solid);
+    --button-ring-color: var(--color-ring-primary-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=secondary]) {
+    --button-background-color: var(--color-background-secondary-solid);
+    --button-background-color-hover: var(--color-background-secondary-solid-hover);
+    --button-background-color-active: var(--color-background-secondary-solid-active);
+    --button-text-color: var(--color-text-secondary-solid);
+    --button-ring-color: var(--color-ring-secondary-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=success]) {
+    --button-background-color: var(--color-background-success-solid);
+    --button-background-color-hover: var(--color-background-success-solid-hover);
+    --button-background-color-active: var(--color-background-success-solid-active);
+    --button-text-color: var(--color-text-success-solid);
+    --button-ring-color: var(--color-ring-success-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=danger]) {
+    --button-background-color: var(--color-background-danger-solid);
+    --button-background-color-hover: var(--color-background-danger-solid-hover);
+    --button-background-color-active: var(--color-background-danger-solid-active);
+    --button-text-color: var(--color-text-danger-solid);
+    --button-ring-color: var(--color-ring-danger-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=warning]) {
+    --button-background-color: var(--color-background-warning-solid);
+    --button-background-color-hover: var(--color-background-warning-solid-hover);
+    --button-background-color-active: var(--color-background-warning-solid-active);
+    --button-text-color: var(--color-text-warning-solid);
+    --button-ring-color: var(--color-ring-warning-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=caution]) {
+    --button-background-color: var(--color-background-caution-solid);
+    --button-background-color-hover: var(--color-background-caution-solid-hover);
+    --button-background-color-active: var(--color-background-caution-solid-active);
+    --button-text-color: var(--color-text-caution-solid);
+    --button-ring-color: var(--color-ring-caution-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=info]) {
+    --button-background-color: var(--color-background-info-solid);
+    --button-background-color-hover: var(--color-background-info-solid-hover);
+    --button-background-color-active: var(--color-background-info-solid-active);
+    --button-text-color: var(--color-text-info-solid);
+    --button-ring-color: var(--color-ring-info-solid);
+  }
+  .Button_Button[data-variant=solid]:where([data-color=discovery]) {
+    --button-background-color: var(--color-background-discovery-solid);
+    --button-background-color-hover: var(--color-background-discovery-solid-hover);
+    --button-background-color-active: var(--color-background-discovery-solid-active);
+    --button-text-color: var(--color-text-discovery-solid);
+    --button-ring-color: var(--color-ring-discovery-solid);
+  }
+  .Button_Button[data-variant=soft] {
+    color: var(--button-text-color);
+  }
+  .Button_Button[data-variant=soft]::before {
+    background-color: var(--button-background-color);
+  }
+  .Button_Button[data-variant=soft][aria-expanded=true]::before,
+  .Button_Button[data-variant=soft][data-state=open]::before,
+  .Button_Button[data-variant=soft][data-selected]::before {
+    background-color: var(--button-background-color-hover);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .Button_Button[data-variant=soft]:where(:not([data-disabled])):hover::before {
+      background-color: var(--button-background-color-hover);
+    }
+  }
+  .Button_Button[data-variant=soft]:where(:not([data-disabled])):active::before {
+    background-color: var(--button-background-color-active);
+  }
+  .Button_Button[data-variant=soft]:where(:not([data-disabled])):active::before,
+  .Button_Button[data-variant=soft]:where(:not([data-disabled])):active::after {
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=soft]:where([data-color=primary]) {
+    --button-background-color: var(--color-background-primary-soft-alpha);
+    --button-background-color-hover: var(--color-background-primary-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-primary-soft-alpha-active);
+    --button-text-color: var(--color-text-primary-soft);
+    --button-ring-color: var(--color-ring-primary-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=secondary]) {
+    --button-background-color: var(--color-background-secondary-soft-alpha);
+    --button-background-color-hover: var(--color-background-secondary-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-secondary-soft-alpha-active);
+    --button-text-color: var(--color-text-secondary-soft);
+    --button-ring-color: var(--color-ring-secondary-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=success]) {
+    --button-background-color: var(--color-background-success-soft-alpha);
+    --button-background-color-hover: var(--color-background-success-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-success-soft-alpha-active);
+    --button-text-color: var(--color-text-success-soft);
+    --button-ring-color: var(--color-ring-success-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=danger]) {
+    --button-background-color: var(--color-background-danger-soft-alpha);
+    --button-background-color-hover: var(--color-background-danger-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-danger-soft-alpha-active);
+    --button-text-color: var(--color-text-danger-soft);
+    --button-ring-color: var(--color-ring-danger-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=warning]) {
+    --button-background-color: var(--color-background-warning-soft-alpha);
+    --button-background-color-hover: var(--color-background-warning-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-warning-soft-alpha-active);
+    --button-text-color: var(--color-text-warning-soft);
+    --button-ring-color: var(--color-ring-warning-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=caution]) {
+    --button-background-color: var(--color-background-caution-soft-alpha);
+    --button-background-color-hover: var(--color-background-caution-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-caution-soft-alpha-active);
+    --button-text-color: var(--color-text-caution-soft);
+    --button-ring-color: var(--color-ring-caution-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=info]) {
+    --button-background-color: var(--color-background-info-soft-alpha);
+    --button-background-color-hover: var(--color-background-info-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-info-soft-alpha-active);
+    --button-text-color: var(--color-text-info-soft);
+    --button-ring-color: var(--color-ring-info-soft);
+  }
+  .Button_Button[data-variant=soft]:where([data-color=discovery]) {
+    --button-background-color: var(--color-background-discovery-soft-alpha);
+    --button-background-color-hover: var(--color-background-discovery-soft-alpha-hover);
+    --button-background-color-active: var(--color-background-discovery-soft-alpha-active);
+    --button-text-color: var(--color-text-discovery-soft);
+    --button-ring-color: var(--color-ring-discovery-soft);
+  }
+  .Button_Button[data-variant=outline] {
+    --button-ring-offset: -1px;
+    color: var(--button-text-color);
+  }
+  .Button_Button[data-variant=outline]::before {
+    background-color: transparent;
+    box-shadow: 0 0 0 1px var(--button-border-color) inset, var(--button-shadow-custom, 0 0 #00000000);
+  }
+  .Button_Button[data-variant=outline][aria-expanded=true],
+  .Button_Button[data-variant=outline][data-state=open],
+  .Button_Button[data-variant=outline][data-selected] {
+    color: var(--button-text-color-hover);
+  }
+  .Button_Button[data-variant=outline][aria-expanded=true]::before,
+  .Button_Button[data-variant=outline][data-state=open]::before,
+  .Button_Button[data-variant=outline][data-selected]::before {
+    background-color: var(--button-background-color-hover);
+    box-shadow: 0 0 0 1px var(--button-border-color-hover) inset, var(--button-shadow-custom, 0 0 #00000000);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .Button_Button[data-variant=outline]:where(:not([data-disabled])):hover {
+      color: var(--button-text-color-hover);
+    }
+    .Button_Button[data-variant=outline]:where(:not([data-disabled])):hover::before {
+      background-color: var(--button-background-color-hover);
+      box-shadow: 0 0 0 1px var(--button-border-color-hover) inset, var(--button-shadow-custom, 0 0 #00000000);
+    }
+  }
+  .Button_Button[data-variant=outline]:where(:not([data-disabled])):active::before {
+    background-color: var(--button-background-color-active);
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=outline]:where(:not([data-disabled])):active::after {
+    transform: scale(var(--scale));
+  }
+  .Button_Button[data-variant=outline]:where([data-color=primary]) {
+    --button-background-color-hover: var(--color-background-primary-outline-hover);
+    --button-background-color-active: var(--color-background-primary-outline-active);
+    --button-border-color: var(--color-border-primary-outline);
+    --button-border-color-hover: var(--color-border-primary-outline-hover);
+    --button-text-color: var(--color-text-primary-outline);
+    --button-text-color-hover: var(--color-text-primary-outline-hover);
+    --button-ring-color: var(--color-ring-primary-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=secondary]) {
+    --button-background-color-hover: var(--color-background-secondary-outline-hover);
+    --button-background-color-active: var(--color-background-secondary-outline-active);
+    --button-border-color: var(--color-border-secondary-outline);
+    --button-border-color-hover: var(--color-border-secondary-outline-hover);
+    --button-text-color: var(--color-text-secondary-outline);
+    --button-text-color-hover: var(--color-text-secondary-outline-hover);
+    --button-ring-color: var(--color-ring-secondary-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=danger]) {
+    --button-background-color-hover: var(--color-background-danger-outline-hover);
+    --button-background-color-active: var(--color-background-danger-outline-active);
+    --button-border-color: var(--color-border-danger-outline);
+    --button-border-color-hover: var(--color-border-danger-outline-hover);
+    --button-text-color: var(--color-text-danger-outline);
+    --button-text-color-hover: var(--color-text-danger-outline-hover);
+    --button-ring-color: var(--color-ring-danger-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=success]) {
+    --button-background-color-hover: var(--color-background-success-outline-hover);
+    --button-background-color-active: var(--color-background-success-outline-active);
+    --button-border-color: var(--color-border-success-outline);
+    --button-border-color-hover: var(--color-border-success-outline-hover);
+    --button-text-color: var(--color-text-success-outline);
+    --button-text-color-hover: var(--color-text-success-outline-hover);
+    --button-ring-color: var(--color-ring-success-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=warning]) {
+    --button-background-color-hover: var(--color-background-warning-outline-hover);
+    --button-background-color-active: var(--color-background-warning-outline-active);
+    --button-border-color: var(--color-border-warning-outline);
+    --button-border-color-hover: var(--color-border-warning-outline-hover);
+    --button-text-color: var(--color-text-warning-outline);
+    --button-text-color-hover: var(--color-text-warning-outline-hover);
+    --button-ring-color: var(--color-ring-warning-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=caution]) {
+    --button-background-color-hover: var(--color-background-caution-outline-hover);
+    --button-background-color-active: var(--color-background-caution-outline-active);
+    --button-border-color: var(--color-border-caution-outline);
+    --button-border-color-hover: var(--color-border-caution-outline-hover);
+    --button-text-color: var(--color-text-caution-outline);
+    --button-text-color-hover: var(--color-text-caution-outline-hover);
+    --button-ring-color: var(--color-ring-caution-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=info]) {
+    --button-background-color-hover: var(--color-background-info-outline-hover);
+    --button-background-color-active: var(--color-background-info-outline-active);
+    --button-border-color: var(--color-border-info-outline);
+    --button-border-color-hover: var(--color-border-info-outline-hover);
+    --button-text-color: var(--color-text-info-outline);
+    --button-text-color-hover: var(--color-text-info-outline-hover);
+    --button-ring-color: var(--color-ring-info-outline);
+  }
+  .Button_Button[data-variant=outline]:where([data-color=discovery]) {
+    --button-background-color-hover: var(--color-background-discovery-outline-hover);
+    --button-background-color-active: var(--color-background-discovery-outline-active);
+    --button-border-color: var(--color-border-discovery-outline);
+    --button-border-color-hover: var(--color-border-discovery-outline-hover);
+    --button-text-color: var(--color-text-discovery-outline);
+    --button-text-color-hover: var(--color-text-discovery-outline-hover);
+    --button-ring-color: var(--color-ring-discovery-outline);
+  }
+  .Button_Button[disabled] {
+    pointer-events: none;
+  }
+  .Button_Button[data-disabled][data-variant] {
+    --button-background-color: var(--color-background-disabled);
+    --button-border-color: var(--color-border-disabled);
+    --button-text-color: var(--color-text-disabled);
+    cursor: not-allowed;
+    pointer-events: auto;
+  }
+  .Button_Button[data-disabled][data-variant]:active::before {
+    transform: scale(1);
+  }
+  .Button_Button[data-disabled][data-variant][data-disabled-tone=relaxed] {
+    cursor: default;
+  }
+  .Button_ButtonInner {
+    position: relative;
+    display: flex;
+    flex-direction: inherit;
+    align-items: center;
+    justify-content: center;
+    gap: inherit;
+    width: 100%;
+    height: 100%;
+    transition: opacity 0.15s ease 0.1s;
+  }
+  [data-loading] .Button_ButtonInner {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .Button_ButtonLoader {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .Button_ButtonLoader[data-entering] {
+    opacity: 0;
+  }
+  .Button_ButtonLoader[data-exiting] {
+    opacity: 1;
+  }
+  .Button_ButtonLoader[data-entering-active],
+  .Button_ButtonLoader[data-entering][data-interrupted] {
+    opacity: 1;
+    transition: opacity 0.15s ease 0.1s;
+  }
+  .Button_ButtonLoader[data-exiting-active],
+  .Button_ButtonLoader[data-exiting][data-interrupted] {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Transition/Animate.module.css */
+@layer components {
+  .Animate_TransitionItem {
+    will-change: var(--tg-will-change);
+  }
+  [data-transition-position=absolute] .Animate_TransitionItem[data-exiting],
+  [data-transition-position=absolute] .Animate_TransitionItem:not([data-exiting]) + .Animate_TransitionItem[data-entering] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .Animate_TransitionItem[data-entering] {
+    filter: var(--tg-initial-filter);
+    opacity: var(--tg-initial-opacity);
+    transform: var(--tg-initial-transform);
+  }
+  .Animate_TransitionItem[data-exiting] {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+  }
+  .Animate_TransitionItem[data-entering-active],
+  .Animate_TransitionItem[data-entering][data-interrupted] {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+    transition:
+      opacity var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      transform var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      filter var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay);
+  }
+  .Animate_TransitionItem[data-exiting-active],
+  .Animate_TransitionItem[data-exiting][data-interrupted] {
+    filter: var(--tg-exit-filter, none);
+    opacity: var(--tg-exit-opacity, 0);
+    transform: var(--tg-exit-transform, none);
+    transition:
+      opacity var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      transform var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      filter var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay);
+  }
+  .Animate_TransitionItem[data-entering][data-interrupted],
+  .Animate_TransitionItem[data-exiting][data-interrupted] {
+    transition-delay: 0ms;
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Transition/AnimateLayout.module.css */
+@layer components {
+  .AnimateLayout_Layout {
+    position: relative;
+    display: block;
+    flex-shrink: 0;
+    transition-property: height, width;
+  }
+  .AnimateLayout_Layout[data-clip=true] {
+    overflow: hidden;
+  }
+  .AnimateLayout_Layout[data-direction=in] {
+    transition-delay: var(--tg-layout-enter-delay);
+    transition-duration: var(--tg-layout-enter-duration);
+    transition-timing-function: var(--tg-layout-enter-timing-function);
+  }
+  .AnimateLayout_Layout[data-direction=out] {
+    transition-delay: var(--tg-layout-exit-delay);
+    transition-duration: var(--tg-layout-exit-duration);
+    transition-timing-function: var(--tg-layout-exit-timing-function);
+  }
+  .AnimateLayout_Layout[data-direction=move] {
+    transition-delay: var(--tg-layout-move-delay);
+    transition-duration: var(--tg-layout-move-duration);
+    transition-timing-function: var(--tg-layout-move-timing-function);
+  }
+  .AnimateLayout_Layout[data-interrupted=true] {
+    transition-delay: 0ms;
+  }
+  .AnimateLayout_TransitionItem {
+    flex-shrink: 0;
+    will-change: var(--tg-will-change, auto);
+  }
+  .AnimateLayout_TransitionItem[data-entering],
+  .AnimateLayout_TransitionItem[data-exiting] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .AnimateLayout_Layout[data-dimension=width] > .AnimateLayout_TransitionItem[data-entering],
+  .AnimateLayout_Layout[data-dimension=width] > .AnimateLayout_TransitionItem[data-exiting] {
+    width: auto;
+  }
+  .AnimateLayout_Layout[data-item-anchor=end] > .AnimateLayout_TransitionItem[data-entering],
+  .AnimateLayout_Layout[data-item-anchor=end] > .AnimateLayout_TransitionItem[data-exiting] {
+    top: initial;
+    bottom: 0;
+  }
+  .AnimateLayout_Layout[data-item-anchor=end][data-dimension=width] > .AnimateLayout_TransitionItem[data-entering],
+  .AnimateLayout_Layout[data-item-anchor=end][data-dimension=width] > .AnimateLayout_TransitionItem[data-exiting] {
+    right: 0;
+    left: initial;
+  }
+  .AnimateLayout_TransitionItem[data-entering] {
+    filter: var(--tg-initial-filter);
+    opacity: var(--tg-initial-opacity);
+    transform: var(--tg-initial-transform);
+  }
+  .AnimateLayout_TransitionItem[data-exiting] {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+  }
+  .AnimateLayout_TransitionItem[data-entering-active],
+  .AnimateLayout_TransitionItem[data-entering][data-interrupted] {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+    transition:
+      opacity var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      transform var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      filter var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay);
+  }
+  .AnimateLayout_TransitionItem[data-exiting-active],
+  .AnimateLayout_TransitionItem[data-exiting][data-interrupted] {
+    filter: var(--tg-exit-filter);
+    opacity: var(--tg-exit-opacity);
+    transform: var(--tg-exit-transform);
+    transition:
+      opacity var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      transform var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      filter var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay);
+  }
+}
+
+/* node_modules/@openai/apps-sdk-ui/dist/es/components/Transition/AnimateLayoutGroup.module.css */
+@layer components {
+  .AnimateLayoutGroup_LayoutItem {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .AnimateLayoutGroup_LayoutItem[data-entering-active],
+  .AnimateLayoutGroup_LayoutItem[data-entering][data-interrupted] {
+    transition: height var(--tg-layout-enter-duration) var(--tg-layout-enter-timing-function) var(--tg-layout-enter-delay), width var(--tg-layout-enter-duration) var(--tg-layout-enter-timing-function) var(--tg-layout-enter-delay);
+  }
+  .AnimateLayoutGroup_LayoutItem[data-exiting-active],
+  .AnimateLayoutGroup_LayoutItem[data-exiting][data-interrupted] {
+    transition: height var(--tg-layout-exit-duration) var(--tg-layout-exit-timing-function) var(--tg-layout-exit-delay), width var(--tg-layout-exit-duration) var(--tg-layout-exit-timing-function) var(--tg-layout-exit-delay);
+  }
+  .AnimateLayoutGroup_TransitionItem {
+    display: block;
+    will-change: var(--tg-will-change);
+  }
+  .AnimateLayoutGroup_LayoutItem[data-entering] > .AnimateLayoutGroup_TransitionItem {
+    filter: var(--tg-initial-filter);
+    opacity: var(--tg-initial-opacity);
+    transform: var(--tg-initial-transform);
+  }
+  .AnimateLayoutGroup_LayoutItem[data-exiting] > .AnimateLayoutGroup_TransitionItem {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+  }
+  .AnimateLayoutGroup_LayoutItem[data-entering] > .AnimateLayoutGroup_TransitionItem[data-dimension=width] {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  .AnimateLayoutGroup_LayoutItem[data-entering-active] > .AnimateLayoutGroup_TransitionItem,
+  .AnimateLayoutGroup_LayoutItem[data-entering][data-interrupted] > .AnimateLayoutGroup_TransitionItem {
+    filter: var(--tg-enter-filter);
+    opacity: var(--tg-enter-opacity);
+    transform: var(--tg-enter-transform);
+    transition:
+      opacity var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      transform var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay),
+      filter var(--tg-enter-duration) var(--tg-enter-timing-function) var(--tg-enter-delay);
+  }
+  .AnimateLayoutGroup_LayoutItem[data-exiting-active] > .AnimateLayoutGroup_TransitionItem,
+  .AnimateLayoutGroup_LayoutItem[data-exiting][data-interrupted] > .AnimateLayoutGroup_TransitionItem {
+    filter: var(--tg-exit-filter);
+    opacity: var(--tg-exit-opacity, 0);
+    transform: var(--tg-exit-transform);
+    transition:
+      opacity var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      transform var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay),
+      filter var(--tg-exit-duration) var(--tg-exit-timing-function) var(--tg-exit-delay);
+  }
+}

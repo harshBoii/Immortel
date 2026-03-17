@@ -7,6 +7,7 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "build:widgets": "esbuild src/widget/product-list-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/product-list.js && esbuild src/widget/checkout-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/checkout.js",
     "seed": "prisma db seed"
   },
   "prisma": {
@@ -16,6 +17,9 @@
     "@aws-sdk/client-s3": "^3.997.0",
     "@aws-sdk/s3-request-presigner": "^3.997.0",
     "@elastic/elasticsearch": "^9.3.4",
+    "@modelcontextprotocol/ext-apps": "^1.2.2",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@openai/apps-sdk-ui": "^0.2.1",
     "@prisma/adapter-better-sqlite3": "^7.4.1",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
@@ -30,7 +34,8 @@
     "prisma": "^7.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "recharts": "^3.7.0"
+    "recharts": "^3.7.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
@@ -44,6 +49,7 @@
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.2.1",
+    "esbuild": "^0.25.0",
     "tsx": "^4.19.2",
     "typescript": "^5"
   }
