@@ -21726,64 +21726,65 @@
   var import_react = __toESM(require_react());
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   var STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Share+Tech+Mono&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --parchment:      #FAF8F2;
-    --parchment-2:    #F5F2EA;
-    --navy:           #151D35;
-    --navy-mid:       #2A3560;
-    --navy-grey:      #606678;
-    --orange:         #C4550A;
-    --orange-hover:   #D4620F;
-    --orange-dark:    #A04208;
-    --border:         rgba(21, 29, 53, 0.09);
-    --border-top:     rgba(255, 255, 255, 0.88);
-    --shadow-card:    3px 3px 0 0 rgba(10, 13, 25, 0.20), 1.5px 1.5px 0 0 rgba(21, 29, 53, 0.06);
-    --shadow-hover:   4px 5px 0 0 rgba(21, 29, 53, 0.14), 2px 2.5px 0 0 rgba(21, 29, 53, 0.07);
-    --radius:         14px;
-    --radius-sm:      8px;
-    --font-heading:   'Playfair Display', Georgia, serif;
+    --black:          #080808;
+    --black-2:        #111111;
+    --black-3:        #1a1a1a;
+    --black-4:        #222222;
+    --green:          #00FF88;
+    --green-dim:      #00CC6A;
+    --green-dark:     #008F4A;
+    --green-glow:     rgba(0, 255, 136, 0.18);
+    --green-glow-lg:  rgba(0, 255, 136, 0.32);
+    --white:          #F0F0F0;
+    --grey:           #888888;
+    --grey-dim:       #555555;
+    --red:            #FF6060;
+    --red-dim:        rgba(255, 96, 96, 0.12);
+    --border:         rgba(0, 255, 136, 0.14);
+    --border-bright:  rgba(0, 255, 136, 0.35);
+    --radius:         10px;
+    --radius-sm:      6px;
+    --font-mono:      'Share Tech Mono', 'Courier New', monospace;
     --font-body:      'Outfit', system-ui, sans-serif;
     --font-label:     'DM Sans', system-ui, sans-serif;
   }
 
   html, body {
-    background: var(--parchment);
-    color: var(--navy);
+    background: var(--black);
+    color: var(--white);
     font-family: var(--font-body);
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
 
-  #root { padding: 16px; }
+  #root { padding: 14px; }
 
   /* \u2500\u2500 Scrollbar \u2500\u2500 */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(21,29,53,0.15); border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(196,85,10,0.4); }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--black-3); }
+  ::-webkit-scrollbar-thumb { background: var(--green-dark); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green); box-shadow: 0 0 6px var(--green); }
 
   /* \u2500\u2500 Wrapper card \u2500\u2500 */
   .checkout-card {
     position: relative;
     overflow: hidden;
-    background: rgba(250, 248, 242, 0.72);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    border: 1.5px solid var(--border);
-    border-top-color: var(--border-top);
+    background: var(--black-2);
+    border: 1px solid var(--border);
+    border-top-color: rgba(0, 255, 136, 0.22);
     border-radius: var(--radius);
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 0 0 1px rgba(0,255,136,0.08), 3px 3px 0 0 rgba(0,0,0,0.6);
     display: flex;
     flex-direction: column;
-    gap: 0;
   }
 
-  /* Bokeh orbs */
+  /* Neon corner orbs */
   .checkout-card::before, .checkout-card::after {
     content: "";
     position: absolute;
@@ -21791,66 +21792,76 @@
     pointer-events: none;
     z-index: 0;
     filter: blur(48px);
-    opacity: 0.55;
+    opacity: 0.5;
   }
   .checkout-card::before {
     width: 160px; height: 160px;
-    top: -50px; left: -30px;
-    background: radial-gradient(circle, rgba(196,85,10,0.22) 0%, transparent 70%);
+    top: -60px; left: -40px;
+    background: radial-gradient(circle, rgba(0,255,136,0.20) 0%, transparent 70%);
   }
   .checkout-card::after {
     width: 120px; height: 120px;
-    bottom: -30px; right: -20px;
-    background: radial-gradient(circle, rgba(21,29,53,0.14) 0%, transparent 70%);
+    bottom: -40px; right: -30px;
+    background: radial-gradient(circle, rgba(0,255,136,0.12) 0%, transparent 70%);
   }
   .checkout-card > * { position: relative; z-index: 1; }
 
   /* \u2500\u2500 Header \u2500\u2500 */
   .checkout-header {
-    padding: 18px 18px 14px;
-    border-bottom: 1px solid rgba(21,29,53,0.07);
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(0,255,136,0.08);
   }
   .checkout-company {
-    font-family: var(--font-label);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--orange);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    opacity: 0.8;
   }
+  .checkout-company::before { content: "// "; opacity: 0.5; }
   .checkout-title {
-    font-family: var(--font-heading);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.02em;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--green);
+    letter-spacing: 0.03em;
+    text-shadow: 0 0 14px rgba(0,255,136,0.45);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   /* \u2500\u2500 Product rows \u2500\u2500 */
   .product-list {
-    padding: 14px 18px;
+    padding: 10px 16px;
     display: flex;
     flex-direction: column;
-    gap: 0;
   }
   .product-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(21,29,53,0.05);
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(0,255,136,0.06);
     gap: 12px;
   }
   .product-row:last-child { border-bottom: none; }
+
+  /* scan-line accent on left */
+  .product-row::before {
+    content: "\u25B8";
+    color: var(--green-dark);
+    font-size: 10px;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
   .product-name {
     font-family: var(--font-label);
     font-size: 13px;
     font-weight: 500;
-    color: var(--navy);
+    color: var(--white);
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -21858,43 +21869,48 @@
     white-space: nowrap;
   }
   .product-price {
-    font-family: var(--font-label);
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--orange-dark);
-    letter-spacing: -0.01em;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--green-dim);
     white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+
+  /* \u2500\u2500 Divider \u2500\u2500 */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0,255,136,0.18), transparent);
+    margin: 0 16px;
   }
 
   /* \u2500\u2500 Total row \u2500\u2500 */
   .total-row {
-    padding: 12px 18px;
+    padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(21,29,53,0.03);
-    border-top: 1.5px solid rgba(21,29,53,0.08);
-    border-bottom: 1px solid rgba(21,29,53,0.06);
+    background: rgba(0,255,136,0.04);
+    border-top: 1px solid rgba(0,255,136,0.12);
+    border-bottom: 1px solid rgba(0,255,136,0.08);
   }
   .total-label {
-    font-family: var(--font-label);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--navy-grey);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--grey);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.1em;
   }
   .total-amount {
-    font-family: var(--font-heading);
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--navy);
-    letter-spacing: -0.02em;
+    font-family: var(--font-mono);
+    font-size: 22px;
+    color: var(--green);
+    letter-spacing: 0.02em;
+    text-shadow: 0 0 16px rgba(0,255,136,0.5);
   }
 
   /* \u2500\u2500 Footer \u2500\u2500 */
   .checkout-footer {
-    padding: 14px 18px 16px;
+    padding: 12px 16px 14px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -21902,16 +21918,28 @@
   .expires-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-family: var(--font-label);
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--navy-grey);
-    background: rgba(21,29,53,0.05);
-    border: 1px solid rgba(21,29,53,0.08);
-    border-radius: 20px;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--grey);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 3px;
     padding: 3px 10px;
     width: fit-content;
+    letter-spacing: 0.04em;
+  }
+  .expires-badge .dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 6px var(--red);
+    animation: blink 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.2; }
   }
 
   /* \u2500\u2500 CTA Button \u2500\u2500 */
@@ -21921,34 +21949,42 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
-    padding: 12px 18px;
-    background: var(--orange);
-    color: var(--parchment);
-    border: 1px solid var(--orange-dark);
+    padding: 11px 18px;
+    background: transparent;
+    color: var(--green);
+    border: 1px solid var(--green-dark);
     border-radius: var(--radius-sm);
-    font-family: var(--font-label);
-    font-size: 14px;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.05em;
     cursor: pointer;
-    box-shadow: 0 1px 5px rgba(196,85,10,0.32), inset 0 1px 0 rgba(255,255,255,0.20);
-    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease;
+    transition: background 0.18s ease, box-shadow 0.18s ease,
+                border-color 0.18s ease, transform 0.14s ease, color 0.18s ease;
   }
   .btn-primary:hover {
-    background: var(--orange-hover);
-    box-shadow: 0 4px 16px rgba(196,85,10,0.42), inset 0 1px 0 rgba(255,255,255,0.20);
+    background: var(--green-glow);
+    border-color: var(--green);
+    color: #ffffff;
+    box-shadow: 0 0 14px var(--green-glow-lg), inset 0 0 10px var(--green-glow);
     transform: translateY(-1px);
   }
   .btn-primary:active { transform: translateY(1px); }
+  .btn-primary:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    color: var(--grey-dim);
+    border-color: var(--grey-dim);
+  }
 
-  /* \u2500\u2500 No URL state \u2500\u2500 */
+  /* \u2500\u2500 No URL \u2500\u2500 */
   .no-url {
-    font-family: var(--font-label);
-    font-size: 13px;
-    color: var(--navy-grey);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--grey);
     text-align: center;
     padding: 4px 0;
-    opacity: 0.7;
+    opacity: 0.6;
   }
 
   /* \u2500\u2500 Waiting state \u2500\u2500 */
@@ -21959,33 +21995,37 @@
     justify-content: center;
     padding: 48px 24px;
     gap: 12px;
-    color: var(--navy-grey);
-    font-family: var(--font-label);
+    font-family: var(--font-mono);
   }
-  .state-icon { font-size: 32px; opacity: 0.5; }
-  .state-text { font-size: 14px; font-weight: 500; }
-  .state-sub  { font-size: 12px; opacity: 0.7; }
+  .state-icon { font-size: 30px; opacity: 0.4; }
+  .state-text { font-size: 13px; color: var(--green-dim); }
+  .state-sub  { font-size: 11px; color: var(--grey); }
 `;
   function Checkout() {
     const [data, setData] = (0, import_react.useState)(
-      () => window.openai?.toolOutput ?? null
+      () => window.openai?.toolOutput ?? window.claude?.toolOutput ?? null
     );
     const [loading, setLoading] = (0, import_react.useState)(false);
     (0, import_react.useEffect)(() => {
       const onSetGlobals = (event) => {
         const e = event;
-        const toolOutput = e.detail?.globals?.toolOutput ?? window.openai?.toolOutput;
+        const toolOutput = e.detail?.globals?.toolOutput ?? window.openai?.toolOutput ?? window.claude?.toolOutput;
         if (toolOutput) setData(toolOutput);
       };
       window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
-      return () => window.removeEventListener("openai:set_globals", onSetGlobals);
+      window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
+      return () => {
+        window.removeEventListener("openai:set_globals", onSetGlobals);
+        window.removeEventListener("claude:set_globals", onSetGlobals);
+      };
     }, []);
     const handleCheckout = async () => {
       if (!data?.checkoutUrl) return;
       setLoading(true);
       try {
-        if (window.openai?.openExternal) {
-          await window.openai.openExternal({ url: data.checkoutUrl });
+        const openExternal = window.openai?.openExternal ?? window.claude?.openExternal;
+        if (openExternal) {
+          await openExternal({ url: data.checkoutUrl });
         } else {
           window.open(data.checkoutUrl, "_blank");
         }
@@ -22002,12 +22042,12 @@
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("style", { dangerouslySetInnerHTML: { __html: STYLES } }),
       !data ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "state-box", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "state-icon", children: "\u{1F6D2}" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "state-text", children: "Preparing your checkout\u2026" }),
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "state-sub", children: "This will only take a moment" })
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "state-text", children: "// preparing checkout..." }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "state-sub", children: "this will only take a moment" })
       ] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "checkout-card", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "checkout-header", children: [
           companyName && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "checkout-company", children: companyName }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "checkout-title", children: "\u{1F6D2} Your Order" })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { className: "checkout-title", children: "\u{1F6D2} your_order" })
         ] }),
         products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "product-list", children: products.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "product-row", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "product-name", children: p.title }),
@@ -22018,7 +22058,7 @@
           ] })
         ] }, p.id)) }),
         products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "total-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "total-label", children: "Total" }),
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "total-label", children: "total_amount" }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "total-amount", children: [
             currency,
             " ",
@@ -22027,7 +22067,8 @@
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "checkout-footer", children: [
           data.expiresAt && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "expires-badge", children: [
-            "\u23F3 Expires ",
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dot" }),
+            "expires ",
             new Date(data.expiresAt).toLocaleString()
           ] }),
           checkoutUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
@@ -22036,9 +22077,9 @@
               className: "btn-primary",
               onClick: handleCheckout,
               disabled: loading,
-              children: loading ? "Opening\u2026" : "Complete Purchase \u2192"
+              children: loading ? "// opening..." : "> complete_purchase()"
             }
-          ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "no-url", children: "No checkout URL available." })
+          ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "no-url", children: "// no checkout url available" })
         ] })
       ] })
     ] });

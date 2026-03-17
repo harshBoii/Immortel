@@ -464,7 +464,7 @@ export default function ProductList() {
                       {loadingId === product.id
                         ? "// adding..."
                         : inStock
-                        ? "> buy_now()"
+                        ? "> Check In Website"
                         : "// unavailable"}
                     </button>
                   </div>

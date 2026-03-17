@@ -22097,7 +22097,7 @@
                 className: "btn-primary",
                 onClick: () => handleBuyNow(product),
                 disabled: loadingId === product.id || !inStock,
-                children: loadingId === product.id ? "// adding..." : inStock ? "> buy_now()" : "// unavailable"
+                children: loadingId === product.id ? "// adding..." : inStock ? "> Check In Website" : "// unavailable"
               }
             ) })
           ] }, product.id);
