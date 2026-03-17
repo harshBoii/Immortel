@@ -42,7 +42,7 @@ export function createServer(): McpServer {
       inputSchema: listProductsInputSchema as any,
       _meta: {
         ui: { resourceUri: productListResourceUri },
-        "openai/outputTemplate": productListResourceUri, // ✅ ChatGPT-specific key
+        "openai/outputTemplate": productListResourceUri,
       },
     },
     (async (input) => {
@@ -52,11 +52,24 @@ export function createServer(): McpServer {
       url.searchParams.set("page", String(page));
       url.searchParams.set("pageSize", String(pageSize));
 
+      console.log("[list_products] →", url.toString());
+
       const res = await fetch(url.toString());
       if (!res.ok) {
+        console.error("[list_products] ✗ HTTP", res.status);
         return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
+
       const data = await res.json();
+
+      // ── Image debug ──────────────────────────────────────────────────────
+      const products = data.data ?? [];
+      console.log(`[list_products] ✓ ${products.length} products returned`);
+      products.slice(0, 3).forEach((p: any, i: number) => {
+        console.log(`  [${i}] "${p.title}" → featuredImage:`, p.featuredImage ?? "NULL");
+      });
+      // ────────────────────────────────────────────────────────────────────
+
       return {
         content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} products.` }],
         structuredContent: data,
@@ -81,7 +94,7 @@ export function createServer(): McpServer {
       inputSchema: getProductInputSchema as any,
       _meta: {
         ui: { resourceUri: productListResourceUri },
-        "openai/outputTemplate": productListResourceUri, // ✅
+        "openai/outputTemplate": productListResourceUri,
       },
     },
     (async (input) => {
@@ -89,11 +102,18 @@ export function createServer(): McpServer {
       const url = new URL(`/api/mcp/products/${encodeURIComponent(id)}`, IMMORTEL_BASE_URL);
       if (companyName) url.searchParams.set("companyName", companyName);
 
+      console.log("[get_product] →", url.toString());
+
       const res = await fetch(url.toString());
       if (!res.ok) {
+        console.error("[get_product] ✗ HTTP", res.status);
         return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
+
       const data = await res.json();
+
+      console.log(`[get_product] ✓ "${data.data?.title}" → featuredImage:`, data.data?.featuredImage ?? "NULL");
+
       return {
         content: [{ type: "text" as const, text: `Loaded: ${data.data?.title ?? id}` }],
         structuredContent: data,
@@ -120,7 +140,7 @@ export function createServer(): McpServer {
       inputSchema: searchProductsInputSchema as any,
       _meta: {
         ui: { resourceUri: productListResourceUri },
-        "openai/outputTemplate": productListResourceUri, // ✅
+        "openai/outputTemplate": productListResourceUri,
       },
     },
     (async (input) => {
@@ -131,15 +151,28 @@ export function createServer(): McpServer {
       if (typeof priceMin === "number") body.priceMin = priceMin;
       if (typeof priceMax === "number") body.priceMax = priceMax;
 
+      console.log("[search_products] →", url.toString(), "body:", JSON.stringify(body));
+
       const res = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
+        console.error("[search_products] ✗ HTTP", res.status);
         return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
+
       const data = await res.json();
+
+      // ── Image debug ──────────────────────────────────────────────────────
+      const products = data.data ?? [];
+      console.log(`[search_products] ✓ ${products.length} results`);
+      products.slice(0, 3).forEach((p: any, i: number) => {
+        console.log(`  [${i}] "${p.title}" → featuredImage:`, p.featuredImage ?? "NULL");
+      });
+      // ────────────────────────────────────────────────────────────────────
+
       return {
         content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} results.` }],
         structuredContent: data,
@@ -164,7 +197,7 @@ export function createServer(): McpServer {
       inputSchema: createCheckoutInputSchema as any,
       _meta: {
         ui: { resourceUri: checkoutResourceUri },
-        "openai/outputTemplate": checkoutResourceUri, // ✅
+        "openai/outputTemplate": checkoutResourceUri,
       },
     },
     (async (input) => {
@@ -173,15 +206,21 @@ export function createServer(): McpServer {
       const body: Record<string, unknown> = { productIds };
       if (companyName) body.companyName = companyName;
 
+      console.log("[create_checkout] →", url.toString(), "productIds:", productIds);
+
       const res = await fetch(url.toString(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
+        console.error("[create_checkout] ✗ HTTP", res.status);
         return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
+
       const data = await res.json();
+      console.log("[create_checkout] ✓ checkoutUrl:", data.checkoutUrl ?? "MISSING");
+
       return {
         content: [{ type: "text" as const, text: "Checkout ready." }],
         structuredContent: data,

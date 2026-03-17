@@ -24,6 +24,10 @@ export async function ensureProductsIndex() {
         currencyCode: { type: "keyword" },
         shopifyCreatedAt: { type: "date" },
         shopifyUpdatedAt: { type: "date" },
+        featuredImageUrl: { type: "keyword" },
+        featuredImageAltText: { type: "text" },
+        featuredImageWidth: { type: "integer" },
+        featuredImageHeight: { type: "integer" },
       },
     },
   });
@@ -53,6 +57,10 @@ export function serializeProductForIndex(product: ShopifyProduct) {
     currencyCode: product.currencyCode,
     shopifyCreatedAt: product.shopifyCreatedAt,
     shopifyUpdatedAt: product.shopifyUpdatedAt,
+    featuredImageUrl: product.featuredImageUrl,
+    featuredImageAltText: product.featuredImageAltText,
+    featuredImageWidth: product.featuredImageWidth,
+    featuredImageHeight: product.featuredImageHeight,
   };
 }
 
