@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
   const isMcpApi = pathname.startsWith('/api/mcp/');
   const isPayPage = pathname.startsWith('/pay/');
   const isImageProxyApi = pathname.startsWith('/api/image-proxy');
+  const isWidgetApi = pathname.startsWith('/widget/');
 
   const isPublic =
     isLoginPage ||
@@ -37,7 +38,8 @@ export function middleware(request: NextRequest) {
     isShopifyApi ||
     isMcpApi ||
     isPayPage ||
-    isImageProxyApi;
+    isImageProxyApi ||
+    isWidgetApi;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {
