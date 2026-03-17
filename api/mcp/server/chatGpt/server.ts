@@ -13,6 +13,8 @@ const PORT = process.env.MCP_PORT ? Number(process.env.MCP_PORT) : 3001;
 const IMMORTEL_BASE_URL =
   process.env.IMMORTEL_API_BASE_URL ?? "https://immortel.vercel.app";
 
+const WIDGET_DOMAIN = "https://immortel.vercel.app";
+
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "Immortel MCP App Server",
@@ -22,19 +24,13 @@ export function createServer(): McpServer {
   const productListResourceUri = "ui://product-list/mcp-app.html";
   const checkoutResourceUri = "ui://checkout/mcp-app.html";
 
-  // ─── list_products ────────────────────────────────────────────────────────
+  // ─── list_products ──────────────────────────────────────────────────────
 
   const listProductsInputSchema = z.object({
     companyName: z.string().optional().describe("Company name or slug"),
     page: z.number().int().optional().default(1).describe("Page number"),
-    pageSize: z
-      .number()
-      .int()
-      .optional()
-      .default(20)
-      .describe("Number of products per page"),
+    pageSize: z.number().int().optional().default(20).describe("Items per page"),
   });
-
   type ListProductsInput = z.infer<typeof listProductsInputSchema>;
 
   registerAppTool(
@@ -47,45 +43,30 @@ export function createServer(): McpServer {
       _meta: { ui: { resourceUri: productListResourceUri } },
     },
     (async (input) => {
-      const { page = 1, pageSize = 20, companyName } =
-        input as ListProductsInput;
+      const { page = 1, pageSize = 20, companyName } = input as ListProductsInput;
       const url = new URL("/api/mcp/products", IMMORTEL_BASE_URL);
       if (companyName) url.searchParams.set("companyName", companyName);
       url.searchParams.set("page", String(page));
       url.searchParams.set("pageSize", String(pageSize));
 
-      const res = await fetch(url.toString(), {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
+      const res = await fetch(url.toString());
       if (!res.ok) {
-        const msg = `Failed to list products: ${res.status} ${res.statusText}`;
-        return { content: [{ type: "text" as const, text: msg }] };
+        return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
-
       const data = await res.json();
-
-      // ✅ FIX 1 — structuredContent added so widget receives the data
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Found ${data.pagination?.total ?? 0} products from ${data.company?.name ?? companyName}.`,
-          },
-        ],
+        content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} products.` }],
         structuredContent: data,
       };
     }) as any
   );
 
-  // ─── get_product ──────────────────────────────────────────────────────────
+  // ─── get_product ────────────────────────────────────────────────────────
 
   const getProductInputSchema = z.object({
     id: z.string().describe("Product ID"),
     companyName: z.string().optional().describe("Company name or slug"),
   });
-
   type GetProductInput = z.infer<typeof getProductInputSchema>;
 
   registerAppTool(
@@ -99,36 +80,22 @@ export function createServer(): McpServer {
     },
     (async (input) => {
       const { id, companyName } = input as GetProductInput;
-      const path = `/api/mcp/products/${encodeURIComponent(id)}`;
-      const url = new URL(path, IMMORTEL_BASE_URL);
+      const url = new URL(`/api/mcp/products/${encodeURIComponent(id)}`, IMMORTEL_BASE_URL);
       if (companyName) url.searchParams.set("companyName", companyName);
 
-      const res = await fetch(url.toString(), {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
+      const res = await fetch(url.toString());
       if (!res.ok) {
-        const msg = `Failed to get product: ${res.status} ${res.statusText}`;
-        return { content: [{ type: "text" as const, text: msg }] };
+        return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
-
       const data = await res.json();
-
-      // ✅ FIX 1 — structuredContent added
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Loaded product: ${data.data?.title ?? id}`,
-          },
-        ],
+        content: [{ type: "text" as const, text: `Loaded: ${data.data?.title ?? id}` }],
         structuredContent: data,
       };
     }) as any
   );
 
-  // ─── search_products ──────────────────────────────────────────────────────
+  // ─── search_products ────────────────────────────────────────────────────
 
   const searchProductsInputSchema = z.object({
     query: z.string().describe("Search query for products"),
@@ -136,7 +103,6 @@ export function createServer(): McpServer {
     priceMin: z.number().optional().describe("Minimum price filter"),
     priceMax: z.number().optional().describe("Maximum price filter"),
   });
-
   type SearchProductsInput = z.infer<typeof searchProductsInputSchema>;
 
   registerAppTool(
@@ -149,10 +115,8 @@ export function createServer(): McpServer {
       _meta: { ui: { resourceUri: productListResourceUri } },
     },
     (async (input) => {
-      const { query, companyName, priceMin, priceMax } =
-        input as SearchProductsInput;
+      const { query, companyName, priceMin, priceMax } = input as SearchProductsInput;
       const url = new URL("/api/mcp/products/search", IMMORTEL_BASE_URL);
-
       const body: Record<string, unknown> = { query };
       if (companyName) body.companyName = companyName;
       if (typeof priceMin === "number") body.priceMin = priceMin;
@@ -163,37 +127,23 @@ export function createServer(): McpServer {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
       if (!res.ok) {
-        const msg = `Failed to search products: ${res.status} ${res.statusText}`;
-        return { content: [{ type: "text" as const, text: msg }] };
+        return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
-
       const data = await res.json();
-
-      // ✅ FIX 1 — structuredContent added
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Found ${data.pagination?.total ?? 0} results for "${query}".`,
-          },
-        ],
+        content: [{ type: "text" as const, text: `Found ${data.pagination?.total ?? 0} results.` }],
         structuredContent: data,
       };
     }) as any
   );
 
-  // ─── create_checkout ──────────────────────────────────────────────────────
+  // ─── create_checkout ────────────────────────────────────────────────────
 
   const createCheckoutInputSchema = z.object({
     companyName: z.string().optional().describe("Company name or slug"),
-    productIds: z
-      .array(z.string())
-      .min(1)
-      .describe("List of product IDs to include in checkout"),
+    productIds: z.array(z.string()).min(1).describe("Product IDs to checkout"),
   });
-
   type CreateCheckoutInput = z.infer<typeof createCheckoutInputSchema>;
 
   registerAppTool(
@@ -208,7 +158,6 @@ export function createServer(): McpServer {
     (async (input) => {
       const { companyName, productIds } = input as CreateCheckoutInput;
       const url = new URL("/api/mcp/products/checkout", IMMORTEL_BASE_URL);
-
       const body: Record<string, unknown> = { productIds };
       if (companyName) body.companyName = companyName;
 
@@ -217,37 +166,31 @@ export function createServer(): McpServer {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-
       if (!res.ok) {
-        const msg = `Failed to create checkout: ${res.status} ${res.statusText}`;
-        return { content: [{ type: "text" as const, text: msg }] };
+        return { content: [{ type: "text" as const, text: `Error: ${res.status}` }] };
       }
-
       const data = await res.json();
-
-      // ✅ FIX 1 — structuredContent added
       return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Checkout ready. Redirecting to payment portal.`,
-          },
-        ],
+        content: [{ type: "text" as const, text: "Checkout ready." }],
         structuredContent: data,
       };
     }) as any
   );
 
-  // ─── UI Resources ─────────────────────────────────────────────────────────
+  // ─── UI Resources ────────────────────────────────────────────────────────
 
   registerAppResource(
     server,
+    "Immortel Product List",
     productListResourceUri,
-    productListResourceUri,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => {
-      // ✅ FIX 2 — added <meta name="openai-widget" content="true" />
-      const html = `<!doctype html>
+    {
+      description: "Product listing widget for Immortel catalog",
+    },
+    async () => ({
+      contents: [{
+        uri: productListResourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -257,33 +200,33 @@ export function createServer(): McpServer {
   </head>
   <body>
     <div id="root"></div>
-    <script src="${
-      process.env.WIDGET_PRODUCT_LIST_URL ??
-      "https://immortel.vercel.app/widget/product-list.js"
-    }"></script>
+    <script src="${process.env.WIDGET_PRODUCT_LIST_URL ?? `${WIDGET_DOMAIN}/widget/product-list.js`}"></script>
   </body>
-</html>`;
-
-      return {
-        contents: [
-          {
-            uri: productListResourceUri,
-            mimeType: RESOURCE_MIME_TYPE,
-            text: html,
+</html>`,
+        _meta: {
+          ui: {
+            csp: {
+              resourceDomains: [WIDGET_DOMAIN],
+              connectDomains: [WIDGET_DOMAIN],
+            },
           },
-        ],
-      };
-    }
+        },
+      }],
+    })
   );
 
   registerAppResource(
     server,
+    "Immortel Checkout",
     checkoutResourceUri,
-    checkoutResourceUri,
-    { mimeType: RESOURCE_MIME_TYPE },
-    async () => {
-      // ✅ FIX 2 — added <meta name="openai-widget" content="true" />
-      const html = `<!doctype html>
+    {
+      description: "Checkout widget for Immortel products",
+    },
+    async () => ({
+      contents: [{
+        uri: checkoutResourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -293,23 +236,19 @@ export function createServer(): McpServer {
   </head>
   <body>
     <div id="root"></div>
-    <script src="${
-      process.env.WIDGET_CHECKOUT_URL ??
-      "https://immortel.vercel.app/widget/checkout.js"
-    }"></script>
+    <script src="${process.env.WIDGET_CHECKOUT_URL ?? `${WIDGET_DOMAIN}/widget/checkout.js`}"></script>
   </body>
-</html>`;
-
-      return {
-        contents: [
-          {
-            uri: checkoutResourceUri,
-            mimeType: RESOURCE_MIME_TYPE,
-            text: html,
+</html>`,
+        _meta: {
+          ui: {
+            csp: {
+              resourceDomains: [WIDGET_DOMAIN],
+              connectDomains: [WIDGET_DOMAIN],
+            },
           },
-        ],
-      };
-    }
+        },
+      }],
+    })
   );
 
   return server;
@@ -346,17 +285,9 @@ app.all("/mcp", async (req: Request, res: Response) => {
 });
 
 const httpServer = app.listen(PORT, (err?: Error) => {
-  if (err) {
-    console.error("Failed to start MCP server:", err);
-    process.exit(1);
-  }
+  if (err) { console.error("Failed to start:", err); process.exit(1); }
   console.log(`MCP server listening on http://localhost:${PORT}/mcp`);
 });
 
-const shutdown = () => {
-  console.log("\nShutting down MCP server...");
-  httpServer.close(() => process.exit(0));
-};
-
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => { httpServer.close(() => process.exit(0)); });
+process.on("SIGTERM", () => { httpServer.close(() => process.exit(0)); });

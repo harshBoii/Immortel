@@ -21729,7 +21729,7 @@
     const [data, setData] = (0, import_react.useState)(null);
     (0, import_react.useEffect)(() => {
       const onMessage = (event) => {
-        if (event.source !== window.parent) return;
+        console.log("[ProductList] message received:", event.data);
         const msg = event.data;
         if (!msg || msg.jsonrpc !== "2.0") return;
         if (msg.method !== "ui/notifications/tool-result") return;
@@ -21737,6 +21737,10 @@
         if (payload) setData(payload);
       };
       window.addEventListener("message", onMessage);
+      window.parent.postMessage(
+        { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
+        "*"
+      );
       return () => window.removeEventListener("message", onMessage);
     }, []);
     if (!data) {
@@ -21786,22 +21790,19 @@
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
               "button",
               {
-                onClick: () => (
-                  // ✅ FIX 3 — postMessage for callTool
-                  window.parent.postMessage(
-                    {
-                      jsonrpc: "2.0",
-                      method: "ui/actions/call-tool",
-                      params: {
-                        name: "create_checkout",
-                        arguments: {
-                          companyName: companySlug,
-                          productIds: [product.id]
-                        }
+                onClick: () => window.parent.postMessage(
+                  {
+                    jsonrpc: "2.0",
+                    method: "ui/actions/call-tool",
+                    params: {
+                      name: "create_checkout",
+                      arguments: {
+                        companyName: companySlug,
+                        productIds: [product.id]
                       }
-                    },
-                    "*"
-                  )
+                    }
+                  },
+                  "*"
                 ),
                 style: {
                   background: "#000",
@@ -21829,14 +21830,6 @@
   var import_jsx_runtime2 = __toESM(require_jsx_runtime());
   var container = document.getElementById("root") ?? document.body.appendChild(document.createElement("div"));
   (0, import_client.createRoot)(container).render(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ProductList, {}));
-  window.parent.postMessage(
-    {
-      jsonrpc: "2.0",
-      method: "ui/notifications/ready",
-      params: {}
-    },
-    "*"
-  );
 })();
 /*! Bundled license information:
 
