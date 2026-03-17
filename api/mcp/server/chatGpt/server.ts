@@ -40,7 +40,10 @@ export function createServer(): McpServer {
       title: "List products",
       description: "List products from the Immortel catalog.",
       inputSchema: listProductsInputSchema as any,
-      _meta: { ui: { resourceUri: productListResourceUri } },
+      _meta: {
+        ui: { resourceUri: productListResourceUri },
+        "openai/outputTemplate": productListResourceUri, // ✅ ChatGPT-specific key
+      },
     },
     (async (input) => {
       const { page = 1, pageSize = 20, companyName } = input as ListProductsInput;
@@ -76,7 +79,10 @@ export function createServer(): McpServer {
       title: "Get product",
       description: "Get detailed product info by ID.",
       inputSchema: getProductInputSchema as any,
-      _meta: { ui: { resourceUri: productListResourceUri } },
+      _meta: {
+        ui: { resourceUri: productListResourceUri },
+        "openai/outputTemplate": productListResourceUri, // ✅
+      },
     },
     (async (input) => {
       const { id, companyName } = input as GetProductInput;
@@ -112,7 +118,10 @@ export function createServer(): McpServer {
       title: "Search products",
       description: "Search products by query.",
       inputSchema: searchProductsInputSchema as any,
-      _meta: { ui: { resourceUri: productListResourceUri } },
+      _meta: {
+        ui: { resourceUri: productListResourceUri },
+        "openai/outputTemplate": productListResourceUri, // ✅
+      },
     },
     (async (input) => {
       const { query, companyName, priceMin, priceMax } = input as SearchProductsInput;
@@ -153,7 +162,10 @@ export function createServer(): McpServer {
       title: "Create checkout",
       description: "Create a checkout session for selected products.",
       inputSchema: createCheckoutInputSchema as any,
-      _meta: { ui: { resourceUri: checkoutResourceUri } },
+      _meta: {
+        ui: { resourceUri: checkoutResourceUri },
+        "openai/outputTemplate": checkoutResourceUri, // ✅
+      },
     },
     (async (input) => {
       const { companyName, productIds } = input as CreateCheckoutInput;
@@ -183,9 +195,7 @@ export function createServer(): McpServer {
     server,
     "Immortel Product List",
     productListResourceUri,
-    {
-      description: "Product listing widget for Immortel catalog",
-    },
+    { description: "Product listing widget for Immortel catalog" },
     async () => ({
       contents: [{
         uri: productListResourceUri,
@@ -219,9 +229,7 @@ export function createServer(): McpServer {
     server,
     "Immortel Checkout",
     checkoutResourceUri,
-    {
-      description: "Checkout widget for Immortel products",
-    },
+    { description: "Checkout widget for Immortel products" },
     async () => ({
       contents: [{
         uri: checkoutResourceUri,

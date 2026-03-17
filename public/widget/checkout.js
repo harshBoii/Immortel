@@ -21726,22 +21726,18 @@
   var import_react = __toESM(require_react());
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   function Checkout() {
-    const [data, setData] = (0, import_react.useState)(null);
+    const [data, setData] = (0, import_react.useState)(
+      // ✅ Read initial value from window.openai.toolOutput
+      () => window.openai?.toolOutput ?? null
+    );
     (0, import_react.useEffect)(() => {
-      const onMessage = (event) => {
-        console.log("[Checkout] message received:", event.data);
-        const msg = event.data;
-        if (!msg || msg.jsonrpc !== "2.0") return;
-        if (msg.method !== "ui/notifications/tool-result") return;
-        const payload = msg.params?.structuredContent;
-        if (payload) setData(payload);
+      const onSetGlobals = (event) => {
+        const customEvent = event;
+        const toolOutput = customEvent.detail?.globals?.toolOutput ?? window.openai?.toolOutput;
+        if (toolOutput) setData(toolOutput);
       };
-      window.addEventListener("message", onMessage);
-      window.parent.postMessage(
-        { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
-        "*"
-      );
-      return () => window.removeEventListener("message", onMessage);
+      window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
+      return () => window.removeEventListener("openai:set_globals", onSetGlobals);
     }, []);
     if (!data) {
       return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { padding: 16, color: "#666", fontFamily: "sans-serif" }, children: "Waiting for checkout data\u2026" });
@@ -21749,63 +21745,32 @@
     const checkoutUrl = data.checkoutUrl ?? null;
     const products = data.products ?? [];
     const companyName = data.company?.name ?? null;
-    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-      "div",
-      {
-        style: {
-          border: "1px solid #eee",
-          borderRadius: 12,
-          padding: 16,
-          fontFamily: "sans-serif",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12
-        },
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { style: { margin: 0, fontSize: 16, fontWeight: 700 }, children: [
-            "\u{1F6D2} Checkout ",
-            companyName ? `\u2014 ${companyName}` : ""
-          ] }),
-          products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 6 }, children: products.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-            "div",
-            {
-              style: { display: "flex", justifyContent: "space-between", fontSize: 14 },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: p.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontWeight: 600 }, children: [
-                  p.currency,
-                  " ",
-                  p.price
-                ] })
-              ]
-            },
-            p.id
-          )) }),
-          data.expiresAt && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { style: { margin: 0, fontSize: 12, color: "#999" }, children: [
-            "\u23F3 Expires: ",
-            new Date(data.expiresAt).toLocaleString()
-          ] }),
-          checkoutUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              onClick: () => window.open(checkoutUrl, "_blank"),
-              style: {
-                background: "#000",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 16px",
-                cursor: "pointer",
-                fontSize: 14,
-                fontWeight: 600,
-                width: "100%"
-              },
-              children: "Complete Purchase \u2192"
-            }
-          ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { margin: 0, fontSize: 13, color: "#999" }, children: "No checkout URL available." })
-        ]
-      }
-    );
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { border: "1px solid #eee", borderRadius: 12, padding: 16, fontFamily: "sans-serif", display: "flex", flexDirection: "column", gap: 12 }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("h3", { style: { margin: 0, fontSize: 16, fontWeight: 700 }, children: [
+        "\u{1F6D2} Checkout ",
+        companyName ? `\u2014 ${companyName}` : ""
+      ] }),
+      products.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { display: "flex", flexDirection: "column", gap: 6 }, children: products.map((p) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 14 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: p.title }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { style: { fontWeight: 600 }, children: [
+          p.currency,
+          " ",
+          p.price
+        ] })
+      ] }, p.id)) }),
+      data.expiresAt && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("p", { style: { margin: 0, fontSize: 12, color: "#999" }, children: [
+        "\u23F3 Expires: ",
+        new Date(data.expiresAt).toLocaleString()
+      ] }),
+      checkoutUrl ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+        "button",
+        {
+          onClick: () => window.openai?.openExternal?.({ url: checkoutUrl }) ?? window.open(checkoutUrl, "_blank"),
+          style: { background: "#000", color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", cursor: "pointer", fontSize: 14, fontWeight: 600, width: "100%" },
+          children: "Complete Purchase \u2192"
+        }
+      ) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { style: { margin: 0, fontSize: 13, color: "#999" }, children: "No checkout URL available." })
+    ] });
   }
 
   // src/widget/checkout-entry.tsx

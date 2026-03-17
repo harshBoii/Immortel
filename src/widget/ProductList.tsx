@@ -17,35 +17,24 @@ type ProductListPayload = {
 };
 
 export default function ProductList() {
-  const [data, setData] = useState<ProductListPayload | null>(null);
+  const [data, setData] = useState<ProductListPayload | null>(
+    // ✅ Read initial value directly from window.openai.toolOutput
+    () => (window as any).openai?.toolOutput ?? null
+  );
 
   useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      // Log ALL messages — no filtering yet
-      console.log("[Widget] RAW message:", {
-        source: event.source,
-        origin: event.origin,
-        data: event.data,
-        isParent: event.source === window.parent,
-      });
-  
-      const msg = event.data;
-      if (!msg || msg.jsonrpc !== "2.0") return;
-      if (msg.method !== "ui/notifications/tool-result") return;
-      const payload = msg.params?.structuredContent;
-      if (payload) setData(payload);
+    // ✅ ChatGPT fires this custom DOM event (NOT postMessage) when data updates
+    const onSetGlobals = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const toolOutput =
+        customEvent.detail?.globals?.toolOutput ??
+        (window as any).openai?.toolOutput;
+      if (toolOutput) setData(toolOutput);
     };
-  
-    window.addEventListener("message", onMessage);
-  
-    window.parent.postMessage(
-      { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
-      "*"
-    );
-  
-    return () => window.removeEventListener("message", onMessage);
+
+    window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
+    return () => window.removeEventListener("openai:set_globals", onSetGlobals);
   }, []);
-  
 
   if (!data) {
     return (
@@ -82,12 +71,7 @@ export default function ProductList() {
               <img
                 src={product.featuredImage.url}
                 alt={product.featuredImage.altText ?? product.title}
-                style={{
-                  width: "100%",
-                  borderRadius: 8,
-                  objectFit: "cover",
-                  aspectRatio: "1 / 1",
-                }}
+                style={{ width: "100%", borderRadius: 8, objectFit: "cover", aspectRatio: "1/1" }}
               />
             )}
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600 }}>
@@ -105,32 +89,16 @@ export default function ProductList() {
             )}
             <button
               onClick={() =>
-                window.parent.postMessage(
-                  {
-                    jsonrpc: "2.0",
-                    method: "ui/actions/call-tool",
-                    params: {
-                      name: "create_checkout",
-                      arguments: {
-                        companyName: companySlug,
-                        productIds: [product.id],
-                      },
-                    },
-                  },
-                  "*"
-                )
+                // ✅ Use window.openai.callTool for ChatGPT
+                (window as any).openai?.callTool?.("create_checkout", {
+                  companyName: companySlug,
+                  productIds: [product.id],
+                })
               }
               style={{
-                background: "#000",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "8px 12px",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-                width: "100%",
-                marginTop: "auto",
+                background: "#000", color: "#fff", border: "none",
+                borderRadius: 8, padding: "8px 12px", cursor: "pointer",
+                fontSize: 13, fontWeight: 600, width: "100%", marginTop: "auto",
               }}
             >
               Buy Now

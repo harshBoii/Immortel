@@ -21726,27 +21726,18 @@
   var import_react = __toESM(require_react());
   var import_jsx_runtime = __toESM(require_jsx_runtime());
   function ProductList() {
-    const [data, setData] = (0, import_react.useState)(null);
+    const [data, setData] = (0, import_react.useState)(
+      // ✅ Read initial value directly from window.openai.toolOutput
+      () => window.openai?.toolOutput ?? null
+    );
     (0, import_react.useEffect)(() => {
-      const onMessage = (event) => {
-        console.log("[Widget] RAW message:", {
-          source: event.source,
-          origin: event.origin,
-          data: event.data,
-          isParent: event.source === window.parent
-        });
-        const msg = event.data;
-        if (!msg || msg.jsonrpc !== "2.0") return;
-        if (msg.method !== "ui/notifications/tool-result") return;
-        const payload = msg.params?.structuredContent;
-        if (payload) setData(payload);
+      const onSetGlobals = (event) => {
+        const customEvent = event;
+        const toolOutput = customEvent.detail?.globals?.toolOutput ?? window.openai?.toolOutput;
+        if (toolOutput) setData(toolOutput);
       };
-      window.addEventListener("message", onMessage);
-      window.parent.postMessage(
-        { jsonrpc: "2.0", method: "ui/notifications/ready", params: {} },
-        "*"
-      );
-      return () => window.removeEventListener("message", onMessage);
+      window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
+      return () => window.removeEventListener("openai:set_globals", onSetGlobals);
     }, []);
     if (!data) {
       return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { padding: 16, color: "#666", fontFamily: "sans-serif" }, children: "Loading products\u2026" });
@@ -21777,12 +21768,7 @@
               {
                 src: product.featuredImage.url,
                 alt: product.featuredImage.altText ?? product.title,
-                style: {
-                  width: "100%",
-                  borderRadius: 8,
-                  objectFit: "cover",
-                  aspectRatio: "1 / 1"
-                }
+                style: { width: "100%", borderRadius: 8, objectFit: "cover", aspectRatio: "1/1" }
               }
             ),
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h3", { style: { margin: 0, fontSize: 14, fontWeight: 600 }, children: product.title || "Untitled product" }),
@@ -21795,19 +21781,12 @@
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
               "button",
               {
-                onClick: () => window.parent.postMessage(
-                  {
-                    jsonrpc: "2.0",
-                    method: "ui/actions/call-tool",
-                    params: {
-                      name: "create_checkout",
-                      arguments: {
-                        companyName: companySlug,
-                        productIds: [product.id]
-                      }
-                    }
-                  },
-                  "*"
+                onClick: () => (
+                  // ✅ Use window.openai.callTool for ChatGPT
+                  window.openai?.callTool?.("create_checkout", {
+                    companyName: companySlug,
+                    productIds: [product.id]
+                  })
                 ),
                 style: {
                   background: "#000",
