@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { App } from "@modelcontextprotocol/ext-apps";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -299,48 +300,80 @@ const STYLES = `
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Checkout() {
-  const [data, setData] = useState<CheckoutPayload | null>(
-    () =>
-      (window as any).openai?.toolOutput ??
-      (window as any).claude?.toolOutput ??
-      null
-  );
+// export default function Checkout() {
+//   const [data, setData] = useState<CheckoutPayload | null>(
+//     () =>
+//       (window as any).openai?.toolOutput ??
+//       (window as any).claude?.toolOutput ??
+//       null
+//   );
+//   const [loading, setLoading] = useState(false);
+
+//   useEffect(() => {
+//     const onSetGlobals = (event: Event) => {
+//       const e = event as CustomEvent;
+//       const toolOutput =
+//         e.detail?.globals?.toolOutput ??
+//         (window as any).openai?.toolOutput ??
+//         (window as any).claude?.toolOutput;
+//       if (toolOutput) setData(toolOutput);
+//     };
+//     window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
+//     window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
+//     return () => {
+//       window.removeEventListener("openai:set_globals", onSetGlobals);
+//       window.removeEventListener("claude:set_globals", onSetGlobals);
+//     };
+//   }, []);
+
+//   const handleCheckout = async () => {
+//     if (!data?.checkoutUrl) return;
+//     setLoading(true);
+//     try {
+//       const openExternal =
+//         (window as any).openai?.openExternal ??
+//         (window as any).claude?.openExternal;
+//       if (openExternal) {
+//         await openExternal({ url: data.checkoutUrl });
+//       } else {
+//         window.open(data.checkoutUrl, "_blank");
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+export default function Checkout({
+  app,
+  onReady,
+}: {
+  app: App;
+  onReady: (setter: (data: any) => void) => void;
+}) {
+  const [data, setData] = useState<CheckoutPayload | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Replace old window.openai/claude listeners
   useEffect(() => {
-    const onSetGlobals = (event: Event) => {
-      const e = event as CustomEvent;
-      const toolOutput =
-        e.detail?.globals?.toolOutput ??
-        (window as any).openai?.toolOutput ??
-        (window as any).claude?.toolOutput;
-      if (toolOutput) setData(toolOutput);
-    };
-    window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
-    window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
-    return () => {
-      window.removeEventListener("openai:set_globals", onSetGlobals);
-      window.removeEventListener("claude:set_globals", onSetGlobals);
-    };
-  }, []);
+    onReady((incoming) => setData(incoming));
+  }, [onReady]);
 
   const handleCheckout = async () => {
     if (!data?.checkoutUrl) return;
     setLoading(true);
     try {
-      const openExternal =
-        (window as any).openai?.openExternal ??
-        (window as any).claude?.openExternal;
-      if (openExternal) {
-        await openExternal({ url: data.checkoutUrl });
-      } else {
-        window.open(data.checkoutUrl, "_blank");
-      }
+      // ✅ Use app.callServerTool, fallback to window.open
+      await app.callServerTool({
+        name: "open_url",
+        arguments: { url: data.checkoutUrl },
+      }).catch(() => {
+        window.open(data.checkoutUrl!, "_blank");
+      });
     } finally {
       setLoading(false);
     }
   };
+
 
   const products = data?.products ?? [];
   const checkoutUrl = data?.checkoutUrl ?? null;
