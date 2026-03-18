@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import type { App } from "@modelcontextprotocol/ext-apps";
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type FeaturedImage = {
@@ -342,47 +342,79 @@ const STYLES = `
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ProductList() {
-  const [data, setData] = useState<ProductListPayload | null>(
-    () => (window as any).openai?.toolOutput
-       ?? (window as any).claude?.toolOutput
-       ?? null
-  );
+// export default function ProductList({ app }: { app: App }) {
+//   const [data, setData] = useState<ProductListPayload | null>(
+//     () => (window as any).openai?.toolOutput
+//        ?? (window as any).claude?.toolOutput
+//        ?? null
+//   );
+//   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+//   useEffect(() => {
+//     const onSetGlobals = (event: Event) => {
+//       const e = event as CustomEvent;
+//       const toolOutput =
+//         e.detail?.globals?.toolOutput ??
+//         (window as any).openai?.toolOutput ??
+//         (window as any).claude?.toolOutput;
+//       if (toolOutput) setData(toolOutput);
+//     };
+
+//     window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
+//     window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
+//     return () => {
+//       window.removeEventListener("openai:set_globals", onSetGlobals);
+//       window.removeEventListener("claude:set_globals", onSetGlobals);
+//     };
+//   }, []);
+
+//   const handleBuyNow = async (product: Product) => {
+//     setLoadingId(product.id);
+//     try {
+//       const callTool =
+//         (window as any).openai?.callTool ??
+//         (window as any).claude?.callTool;
+//       await callTool?.("create_checkout", {
+//         companyName: data?.company?.slug ?? data?.company?.name,
+//         productIds: [product.id],
+//       });
+//     } finally {
+//       setLoadingId(null);
+//     }
+//   };
+
+// ========================================================
+export default function ProductList({
+  app,
+  onReady,
+}: {
+  app: App;
+  onReady: (setter: (data: any) => void) => void;
+}) {
+  const [data, setData] = useState<ProductListPayload | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const onSetGlobals = (event: Event) => {
-      const e = event as CustomEvent;
-      const toolOutput =
-        e.detail?.globals?.toolOutput ??
-        (window as any).openai?.toolOutput ??
-        (window as any).claude?.toolOutput;
-      if (toolOutput) setData(toolOutput);
-    };
-
-    window.addEventListener("openai:set_globals", onSetGlobals, { passive: true });
-    window.addEventListener("claude:set_globals", onSetGlobals, { passive: true });
-    return () => {
-      window.removeEventListener("openai:set_globals", onSetGlobals);
-      window.removeEventListener("claude:set_globals", onSetGlobals);
-    };
-  }, []);
+    // Register the setter so entry file can push data in
+    onReady((incoming) => setData(incoming));
+  }, [onReady]);
 
   const handleBuyNow = async (product: Product) => {
     setLoadingId(product.id);
     try {
-      const callTool =
-        (window as any).openai?.callTool ??
-        (window as any).claude?.callTool;
-      await callTool?.("create_checkout", {
-        companyName: data?.company?.slug ?? data?.company?.name,
-        productIds: [product.id],
+      // ✅ Correct API from docs
+      await app.callServerTool({
+        name: "create_checkout",
+        arguments: {
+          companyName: data?.company?.slug ?? data?.company?.name,
+          productIds: [product.id],
+        },
       });
     } finally {
       setLoadingId(null);
     }
   };
-
+// ========================================================
   const formatPrice = (p: Product) => {
     if (!p.priceMinAmount) return "N/A";
     return `$${parseFloat(p.priceMinAmount).toFixed(2)} ${p.currencyCode ?? "USD"}`;
