@@ -29,7 +29,7 @@ import {
     // ─── list_products ──────────────────────────────────────────────────────
   
     const listProductsInputSchema = z.object({
-      companyName: z.string().optional().describe("Company name or slug"),
+      companyName: z.string().describe("Company name or slug. Always required."),
       page: z.number().int().optional().default(1).describe("Page number"),
       pageSize: z.number().int().optional().default(20).describe("Items per page"),
     });
@@ -83,7 +83,7 @@ import {
   
     const getProductInputSchema = z.object({
       id: z.string().describe("Product ID"),
-      companyName: z.string().optional().describe("Company name or slug"),
+      companyName: z.string().describe("Company name or slug. Always required."),
     });
     type GetProductInput = z.infer<typeof getProductInputSchema>;
   
@@ -127,7 +127,7 @@ import {
   
     const searchProductsInputSchema = z.object({
       query: z.string().describe("Search query for products"),
-      companyName: z.string().optional().describe("Company name or slug"),
+      companyName: z.string().describe("Company name or slug. Always required."),
       priceMin: z.number().optional().describe("Minimum price filter"),
       priceMax: z.number().optional().describe("Maximum price filter"),
     });
@@ -138,7 +138,7 @@ import {
       "search_products",
       {
         title: "Search products",
-        description: "Search products by query.",
+        description: "Search products by query. You MUST always include `companyName` (e.g. 'moonknight') — never omit it. Extract the company name from the user's message and pass it as a separate `companyName` parameter, not inside `query`.",
         inputSchema: searchProductsInputSchema as any,
         _meta: {
           ui: { resourceUri: productListResourceUri },
@@ -185,7 +185,7 @@ import {
     // ─── create_checkout ────────────────────────────────────────────────────
   
     const createCheckoutInputSchema = z.object({
-      companyName: z.string().optional().describe("Company name or slug"),
+      companyName: z.string().describe("Company name or slug. Always required."),
       productIds: z.array(z.string()).min(1).describe("Product IDs to checkout"),
     });
     type CreateCheckoutInput = z.infer<typeof createCheckoutInputSchema>;
