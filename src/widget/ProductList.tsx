@@ -392,17 +392,16 @@ export default function ProductList({
   onReady: (setter: (data: any) => void) => void;
 }) {
   const [data, setData] = useState<ProductListPayload | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null); // ← add this
 
   useEffect(() => {
-    // Register the setter so entry file can push data in
-    onReady((incoming) => setData(incoming));
+    onReady((incoming) => setData(incoming)); // register setter
   }, [onReady]);
 
   const handleBuyNow = async (product: Product) => {
     setLoadingId(product.id);
     try {
-      // ✅ Correct API from docs
+      // ✅ Correct method from docs
       await app.callServerTool({
         name: "create_checkout",
         arguments: {
@@ -414,6 +413,7 @@ export default function ProductList({
       setLoadingId(null);
     }
   };
+
 // ========================================================
   const formatPrice = (p: Product) => {
     if (!p.priceMinAmount) return "N/A";
