@@ -15,6 +15,8 @@ const IMMORTEL_BASE_URL =
 
 const WIDGET_DOMAIN = "https://immortel.vercel.app";
 
+
+
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "Immortel MCP App Server",
