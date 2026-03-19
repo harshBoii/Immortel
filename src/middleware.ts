@@ -26,6 +26,8 @@ export function middleware(request: NextRequest) {
   const isPayPage = pathname.startsWith('/pay/');
   const isImageProxyApi = pathname.startsWith('/api/image-proxy');
   const isWidgetApi = pathname.startsWith('/widget/');
+  const isShopifyWebhookApi = pathname.startsWith('/api/shopify/webhooks');
+  const isPrivacyPolicyApi = pathname.startsWith('/privacy-policy');
 
   const isPublic =
     isLoginPage ||
@@ -39,6 +41,8 @@ export function middleware(request: NextRequest) {
     isMcpApi ||
     isPayPage ||
     isImageProxyApi ||
+    isShopifyWebhookApi ||
+    isPrivacyPolicyApi ||
     isWidgetApi;
 
   if (isPublic) {
