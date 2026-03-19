@@ -122,7 +122,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
   });
 
   try {
-    const generatorUrl = process.env.AEO_GENERATOR_URL ?? "http://localhost:8000/aeo/page";
+    const generatorUrl = `${process.env.MICROSERVICE_URL}/aeo/page`;
     const res = await fetch(generatorUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
