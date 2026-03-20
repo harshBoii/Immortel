@@ -116,6 +116,35 @@ const IconShop = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconDatabase = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="8" ry="3" />
+    <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+    <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+  </svg>
+);
+
+const IconGitBranch = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="6" cy="6" r="3" />
+    <circle cx="18" cy="6" r="3" />
+    <circle cx="18" cy="18" r="3" />
+    <path d="M9 6h6" />
+    <path d="M18 9v6" />
+    <path d="M6 9v6a3 3 0 0 0 3 3h6" />
+  </svg>
+);
+
+const IconFileText = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <path d="M14 2v6h6" />
+    <path d="M16 13H8" />
+    <path d="M16 17H8" />
+    <path d="M10 9H8" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
@@ -226,11 +255,11 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       return (
         <>
           <SectionLabel label="GEO" />
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Data Mine" href="/geo/data-mine" />
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Info Spread" href="/geo/info-spread" />
+          <SecondaryNavItem icon={IconDatabase} label="Data Mine" href="/geo/data-mine" />
+          <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" />
           <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
-          <SecondaryNavItem icon={IconTarget} label="Generated Bounty Pages" href="/geo/bounty-pages" />
+          <SecondaryNavItem icon={IconFileText} label="Generated Bounty Pages" href="/geo/bounty-pages" />
         </>
       );
     case 'shop':
