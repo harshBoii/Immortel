@@ -205,8 +205,8 @@ export async function POST() {
   const topicIdMap = new Map<string, string>();
   for (const name of topicNames) {
     const topic = await prisma.llmTopic.upsert({
-      where: { name },
-      create: { name, description: null },
+      where: { companyId_name: { companyId, name } },
+      create: { companyId, name, description: null },
       update: {},
       select: { id: true },
     });

@@ -23,11 +23,11 @@ function createPrismaClient() {
 const prisma = createPrismaClient();
 
 async function main() {
-  const name = 'MoonKnight';
-  const slug = 'moonknight';
-  const email = 'admin@moonknight.com';
-  const userName = 'admin@moonknight.com';
-  const plainPassword = 'MoonKnight123!';
+  const name = 'MomsMade';
+  const slug = 'MomsMade';
+  const email = 'admin@momsmade.com';
+  const userName = 'admin@momsmade.com';
+  const plainPassword = 'momsmade123!';
 
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
@@ -45,7 +45,7 @@ async function main() {
       email,
       userName,
       password: hashedPassword,
-      description: 'MoonKnight company',
+      description: 'MomsMade company',
     },
   });
 

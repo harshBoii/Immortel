@@ -862,7 +862,7 @@ export default function DataMinePageClient({
         const msg: string =
           data?.error ??
           (data?.missing
-            ? "Website URL and LinkedIn URL are required before auto-filling."
+            ? "Website URL is required before auto-filling."
             : "Failed to auto-fill company data.");
         setAutoFillMessage(msg);
         return;

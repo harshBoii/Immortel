@@ -145,6 +145,7 @@ model Company {
   aeoGenerationProfiles AeoGenerationProfile[]
   Citations Citation[]
   LlmRadarMetrics LlmRadarMetric[]
+  llmTopics LlmTopic[]
   shopifyShops    ShopifyShop[]
   shopifyProducts ShopifyProduct[]
 
@@ -958,7 +959,10 @@ model PromptExecution {
 model LlmTopic {
   id String @id @default(cuid())
 
-  name        String  @unique @db.VarChar(255)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name        String  @db.VarChar(255)
   description String? @db.Text
 
   difficulty  Difficulty @default(MEDIUM)
@@ -966,6 +970,9 @@ model LlmTopic {
   prompts Prompt[] @relation("LlmTopicPrompts")
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([companyId, name])
+  @@index([companyId])
 
   @@map("llm_topics")
 }

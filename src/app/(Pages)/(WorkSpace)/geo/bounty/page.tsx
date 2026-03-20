@@ -17,6 +17,7 @@ export default async function BountyPage() {
   }
 
   const topics = await prisma.llmTopic.findMany({
+    where: { companyId: companyId ?? undefined },
     orderBy: { createdAt: "desc" },
     include: {
       prompts: {

@@ -148,8 +148,9 @@ export async function POST() {
     const difficulty = mapDifficulty(niche.difficulty);
 
     const llmTopic = await prisma.llmTopic.upsert({
-      where: { name: topicName },
+      where: { companyId_name: { companyId, name: topicName } },
       create: {
+        companyId,
         name: topicName,
         description: niche.description ?? null,
         difficulty,
@@ -197,6 +198,7 @@ export async function GET() {
   }
 
   const topics = await prisma.llmTopic.findMany({
+    where: { companyId: session.companyId },
     orderBy: { createdAt: "desc" },
     include: {
       prompts: {

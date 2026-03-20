@@ -54,15 +54,15 @@ export async function POST(_request: NextRequest) {
     urlSources.find((s) => s.label === "LinkedIn")?.rawContent?.trim() ||
     null;
 
-  if (!websiteUrl || !linkedinUrl) {
+  // LinkedIn is optional; we only require the website URL to seed/enrich company info.
+  if (!websiteUrl) {
     return NextResponse.json(
       {
         success: false,
-        error:
-          "Website URL and LinkedIn URL are required before auto-filling. Update them in your GEO profile first.",
+        error: "Website URL is required before auto-filling. Update it in your GEO profile first.",
         missing: {
           website: !websiteUrl,
-          linkedin: !linkedinUrl,
+          linkedin: false,
         },
       },
       { status: 400 }
@@ -81,16 +81,14 @@ export async function POST(_request: NextRequest) {
 
   let payload: any;
   try {
+    const seedBody: any = { website_url: websiteUrl };
+    if (linkedinUrl) seedBody.linkedin_url = linkedinUrl;
+
     const res = await fetch(seedUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // FastAPI / Pydantic expects snake_case fields
-      body: JSON.stringify({
-        website_url: websiteUrl,
-        linkedin_url: linkedinUrl,
-        // you can later thread this through from session if desired
-        // session_id: session.id ?? "company-seeder-session",
-      }),
+      body: JSON.stringify(seedBody),
     });
 
     if (!res.ok) {
