@@ -39,15 +39,45 @@ export async function POST(request: NextRequest) {
   try {
     const huntRes = await fetch(huntUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      // Forward the user's auth cookie; Next middleware blocks the hunt endpoint
+      // unless the `auth` cookie is present.
+      headers: {
+        "Content-Type": "application/json",
+        cookie: request.headers.get("cookie") ?? "",
+      },
     });
-    const huntData = await huntRes.json();
+    const contentType = huntRes.headers.get("content-type") ?? "";
+    const rawText = await huntRes.text().catch(() => "");
+
+    console.log("[geo/bounty/get-cited] hunt response", {
+      url: huntUrl,
+      status: huntRes.status,
+      contentType,
+      responsePreview: rawText?.slice(0, 2000) ?? "",
+    });
+
+    type HuntResponse = {
+      success?: boolean;
+      error?: string;
+      aeoPageId?: string | null;
+    };
+
+    let huntData: HuntResponse | null = null;
+    if (contentType.includes("application/json")) {
+      try {
+        huntData = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        huntData = null;
+      }
+    }
 
     if (!huntRes.ok || !huntData?.success) {
       return NextResponse.json(
         {
           success: false,
-          error: huntData?.error ?? "Hunt failed",
+          error:
+            huntData?.error ??
+            (contentType.includes("application/json") ? "Hunt failed" : "Hunt returned non-JSON (likely redirected)"),
           bountyId: bounty.id,
         },
         { status: huntRes.status >= 400 ? huntRes.status : 502 }

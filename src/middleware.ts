@@ -28,6 +28,8 @@ export function middleware(request: NextRequest) {
   const isWidgetApi = pathname.startsWith('/widget/');
   const isShopifyWebhookApi = pathname.startsWith('/api/shopify/webhooks');
   const isPrivacyPolicyApi = pathname.startsWith('/privacy-policy');
+  const isPublicBountyHuntArticle =
+    pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
 
   const isPublic =
     isLoginPage ||
@@ -43,7 +45,8 @@ export function middleware(request: NextRequest) {
     isImageProxyApi ||
     isShopifyWebhookApi ||
     isPrivacyPolicyApi ||
-    isWidgetApi;
+    isWidgetApi ||
+    isPublicBountyHuntArticle;
 
   if (isPublic) {
     if (isLoginPage && hasValidAuthCookie(request)) {

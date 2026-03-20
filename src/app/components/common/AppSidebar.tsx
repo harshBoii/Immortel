@@ -230,6 +230,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconLayoutDashboard} label="Info Spread" href="/geo/info-spread" />
           <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
+          <SecondaryNavItem icon={IconTarget} label="Generated Bounty Pages" href="/geo/bounty-pages" />
         </>
       );
     case 'shop':

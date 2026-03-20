@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "build:widgets": "esbuild src/widget/product-list-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/product-list.js && esbuild src/widget/checkout-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/checkout.js",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "seed:products": "tsx prisma/seed-products.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
