@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { Sparkles, Star, Store } from 'lucide-react';
+import { SiGoogle,SiOpenai } from 'react-icons/si';
 import { useTheme } from './ThemeProvider';
 import { useCurrentContext } from './useCurrentContext';
 
@@ -145,6 +147,13 @@ const IconFileText = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconConnection = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
@@ -153,6 +162,7 @@ const MAIN_SECTIONS = [
   { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
   { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
+  { id: 'connection', label: 'Connection', icon: IconConnection, hasSecondary: true },
 ];
 
 /* ============================================
@@ -269,6 +279,15 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconLayoutDashboard} label="Products" href="/shop/products" />
         </>
       );
+    case 'connection':
+      return (
+        <>
+          <SectionLabel label="Connection" />
+          <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
+          <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
+          <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
+        </>
+      );
     default:
       return (
         <>
@@ -318,6 +337,8 @@ export default function AppSidebar() {
         return '/geo/data-mine';
       case 'shop':
         return '/shop/products';
+      case 'connection':
+        return '/connection/mcp';
       default:
         return '/';
     }
@@ -344,6 +365,7 @@ export default function AppSidebar() {
     else if (pathname?.startsWith('/ingestion')) setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo')) setActiveSection('geo');
     else if (pathname?.startsWith('/shop')) setActiveSection('shop');
+    else if (pathname?.startsWith('/connection')) setActiveSection('connection');
     else setActiveSection('home');
   }, [pathname]);
 
