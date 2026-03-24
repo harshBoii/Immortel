@@ -14,7 +14,7 @@ export function ShopifyOAuthReturnSync() {
 
   useEffect(() => {
     if (ran.current) return;
-    if (searchParams.get('shopify_connected') !== '1') return;
+    if (searchParams?.get('shopify_connected') !== '1') return;
     ran.current = true;
 
     window.dispatchEvent(new Event('immortel:refetch-context'));
