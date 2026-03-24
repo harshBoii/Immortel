@@ -205,7 +205,7 @@ export default function ConnectionShopifyPage() {
                 disabled={saving}
                 className="mt-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary/15 text-primary hover:bg-primary/25 disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Save store domain'}
+                {saving ? 'Updating...' : 'Update store domain'}
               </button>
               {formError && (
                 <p className="text-sm text-destructive mt-2">{formError}</p>
