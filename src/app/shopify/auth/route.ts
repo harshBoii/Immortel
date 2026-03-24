@@ -139,5 +139,6 @@ export async function GET(request: NextRequest) {
 
   const dashboardUrl = new URL("/", request.url);
   dashboardUrl.searchParams.set("shop", shop);
+  dashboardUrl.searchParams.set("shopify_connected", "1");
   return NextResponse.redirect(dashboardUrl.toString());
 }

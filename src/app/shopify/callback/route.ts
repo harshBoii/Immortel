@@ -144,6 +144,7 @@ export async function GET(request: NextRequest) {
 
   const redirectUrl = new URL("/", request.url);
   redirectUrl.searchParams.set("shop", shop);
+  redirectUrl.searchParams.set("shopify_connected", "1");
 
   return NextResponse.redirect(redirectUrl.toString());
 }
