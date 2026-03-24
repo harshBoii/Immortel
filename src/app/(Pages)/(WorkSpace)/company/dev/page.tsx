@@ -7,6 +7,7 @@ type LoadState = {
   scopes: string;
   appUrl: string;
   connectUrl: string;
+  expectedShopDomain: string;
   hasSecret: boolean;
   updatedAt: string | null;
 };
@@ -22,6 +23,7 @@ export default function CompanyDevShopifyPage() {
   const [scopes, setScopes] = useState('');
   const [appUrl, setAppUrl] = useState('');
   const [connectUrl, setConnectUrl] = useState('');
+  const [expectedShopDomain, setExpectedShopDomain] = useState('');
   const [hasSecret, setHasSecret] = useState(false);
 
   const load = useCallback(async () => {
@@ -39,6 +41,7 @@ export default function CompanyDevShopifyPage() {
       setScopes(d.scopes);
       setAppUrl(d.appUrl);
       setConnectUrl(d.connectUrl);
+      setExpectedShopDomain(d.expectedShopDomain ?? '');
       setHasSecret(d.hasSecret);
       setApiSecret('');
     } catch {
@@ -64,13 +67,14 @@ export default function CompanyDevShopifyPage() {
       if (appUrl.trim()) body.appUrl = appUrl.trim();
       if (apiSecret.trim()) body.apiSecret = apiSecret.trim();
       body.connectUrl = connectUrl.trim();
+      body.expectedShopDomain = expectedShopDomain.trim();
 
       const hasCredentialField =
         Boolean(body.apiKey) ||
         Boolean(body.scopes) ||
         Boolean(body.appUrl) ||
         Boolean(body.apiSecret);
-      if (!hasCredentialField && !body.connectUrl) {
+      if (!hasCredentialField && !body.connectUrl && !body.expectedShopDomain) {
         setError('Enter at least one field to save.');
         setSaving(false);
         return;
@@ -177,6 +181,22 @@ export default function CompanyDevShopifyPage() {
             />
             <p className="mt-1 text-xs text-muted-foreground">
               Full URL or path starting with <code className="text-[10px]">/</code>. Leave empty to use <code className="text-[10px]">/connect-shopify</code>.
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              Expected store domain (for HMAC before install)
+            </label>
+            <input
+              type="text"
+              value={expectedShopDomain}
+              onChange={(e) => setExpectedShopDomain(e.target.value)}
+              placeholder="my-store.myshopify.com"
+              className="w-full px-3 py-2 rounded-lg text-sm border border-[var(--glass-border)] bg-[var(--glass-hover)]"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Must match the shop you open in Shopify Admin. Also editable from the sidebar before connecting.
             </p>
           </div>
 

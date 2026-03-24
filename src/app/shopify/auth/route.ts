@@ -7,6 +7,7 @@ import {
   normalizeShopDomain,
   verifyHmacFromSearchParams,
 } from "@/lib/shopify/client";
+import { resolveCompanyIdForShopifyLoad } from "@/lib/shopify/resolveCompany";
 
 const LOG_PREFIX = "[Shopify Auth]";
 
@@ -70,12 +71,14 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const shopRecord = await prisma.shopifyShop.findUnique({
-    where: { shopDomain: shop },
-    select: { companyId: true, status: true },
-  });
+  const [shopRecord, companyIdForHmac] = await Promise.all([
+    prisma.shopifyShop.findUnique({
+      where: { shopDomain: shop },
+      select: { companyId: true, status: true },
+    }),
+    resolveCompanyIdForShopifyLoad(rawShop),
+  ]);
 
-  const companyIdForHmac = shopRecord?.companyId ?? null;
   const credentialMeta = await getShopifyCredentialSourceMeta(companyIdForHmac);
 
   console.info(`${LOG_PREFIX} Shop lookup`, {
@@ -83,6 +86,7 @@ export async function GET(request: NextRequest) {
     shopInDb: Boolean(shopRecord),
     companyId: companyIdForHmac,
     shopStatus: shopRecord?.status ?? null,
+    preInstallCompanyResolved: Boolean(!shopRecord && companyIdForHmac),
     credentialMeta,
   });
 

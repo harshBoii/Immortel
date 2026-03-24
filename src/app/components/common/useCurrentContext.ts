@@ -20,6 +20,8 @@ type AppContextState = {
   company: CompanySummary | null;
   shopify: ShopifySummary | null;
   shopifyConnectUrl: string | null;
+  /** Normalized *.myshopify.com saved for credential resolution before install */
+  expectedShopDomain: string | null;
   refetch: () => void;
 };
 
@@ -30,6 +32,7 @@ export function useCurrentContext(): AppContextState {
     company: null,
     shopify: null,
     shopifyConnectUrl: null,
+    expectedShopDomain: null,
   });
   const [fetchKey, setFetchKey] = useState(0);
 
@@ -58,6 +61,7 @@ export function useCurrentContext(): AppContextState {
             company: data.company ?? null,
             shopify: data.shopify ?? null,
             shopifyConnectUrl: data.shopifyConnectUrl ?? null,
+            expectedShopDomain: data.expectedShopDomain ?? null,
           });
         }
       } catch (err) {

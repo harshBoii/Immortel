@@ -13,6 +13,7 @@ export async function GET() {
         company: null,
         shopify: null,
         shopifyConnectUrl: null,
+        expectedShopDomain: null,
       },
       { status: 401 }
     );
@@ -37,7 +38,7 @@ export async function GET() {
           provider: IntegrationProvider.Shopify,
         },
       },
-      select: { connectUrl: true },
+      select: { connectUrl: true, expectedShopDomain: true },
     }),
   ]);
 
@@ -49,6 +50,7 @@ export async function GET() {
         company: null,
         shopify: null,
         shopifyConnectUrl: null,
+        expectedShopDomain: null,
       },
       { status: 404 }
     );
@@ -57,11 +59,14 @@ export async function GET() {
   const shopifyConnectUrl =
     cms?.connectUrl?.trim() ? cms.connectUrl.trim() : null;
 
+  const expectedShopDomain = cms?.expectedShopDomain?.trim() ?? "";
+
   return NextResponse.json({
     success: true,
     company,
     shopify: shop,
     shopifyConnectUrl,
+    expectedShopDomain,
   });
 }
 

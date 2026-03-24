@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { IntegrationProvider } from "@prisma/client";
+import { IntegrationProvider, Prisma } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeShopDomain } from "@/lib/shopify/client";
 
 const PatchBodySchema = z.object({
   apiKey: z.string().optional(),
@@ -12,6 +13,8 @@ const PatchBodySchema = z.object({
   connectUrl: z
     .union([z.string().url(), z.string().regex(/^\/.+/), z.literal("")])
     .optional(),
+  /** Normalized *.myshopify.com — used to resolve CMS credentials before install */
+  expectedShopDomain: z.union([z.string(), z.literal("")]).optional(),
 });
 
 export async function GET() {
@@ -33,6 +36,7 @@ export async function GET() {
       scopes: true,
       appUrl: true,
       connectUrl: true,
+      expectedShopDomain: true,
       updatedAt: true,
     },
   });
@@ -44,6 +48,7 @@ export async function GET() {
       scopes: row?.scopes ?? "",
       appUrl: row?.appUrl ?? "",
       connectUrl: row?.connectUrl ?? "",
+      expectedShopDomain: row?.expectedShopDomain ?? "",
       hasSecret: Boolean(row?.apiSecret?.trim()),
       updatedAt: row?.updatedAt ?? null,
     },
@@ -80,12 +85,44 @@ export async function PATCH(request: NextRequest) {
     incoming.apiSecret === undefined &&
     incoming.scopes === undefined &&
     incoming.appUrl === undefined &&
-    incoming.connectUrl === undefined
+    incoming.connectUrl === undefined &&
+    incoming.expectedShopDomain === undefined
   ) {
     return NextResponse.json(
       { success: false, error: "Provide at least one field to update" },
       { status: 400 }
     );
+  }
+
+  let normalizedExpectedDomain: string | null | undefined;
+  if (incoming.expectedShopDomain !== undefined) {
+    const raw = incoming.expectedShopDomain.trim();
+    if (!raw) {
+      normalizedExpectedDomain = null;
+    } else {
+      try {
+        normalizedExpectedDomain = normalizeShopDomain(raw);
+      } catch {
+        return NextResponse.json(
+          { success: false, error: "Invalid expectedShopDomain (use e.g. my-store.myshopify.com)" },
+          { status: 400 }
+        );
+      }
+      const conflict = await prisma.companyIntegrationCms.findFirst({
+        where: {
+          provider: IntegrationProvider.Shopify,
+          expectedShopDomain: normalizedExpectedDomain,
+          NOT: { companyId: session.companyId },
+        },
+        select: { companyId: true },
+      });
+      if (conflict) {
+        return NextResponse.json(
+          { success: false, error: "This store domain is already linked to another workspace" },
+          { status: 409 }
+        );
+      }
+    }
   }
 
   const existing = await prisma.companyIntegrationCms.findUnique({
@@ -112,34 +149,50 @@ export async function PATCH(request: NextRequest) {
       ? incoming.apiSecret
       : (existing?.apiSecret ?? "");
 
-  await prisma.companyIntegrationCms.upsert({
-    where: {
-      companyId_provider: {
+  try {
+    await prisma.companyIntegrationCms.upsert({
+      where: {
+        companyId_provider: {
+          companyId: session.companyId,
+          provider: IntegrationProvider.Shopify,
+        },
+      },
+      create: {
         companyId: session.companyId,
         provider: IntegrationProvider.Shopify,
+        apiKey: apiKey || null,
+        apiSecret: apiSecret || null,
+        scopes: scopes || null,
+        appUrl: appUrl || null,
+        connectUrl: connectUrl || null,
+        ...(normalizedExpectedDomain !== undefined
+          ? { expectedShopDomain: normalizedExpectedDomain }
+          : {}),
       },
-    },
-    create: {
-      companyId: session.companyId,
-      provider: IntegrationProvider.Shopify,
-      apiKey: apiKey || null,
-      apiSecret: apiSecret || null,
-      scopes: scopes || null,
-      appUrl: appUrl || null,
-      connectUrl: connectUrl || null,
-    },
-    update: {
-      ...(incoming.apiKey !== undefined ? { apiKey: incoming.apiKey || null } : {}),
-      ...(incoming.apiSecret !== undefined
-        ? { apiSecret: incoming.apiSecret || null }
-        : {}),
-      ...(incoming.scopes !== undefined ? { scopes: incoming.scopes || null } : {}),
-      ...(incoming.appUrl !== undefined ? { appUrl: incoming.appUrl || null } : {}),
-      ...(incoming.connectUrl !== undefined
-        ? { connectUrl: incoming.connectUrl || null }
-        : {}),
-    },
-  });
+      update: {
+        ...(incoming.apiKey !== undefined ? { apiKey: incoming.apiKey || null } : {}),
+        ...(incoming.apiSecret !== undefined
+          ? { apiSecret: incoming.apiSecret || null }
+          : {}),
+        ...(incoming.scopes !== undefined ? { scopes: incoming.scopes || null } : {}),
+        ...(incoming.appUrl !== undefined ? { appUrl: incoming.appUrl || null } : {}),
+        ...(incoming.connectUrl !== undefined
+          ? { connectUrl: incoming.connectUrl || null }
+          : {}),
+        ...(normalizedExpectedDomain !== undefined
+          ? { expectedShopDomain: normalizedExpectedDomain }
+          : {}),
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { success: false, error: "This store domain is already in use" },
+        { status: 409 }
+      );
+    }
+    throw e;
+  }
 
   return NextResponse.json({ success: true });
 }

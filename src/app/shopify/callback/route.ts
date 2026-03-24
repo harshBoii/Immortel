@@ -6,6 +6,7 @@ import {
   normalizeShopDomain,
   verifyHmacFromSearchParams,
 } from "@/lib/shopify/client";
+import { resolveCompanyIdForShopifyLoad } from "@/lib/shopify/resolveCompany";
 
 const STATE_COOKIE_NAME = "shopify_oauth_state";
 
@@ -77,7 +78,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!(await verifyHmacFromSearchParams(searchParams, parsed.companyId))) {
+  const resolvedCompanyId = await resolveCompanyIdForShopifyLoad(rawShop);
+  if (resolvedCompanyId && resolvedCompanyId !== parsed.companyId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "This store domain is registered to another workspace. Update your saved store domain or sign in as the correct company.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const companyIdForOAuth = resolvedCompanyId ?? parsed.companyId;
+
+  if (!(await verifyHmacFromSearchParams(searchParams, companyIdForOAuth))) {
     return NextResponse.json(
       { success: false, error: "Invalid HMAC signature" },
       { status: 400 }
@@ -90,7 +105,7 @@ export async function GET(request: NextRequest) {
   let scopes: string[];
 
   try {
-    const tokenData = await exchangeCodeForToken(shop, code, parsed.companyId);
+    const tokenData = await exchangeCodeForToken(shop, code, companyIdForOAuth);
     accessToken = tokenData.accessToken;
     scopes = tokenData.scopes;
   } catch (err) {

@@ -49,6 +49,8 @@ model CompanyIntegrationCms {
   scopes     String?
   appUrl     String?             @db.VarChar(2000)
   connectUrl String?             @db.VarChar(2000)
+  /// Normalized *.myshopify.com — used to resolve company + CMS credentials before shop is installed
+  expectedShopDomain String?     @unique @db.VarChar(255)
   createdAt  DateTime            @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
   company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
