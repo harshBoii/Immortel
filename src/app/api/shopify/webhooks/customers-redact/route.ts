@@ -6,13 +6,14 @@ import { NextRequest } from 'next/server'
 export async function POST(req: NextRequest) {
   const { valid, body } = await verifyShopifyWebhook(req)
 
-  if (!valid) {
+  if (!valid || !body) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Delete this customer's data from your DB
   // body.customer.id → the customer to delete
-  console.log('Redact customer:', body.customer?.id, body.shop_domain)
+  const customer = body.customer as { id?: unknown } | undefined;
+  console.log('Redact customer:', customer?.id, body.shop_domain)
 
   // TODO: delete customer data from your database here
 

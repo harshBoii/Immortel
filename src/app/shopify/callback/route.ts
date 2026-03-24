@@ -32,13 +32,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!verifyHmacFromSearchParams(searchParams)) {
-    return NextResponse.json(
-      { success: false, error: "Invalid HMAC signature" },
-      { status: 400 }
-    );
-  }
-
   let shop: string;
   try {
     shop = normalizeShopDomain(rawShop);
@@ -76,7 +69,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Optional: enforce max age in case cookie maxAge not respected
   const MAX_AGE_MS = 10 * 60 * 1000;
   if (Date.now() - parsed.createdAt > MAX_AGE_MS) {
     return NextResponse.json(
@@ -85,14 +77,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Clear the state cookie now that we've validated it
+  if (!(await verifyHmacFromSearchParams(searchParams, parsed.companyId))) {
+    return NextResponse.json(
+      { success: false, error: "Invalid HMAC signature" },
+      { status: 400 }
+    );
+  }
+
   cookieStore.delete(STATE_COOKIE_NAME);
 
   let accessToken: string;
   let scopes: string[];
 
   try {
-    const tokenData = await exchangeCodeForToken(shop, code);
+    const tokenData = await exchangeCodeForToken(shop, code, parsed.companyId);
     accessToken = tokenData.accessToken;
     scopes = tokenData.scopes;
   } catch (err) {
@@ -129,10 +127,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Redirect back into the app dashboard (root workspace home)
   const redirectUrl = new URL("/", request.url);
   redirectUrl.searchParams.set("shop", shop);
 
   return NextResponse.redirect(redirectUrl.toString());
 }
-

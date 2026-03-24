@@ -18,8 +18,13 @@ export function normalizeShopDomain(raw: string): string {
   return shop;
 }
 
-export function buildInstallUrl(shopDomain: string, state: string): string {
-  const { SHOPIFY_API_KEY, scopes, redirectUri } = getShopifyConfig();
+export async function buildInstallUrl(
+  shopDomain: string,
+  state: string,
+  companyId: string
+): Promise<string> {
+  const { SHOPIFY_API_KEY, scopes, redirectUri } =
+    await getShopifyConfig(companyId);
   const shop = normalizeShopDomain(shopDomain);
 
   console.log("[Shopify buildInstallUrl] redirect_uri being used:", redirectUri);
@@ -33,8 +38,11 @@ export function buildInstallUrl(shopDomain: string, state: string): string {
   return url.toString();
 }
 
-export function verifyHmacFromSearchParams(searchParams: URLSearchParams): boolean {
-  const { SHOPIFY_API_SECRET } = getShopifyConfig();
+export async function verifyHmacFromSearchParams(
+  searchParams: URLSearchParams,
+  companyId: string | null | undefined
+): Promise<boolean> {
+  const { SHOPIFY_API_SECRET } = await getShopifyConfig(companyId);
 
   const providedHmac = searchParams.get("hmac") || "";
   if (!providedHmac) return false;
@@ -60,8 +68,13 @@ export function verifyHmacFromSearchParams(searchParams: URLSearchParams): boole
   }
 }
 
-export async function exchangeCodeForToken(shopDomain: string, code: string) {
-  const { SHOPIFY_API_KEY, SHOPIFY_API_SECRET } = getShopifyConfig();
+export async function exchangeCodeForToken(
+  shopDomain: string,
+  code: string,
+  companyId: string | null | undefined
+) {
+  const { SHOPIFY_API_KEY, SHOPIFY_API_SECRET } =
+    await getShopifyConfig(companyId);
   const shop = normalizeShopDomain(shopDomain);
 
   const url = `https://${shop}/admin/oauth/access_token`;
@@ -143,4 +156,3 @@ export async function getShopifyClient(shopDomain: string, companyId: string) {
     },
   };
 }
-

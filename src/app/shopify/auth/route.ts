@@ -33,14 +33,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  if (!verifyHmacFromSearchParams(searchParams)) {
-    console.warn("[Shopify Auth] HMAC verification failed for shop:", rawShop);
-    return NextResponse.json(
-      { success: false, error: "Invalid HMAC signature" },
-      { status: 403 }
-    );
-  }
-
   let shop: string;
   try {
     shop = normalizeShopDomain(rawShop);
@@ -55,6 +47,18 @@ export async function GET(request: NextRequest) {
     where: { shopDomain: shop },
     select: { companyId: true, status: true },
   });
+
+  const hmacOk = await verifyHmacFromSearchParams(
+    searchParams,
+    shopRecord?.companyId ?? null
+  );
+  if (!hmacOk) {
+    console.warn("[Shopify Auth] HMAC verification failed for shop:", rawShop);
+    return NextResponse.json(
+      { success: false, error: "Invalid HMAC signature" },
+      { status: 403 }
+    );
+  }
 
   // Shop hasn't completed OAuth yet → kick off the install flow
   if (!shopRecord || shopRecord.status !== "installed") {

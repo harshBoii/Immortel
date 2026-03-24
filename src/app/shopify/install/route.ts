@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     maxAge: STATE_COOKIE_MAX_AGE,
   });
 
-  const installUrl = buildInstallUrl(shop, state);
+  const installUrl = await buildInstallUrl(shop, state, session.companyId);
 
   console.log("[Shopify Install] shop:", shop);
   console.log("[Shopify Install] redirect URL (installUrl):", installUrl);

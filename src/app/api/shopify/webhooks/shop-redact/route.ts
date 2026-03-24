@@ -5,7 +5,7 @@ import { NextRequest } from 'next/server'
 export async function POST(req: NextRequest) {
   const { valid, body } = await verifyShopifyWebhook(req)
 
-  if (!valid) {
+  if (!valid || !body) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

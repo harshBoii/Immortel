@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Sparkles, Star, Store } from 'lucide-react';
+import { Code, Store } from 'lucide-react';
 import { SiGoogle,SiOpenai } from 'react-icons/si';
 import { useTheme } from './ThemeProvider';
 import { useCurrentContext } from './useCurrentContext';
@@ -251,6 +251,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
         <>
           <SectionLabel label="Dashboard" />
           <SecondaryNavItem icon={IconLayoutDashboard} label="Overview" href="/" />
+          <SecondaryNavItem icon={Code} label="Shopify app (dev)" href="/company/dev" />
         </>
       );
     case 'ingestion':

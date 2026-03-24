@@ -115,6 +115,11 @@ enum Difficulty {
   MEDIUM
   HARD
 }
+
+enum IntegrationProvider {
+  Shopify
+}
+
 // ============================================================
 // COMPANY
 // ============================================================
@@ -149,6 +154,8 @@ model Company {
   shopifyShops    ShopifyShop[]
   shopifyProducts ShopifyProduct[]
 
+  integrationCms  CompanyIntegrationCms[]
+
   // ── Brand identity (optional 1-to-1) ─────────────
   branding          CompanyBranding?
 
@@ -157,6 +164,26 @@ model Company {
 
   @@index([slug])
   @@map("companies")
+}
+
+model CompanyIntegrationCms {
+  id        String @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  provider IntegrationProvider @default(Shopify)
+
+  apiKey    String? @db.VarChar(500)
+  apiSecret String? @db.VarChar(500)
+  scopes    String? @db.Text
+  appUrl    String? @db.VarChar(2000)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([companyId, provider])
+  @@index([companyId])
+  @@map("company_integration_cms")
 }
 
 model BrandEntity {
