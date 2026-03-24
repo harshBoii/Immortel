@@ -66,6 +66,83 @@ function getShopifyConfigFromEnv(): ShopifyConfig {
   };
 }
 
+export type ShopifyCredentialSourceMeta =
+  | {
+      source: "cms";
+      companyId: string;
+      apiKeyLast4: string;
+    }
+  | {
+      source: "env";
+      companyId: string | null;
+      apiKeyLast4: string;
+      reason:
+        | "shop_not_in_db"
+        | "no_cms_row"
+        | "cms_incomplete";
+    }
+  | { source: "error"; message: string };
+
+/**
+ * Which credentials will be used for HMAC/OAuth for this company (for logs only).
+ * Never includes secrets. Fails softly if env vars are invalid.
+ */
+export async function getShopifyCredentialSourceMeta(
+  companyId: string | null | undefined
+): Promise<ShopifyCredentialSourceMeta> {
+  const cid = companyId ?? null;
+  try {
+    if (!cid) {
+      const cfg = getShopifyConfigFromEnv();
+      return {
+        source: "env",
+        companyId: null,
+        apiKeyLast4: cfg.SHOPIFY_API_KEY.slice(-4),
+        reason: "shop_not_in_db",
+      };
+    }
+
+    const row = await prisma.companyIntegrationCms.findUnique({
+      where: {
+        companyId_provider: {
+          companyId: cid,
+          provider: IntegrationProvider.Shopify,
+        },
+      },
+    });
+
+    if (!row) {
+      const cfg = getShopifyConfigFromEnv();
+      return {
+        source: "env",
+        companyId: cid,
+        apiKeyLast4: cfg.SHOPIFY_API_KEY.slice(-4),
+        reason: "no_cms_row",
+      };
+    }
+
+    const fromDb = buildConfigFromCmsRow(row);
+    if (fromDb) {
+      return {
+        source: "cms",
+        companyId: cid,
+        apiKeyLast4: fromDb.SHOPIFY_API_KEY.slice(-4),
+      };
+    }
+
+    const cfg = getShopifyConfigFromEnv();
+    return {
+      source: "env",
+      companyId: cid,
+      apiKeyLast4: cfg.SHOPIFY_API_KEY.slice(-4),
+      reason: "cms_incomplete",
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { source: "error", message };
+  }
+}
+
 /**
  * Resolves Shopify OAuth/app config: company CMS row (IntegrationProvider.Shopify)
  * when all four fields are set, otherwise falls back to SHOPIFY_* env vars.

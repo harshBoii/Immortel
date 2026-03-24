@@ -560,7 +560,7 @@ model PromptExecution {
   @@map("llm_prompt_executions")
 }
 
-model Citation {
+  model Citation {
   id            String          @id @default(cuid())
   executionId   String
   companyId     String?

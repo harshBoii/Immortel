@@ -38,6 +38,38 @@ export async function buildInstallUrl(
   return url.toString();
 }
 
+/** Canonical string Shopify signs for Admin / OAuth query HMAC (excludes hmac & signature). */
+export function buildShopifyQueryHmacMessage(searchParams: URLSearchParams): string {
+  return [...searchParams.entries()]
+    .filter(([key]) => key !== "hmac" && key !== "signature")
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([key, value]) => `${key}=${value}`)
+    .join("&");
+}
+
+/** Safe metadata for debugging HMAC failures (no secrets, no full values). */
+export function describeShopifyQueryForHmac(searchParams: URLSearchParams): {
+  paramKeys: string[];
+  signedKeyCount: number;
+  messageByteLength: number;
+  hasTimestamp: boolean;
+  hasHost: boolean;
+  hasSession: boolean;
+  providedHmacLength: number;
+} {
+  const keys = [...new Set([...searchParams.keys()])].sort();
+  const message = buildShopifyQueryHmacMessage(searchParams);
+  return {
+    paramKeys: keys,
+    signedKeyCount: keys.filter((k) => k !== "hmac" && k !== "signature").length,
+    messageByteLength: Buffer.byteLength(message, "utf8"),
+    hasTimestamp: searchParams.has("timestamp"),
+    hasHost: searchParams.has("host"),
+    hasSession: searchParams.has("session"),
+    providedHmacLength: (searchParams.get("hmac") || "").length,
+  };
+}
+
 export async function verifyHmacFromSearchParams(
   searchParams: URLSearchParams,
   companyId: string | null | undefined
@@ -47,11 +79,7 @@ export async function verifyHmacFromSearchParams(
   const providedHmac = searchParams.get("hmac") || "";
   if (!providedHmac) return false;
 
-  const sortedParams = [...searchParams.entries()]
-    .filter(([key]) => key !== "hmac" && key !== "signature")
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("&");
+  const sortedParams = buildShopifyQueryHmacMessage(searchParams);
 
   const digest = crypto
     .createHmac("sha256", SHOPIFY_API_SECRET)
