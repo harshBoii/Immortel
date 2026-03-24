@@ -457,7 +457,7 @@ export default function AppSidebar() {
                       </span>
                     ) : (
                       <span className="pl-3 text-[10px] text-muted-foreground">
-                        Not connected — configure
+                        connect
                       </span>
                     )}
                   </Link>
