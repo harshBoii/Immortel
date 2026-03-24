@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Code, Store } from 'lucide-react';
+import { Store } from 'lucide-react';
 import { SiGoogle,SiOpenai } from 'react-icons/si';
 import { useTheme } from './ThemeProvider';
 import { useCurrentContext } from './useCurrentContext';
@@ -251,7 +251,6 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
         <>
           <SectionLabel label="Dashboard" />
           <SecondaryNavItem icon={IconLayoutDashboard} label="Overview" href="/" />
-          <SecondaryNavItem icon={Code} label="Shopify app (dev)" href="/company/dev" />
         </>
       );
     case 'ingestion':
@@ -308,7 +307,7 @@ export default function AppSidebar() {
   const { theme, toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-   const { company, shopify, refetch } = useCurrentContext();
+   const { company, shopify, shopifyConnectUrl, refetch } = useCurrentContext();
   const [disconnecting, setDisconnecting] = useState(false);
 
   const handleDisconnectShopify = async () => {
@@ -481,7 +480,8 @@ export default function AppSidebar() {
                     </div>
                   ) : (
                     <Link
-                      href="/connect-shopify"
+                      href={shopifyConnectUrl?.trim() || '/connect-shopify'}
+                      prefetch={false}
                       className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
                     >
                       <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />

@@ -5,13 +5,662 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-// ============================================================
-// ENUMS
-// ============================================================
 
-//  VIDEO    → dynamic  — has Cloudflare Stream fields
-//  IMAGE    → static   — no stream, visual only
-//  DOCUMENT → static   — no stream, page/file based
+model Company {
+  id                    String                  @id @default(cuid())
+  name                  String                  @db.VarChar(255)
+  slug                  String                  @unique @db.VarChar(255)
+  description           String?
+  logoUrl               String?                 @db.VarChar(1000)
+  website               String?                 @db.VarChar(500)
+  email                 String                  @unique @db.VarChar(255)
+  userName              String                  @unique @db.VarChar(255)
+  password              String                  @db.VarChar(255)
+  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
+  aeoGenerationProfiles AeoGenerationProfile[]
+  aeoPages              AeoPage[]
+  assetIntelligence     AssetIntelligence[]
+  assets                Asset[]
+  brandEntity           BrandEntity?
+  citationBounties      CitationBounty[]
+  branding              CompanyBranding?
+  integrationCms        CompanyIntegrationCms[]
+  contentClusters       ContentCluster[]
+  geoDataSources        GeoDataSource[]
+  Citations             Citation[]
+  LlmRadarMetrics       LlmRadarMetric[]
+  llmTopics             LlmTopic[]
+  microAssets           MicroAsset[]
+  shopifyProducts       ShopifyProduct[]
+  shopifyShops          ShopifyShop[]
+  webinars              Webinar[]
+
+  @@index([slug])
+  @@map("companies")
+}
+
+model CompanyIntegrationCms {
+  id        String              @id @default(cuid())
+  companyId String
+  provider  IntegrationProvider @default(Shopify)
+  apiKey     String?             @db.VarChar(500)
+  apiSecret  String?             @db.VarChar(500)
+  scopes     String?
+  appUrl     String?             @db.VarChar(2000)
+  connectUrl String?             @db.VarChar(2000)
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
+  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, provider])
+  @@index([companyId])
+  @@map("company_integration_cms")
+}
+
+model BrandEntity {
+  id                  String                 @id @default(cuid())
+  companyId           String                 @unique
+  canonicalName       String?                @db.VarChar(255)
+  aliases             String[]               @default([])
+  entityType          String                 @default("Organization") @db.VarChar(100)
+  oneLiner            String?                @db.VarChar(500)
+  about               String?
+  industry            String?                @db.VarChar(100)
+  category            String?                @db.VarChar(100)
+  headquartersCity    String?                @db.VarChar(100)
+  headquartersCountry String?                @db.VarChar(100)
+  foundedYear         Int?
+  employeeRange       String?                @db.VarChar(50)
+  businessModel       String?                @db.VarChar(50)
+  topics              String[]               @default([])
+  keywords            String[]               @default([])
+  targetAudiences     String[]               @default([])
+  authorityScore      Float?
+  citationCount       Int                    @default(0)
+  lastCrawledAt       DateTime?              @db.Timestamptz(3)
+  completenessScore   Float                  @default(0)
+  lastEnrichedAt      DateTime?              @db.Timestamptz(3)
+  enrichmentSource    String?                @db.VarChar(50)
+  createdAt           DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime               @updatedAt @db.Timestamptz(3)
+  generationProfiles  AeoGenerationProfile[]
+  company             Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  intelligence        EntityIntelligence?
+  offerings           EntityOffering[]
+  sameAsLinks         EntitySameAsLink[]
+
+  @@index([industry])
+  @@index([completenessScore])
+  @@map("brand_entities")
+}
+
+model EntityIntelligence {
+  id               String      @id @default(cuid())
+  entityId         String      @unique
+  productDocs      String?
+  marketResearch   String?
+  customerFeedback String?
+  createdAt        DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime    @updatedAt @db.Timestamptz(3)
+  entity           BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@map("entity_intelligence")
+}
+
+model EntitySameAsLink {
+  id         String      @id @default(cuid())
+  entityId   String
+  platform   String      @db.VarChar(100)
+  url        String      @db.VarChar(1000)
+  verified   Boolean     @default(false)
+  verifiedAt DateTime?   @db.Timestamptz(3)
+  verifiedBy String?     @db.VarChar(50)
+  createdAt  DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime    @updatedAt @db.Timestamptz(3)
+  entity     BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, platform])
+  @@index([entityId])
+  @@index([platform])
+  @@map("entity_same_as_links")
+}
+
+model EntityOffering {
+  id              String       @id @default(cuid())
+  entityId        String
+  name            String       @db.VarChar(255)
+  slug            String       @db.VarChar(255)
+  description     String?
+  offeringType    OfferingType @default(PRODUCT)
+  url             String?      @db.VarChar(1000)
+  keywords        String[]     @default([])
+  useCases        String[]     @default([])
+  targetAudiences String[]     @default([])
+  isPrimary       Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  differentiators String[]     @default([])
+  competitors     String[]     @default([])
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+  entity          BrandEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, slug])
+  @@index([entityId])
+  @@index([offeringType])
+  @@index([isPrimary])
+  @@index([isActive])
+  @@map("entity_offerings")
+}
+
+model CompanyBranding {
+  id             String   @id @default(cuid())
+  companyId      String   @unique
+  logoUrl        String?  @db.VarChar(1000)
+  faviconUrl     String?  @db.VarChar(1000)
+  banner         String?  @db.VarChar(1000)
+  themeMusic     String?  @db.VarChar(1000)
+  primaryColor   String   @default("#D7765A") @db.VarChar(20)
+  secondaryColor String   @default("#8B5CF6") @db.VarChar(20)
+  bgColor        String   @default("#141414") @db.VarChar(20)
+  surfaceColor   String   @default("#181818") @db.VarChar(20)
+  textColor      String   @default("#FFFFFF") @db.VarChar(20)
+  companyAddress String?  @default("123 Main St, San Francisco, CA") @db.VarChar(500)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_branding")
+}
+
+model Asset {
+  id                 String              @id @default(cuid())
+  assetType          AssetType
+  title              String              @db.VarChar
+  filename           String              @db.VarChar
+  originalSize       BigInt
+  status             AssetStatus         @default(UPLOADING)
+  r2Key              String              @db.VarChar(500)
+  r2Bucket           String              @db.VarChar(255)
+  resolution         String?             @db.VarChar(20)
+  mimeType           String?             @db.VarChar(100)
+  duration           Int?
+  fps                Int?
+  codec              String?             @db.VarChar(50)
+  streamId           String?             @unique @db.VarChar(255)
+  playbackUrl        String?
+  thumbnailUrl       String?
+  pageCount          Int?
+  tags               String[]            @default([])
+  metadata           Json                @default("{}")
+  uploadSource       UploadSource        @default(NATIVE)
+  companyId          String
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  intelligenceStatus IntelligenceStatus?
+  aeoPageSources     AeoPageSource[]
+  description        AssetDescription?
+  intelligence       AssetIntelligence[]
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  geoDataSource      GeoDataSource?
+  microAssets        MicroAsset[]
+  streamQueueItems   StreamQueue[]
+  webinars           Webinar[]
+
+  @@index([companyId])
+  @@index([assetType])
+  @@index([status])
+  @@index([uploadSource])
+  @@index([assetType, status])
+  @@index([assetType, companyId])
+  @@index([createdAt(sort: Desc)])
+  @@index([intelligenceStatus])
+  @@map("assets")
+}
+
+model StreamQueue {
+  id          String              @id @default(cuid())
+  assetId     String
+  r2Key       String              @db.VarChar(500)
+  r2Bucket    String              @db.VarChar(255)
+  status      StreamQueueStatus   @default(PENDING)
+  priority    StreamQueuePriority @default(NORMAL)
+  attempts    Int                 @default(0)
+  maxAttempts Int                 @default(3)
+  lastError   String?
+  streamId    String?             @db.VarChar(255)
+  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
+  startedAt   DateTime?           @db.Timestamptz(3)
+  completedAt DateTime?           @db.Timestamptz(3)
+  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([status, priority, createdAt])
+  @@index([assetId])
+  @@map("stream_queue")
+}
+
+model UploadSession {
+  id            String   @id @default(cuid())
+  uploadId      String   @db.VarChar(255)
+  key           String   @db.VarChar(500)
+  fileName      String   @db.VarChar(255)
+  fileSize      BigInt
+  fileType      String   @db.VarChar(200)
+  totalParts    Int
+  uploadedParts Int[]    @default([])
+  status        String   @db.VarChar(50)
+  campaignId    String?  @db.VarChar(255)
+  uploadedBy    String?  @db.VarChar(255)
+  metadata      String?
+  expiresAt     DateTime @db.Timestamptz(3)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+  @@index([uploadedBy])
+  @@index([campaignId])
+  @@map("upload_sessions")
+}
+
+model AssetDescription {
+  id         String   @id @default(cuid())
+  assetId    String   @unique
+  content    String
+  seoTitle   String?  @db.VarChar(500)
+  seoSummary String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+  asset      Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_descriptions")
+}
+
+model AssetIntelligence {
+  id                String          @id @default(cuid())
+  assetId           String
+  language          String?         @db.VarChar(10)
+  contentType       String?         @db.VarChar(100)
+  durationSeconds   Int?
+  theme             String?         @db.VarChar(255)
+  sentiment         String?         @db.VarChar(50)
+  intensityScore    Float?
+  spiritualElements Boolean         @default(false)
+  titlePrimary      String?         @db.VarChar(500)
+  shortSummary      String?
+  longDescription   String?
+  tags              String[]        @default([])
+  tone              String[]        @default([])
+  topics            String[]        @default([])
+  targetAudience    String[]        @default([])
+  bestPlatforms     String[]        @default([])
+  visualContext     String[]        @default([])
+  videoGenres       String[]        @default([])
+  titleVariants     Json?           @default("{}")
+  chapters          Json?           @default("[]")
+  shortsHooks       Json?           @default("[]")
+  clipfoxInsights   Json?           @default("[]")
+  modelVersion      String?         @db.VarChar(50)
+  confidence        Float?
+  processedAt       DateTime        @default(now()) @db.Timestamptz(3)
+  companyId         String
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamptz(3)
+  aeoPageSources    AeoPageSource[]
+  asset             Asset           @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([companyId])
+  @@index([language])
+  @@index([sentiment])
+  @@index([theme])
+  @@index([contentType])
+  @@index([spiritualElements])
+  @@index([processedAt(sort: Desc)])
+  @@map("asset_intelligence")
+}
+
+model MicroAsset {
+  id          String           @id @default(cuid())
+  assetId     String
+  title       String           @db.VarChar(500)
+  startTime   Float
+  endTime     Float
+  hook        String?
+  editingIdea String?
+  description String?
+  thumbnail   String?          @db.VarChar(1000)
+  status      MicroAssetStatus @default(DRAFT)
+  category    String?          @db.VarChar(100)
+  tags        String[]         @default([])
+  aiGenerated Boolean          @default(false)
+  confidence  Float?
+  companyId   String
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+  approved_at DateTime?        @db.Timestamptz(3)
+  is_approved Boolean          @default(false)
+  shortType   ContentStyle?    @default(CASUAL)
+  asset       Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@index([companyId])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt(sort: Desc)])
+  @@index([is_approved])
+  @@map("micro_assets")
+}
+
+model Webinar {
+  id                 String    @id @default(cuid())
+  title              String    @db.VarChar(255)
+  description        String?
+  assetId            String?
+  companyId          String
+  scheduledAt        DateTime? @db.Timestamptz(3)
+  isRecurring        Boolean   @default(false)
+  recurringDayOfWeek String?   @db.VarChar(20)
+  recurringTime      String?   @db.VarChar(10)
+  timeZone           String?   @db.VarChar(50)
+  status             String    @default("DRAFT") @db.VarChar(50)
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+  approved_at        DateTime? @db.Timestamptz(3)
+  is_approved        Boolean   @default(false)
+  asset              Asset?    @relation(fields: [assetId], references: [id])
+  company            Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([assetId])
+  @@index([scheduledAt])
+  @@index([is_approved])
+  @@map("webinars")
+}
+
+model ContentCluster {
+  id           String    @id @default(cuid())
+  companyId    String
+  name         String    @db.VarChar(255)
+  slug         String    @db.VarChar(255)
+  description  String?
+  pillarPageId String?   @unique
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @db.Timestamptz(3)
+  pages        AeoPage[] @relation("ClusterPages")
+  company      Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  pillarPage   AeoPage?  @relation("PillarPage", fields: [pillarPageId], references: [id])
+
+  @@unique([companyId, slug])
+  @@index([companyId])
+  @@map("content_clusters")
+}
+
+model AeoPage {
+  id                 String                 @id @default(cuid())
+  companyId          String
+  slug               String                 @db.VarChar(255)
+  locale             String                 @default("en") @db.VarChar(10)
+  pageType           AeoPageType            @default(DEFINITION)
+  status             AeoPageStatus          @default(DRAFT)
+  title              String                 @db.VarChar(500)
+  description        String
+  facts              Json                   @default("[]")
+  faq                Json                   @default("[]")
+  claims             Json                   @default("[]")
+  summary            Json                   @default("{}")
+  knowledgeGraph     Json                   @default("{}")
+  seoTitle           String?                @db.VarChar(500)
+  seoDescription     String?
+  canonicalUrl       String?                @db.VarChar(1000)
+  clusterId          String?
+  publishedAt        DateTime?              @db.Timestamptz(3)
+  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  generationProfiles AeoGenerationProfile[]
+  sources            AeoPageSource[]
+  cluster            ContentCluster?        @relation("ClusterPages", fields: [clusterId], references: [id])
+  company            Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  citationBounties   CitationBounty?
+  pillarFor          ContentCluster?        @relation("PillarPage")
+  aeo_pages_A        AeoPage[]              @relation("RelatedAeoPages")
+  aeo_pages_B        AeoPage[]              @relation("RelatedAeoPages")
+
+  @@unique([companyId, slug, locale])
+  @@index([companyId])
+  @@index([status])
+  @@index([pageType])
+  @@index([clusterId])
+  @@index([companyId, status])
+  @@index([publishedAt(sort: Desc)])
+  @@map("aeo_pages")
+}
+
+model AeoGenerationProfile {
+  id                     String       @id @default(cuid())
+  companyId              String
+  brandEntityId          String?
+  baseUrl                String       @db.VarChar(1000)
+  locale                 String       @default("en") @db.VarChar(10)
+  clusterId              String?      @db.VarChar(255)
+  existingSlugs          String[]     @default([])
+  defaultPageType        AeoPageType  @default(COMPARISON)
+  defaultQuery           String?
+  label                  String?      @db.VarChar(255)
+  slug                   String?      @db.VarChar(255)
+  lastGeneratedAeoPageId String?
+  lastRunAt              DateTime?    @db.Timestamptz(3)
+  createdAt              DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime     @updatedAt @db.Timestamptz(3)
+  brandEntity            BrandEntity? @relation(fields: [brandEntityId], references: [id])
+  company                Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lastGeneratedAeoPage   AeoPage?     @relation(fields: [lastGeneratedAeoPageId], references: [id])
+
+  @@index([companyId])
+  @@index([brandEntityId])
+  @@index([defaultPageType])
+  @@map("aeo_generation_profiles")
+}
+
+model AeoPageSource {
+  id                String             @id @default(cuid())
+  pageId            String
+  assetId           String?
+  intelligenceId    String?
+  contributionScore Float?
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  asset             Asset?             @relation(fields: [assetId], references: [id])
+  intelligence      AssetIntelligence? @relation(fields: [intelligenceId], references: [id])
+  page              AeoPage            @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId])
+  @@index([assetId])
+  @@map("aeo_page_sources")
+}
+
+model CitationBounty {
+  id                String           @id @default(cuid())
+  companyId         String
+  query             String
+  intent            String?          @db.VarChar(255)
+  pageType          AeoPageType
+  confidence        Float
+  difficulty        BountyDifficulty @default(EASY)
+  estimatedReach    Int?
+  suggestedCluster  String?          @db.VarChar(255)
+  status            BountyStatus     @default(OPEN)
+  huntedAt          DateTime?        @db.Timestamptz(3)
+  aeoPageId         String?          @unique
+  generationContext Json             @default("{}")
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @db.Timestamptz(3)
+  aeoPage           AeoPage?         @relation(fields: [aeoPageId], references: [id])
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([status])
+  @@index([confidence])
+  @@index([difficulty])
+  @@index([companyId, status])
+  @@index([companyId, status, confidence])
+  @@map("citation_bounties")
+}
+
+model GeoDataSource {
+  id               String        @id @default(cuid())
+  companyId        String
+  sourceType       GeoSourceType
+  label            String        @db.VarChar(255)
+  assetId          String?       @unique
+  rawContent       String?
+  processedContent String?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+  asset            Asset?        @relation(fields: [assetId], references: [id])
+  company          Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([sourceType])
+  @@map("geo_data_sources")
+}
+
+model Prompt {
+  id         String            @id @default(cuid())
+  query      String
+  topic      String?           @db.VarChar(255)
+  topicId    String?
+  intent     String?           @db.VarChar(100)
+  isActive   Boolean           @default(true)
+  createdAt  DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
+  executions PromptExecution[]
+  llmTopic   LlmTopic?         @relation("LlmTopicPrompts", fields: [topicId], references: [id])
+
+  @@index([intent])
+  @@index([topic])
+  @@index([topicId])
+  @@map("llm_prompts")
+}
+
+model PromptExecution {
+  id         String     @id @default(cuid())
+  promptId   String
+  model      String     @db.VarChar(100)
+  response   String
+  executedAt DateTime   @default(now()) @db.Timestamptz(3)
+  citations  Citation[]
+  prompt     Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId])
+  @@index([model])
+  @@index([executedAt])
+  @@map("llm_prompt_executions")
+}
+
+model Citation {
+  id            String          @id @default(cuid())
+  executionId   String
+  companyId     String?
+  mentionedName String          @db.VarChar(255)
+  rank          Int?
+  context       String?         @db.VarChar(100)
+  confidence    Float?
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+  company       Company?        @relation(fields: [companyId], references: [id])
+  execution     PromptExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId])
+  @@index([companyId])
+  @@index([rank])
+  @@map("llm_citations")
+}
+
+model LlmTopic {
+  id          String     @id @default(cuid())
+  name        String     @db.VarChar(255)
+  description String?
+  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
+  difficulty  Difficulty @default(MEDIUM)
+  companyId   String
+  prompts     Prompt[]   @relation("LlmTopicPrompts")
+  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@index([companyId])
+  @@map("llm_topics")
+}
+
+model LlmRadarMetric {
+  id             String   @id @default(cuid())
+  companyId      String
+  model          String   @db.VarChar(100)
+  shareOfVoice   Float?
+  top3Rate       Float?
+  queryCoverage  Float?
+  avgRank        Float?
+  calculatedAt   DateTime @default(now()) @db.Timestamptz(3)
+  competitorRank Float?
+  topicAuthority Float?
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([model])
+  @@index([companyId, calculatedAt(sort: Desc)])
+  @@map("llm_radar_metrics")
+}
+
+model ShopifyShop {
+  id            String           @id @default(cuid())
+  companyId     String
+  shopDomain    String           @unique @db.VarChar(255)
+  accessToken   String           @db.VarChar(500)
+  scopes        String[]         @default([])
+  status        String           @default("installed") @db.VarChar(50)
+  installedAt   DateTime         @default(now()) @db.Timestamptz(3)
+  uninstalledAt DateTime?        @db.Timestamptz(3)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
+  products      ShopifyProduct[]
+  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("shopify_shops")
+}
+
+model ShopifyProduct {
+  id                   String      @id @default(cuid())
+  shopId               String
+  companyId            String
+  shopifyGid           String      @unique @db.VarChar(255)
+  title                String      @db.VarChar(500)
+  status               String      @db.VarChar(50)
+  handle               String      @db.VarChar(255)
+  totalInventory       Int         @default(0)
+  onlineStoreUrl       String?     @db.VarChar(1000)
+  priceMinAmount       String?     @db.VarChar(64)
+  priceMaxAmount       String?     @db.VarChar(64)
+  currencyCode         String?     @db.VarChar(10)
+  shopifyCreatedAt     DateTime    @db.Timestamptz(3)
+  shopifyUpdatedAt     DateTime    @db.Timestamptz(3)
+  createdAt            DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime    @updatedAt @db.Timestamptz(3)
+  featuredImageAltText String?     @db.VarChar(500)
+  featuredImageHeight  Int?
+  featuredImageUrl     String?     @db.VarChar(2000)
+  featuredImageWidth   Int?
+  description          String?
+  company              Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shop                 ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([companyId])
+  @@index([status])
+  @@map("shopify_products")
+}
+
 enum AssetType {
   VIDEO
   IMAGE
@@ -55,11 +704,11 @@ enum MicroAssetStatus {
 }
 
 enum ContentStyle {
-  EDUCATIONAL 
-  FLASHY 
-  CASUAL 
-  STORY 
-  PROMOTIONAL 
+  EDUCATIONAL
+  FLASHY
+  CASUAL
+  STORY
+  PROMOTIONAL
 }
 
 enum IntelligenceStatus {
@@ -69,11 +718,11 @@ enum IntelligenceStatus {
 }
 
 enum AeoPageType {
-  DEFINITION       // "What is [X]?"
-  HOW_TO           // "How does [X] work?"
-  COMPARISON       // "[X] vs [Y]"
-  FAQ              // General FAQ cluster
-  USE_CASE         // "[X] for [audience]"
+  DEFINITION
+  HOW_TO
+  COMPARISON
+  FAQ
+  USE_CASE
   THOUGHT_LEADERSHIP
 }
 
@@ -83,25 +732,27 @@ enum AeoPageStatus {
   PUBLISHED
   ARCHIVED
 }
+
 enum OfferingType {
   PRODUCT
   SERVICE
   FEATURE
   INTEGRATION
-  PLAN          // pricing tier e.g. "Pro Plan"
+  PLAN
 }
+
 enum BountyStatus {
-  OPEN        // visible in UI, not yet hunted
-  IN_PROGRESS // page being generated
-  HUNTED      // AeoPage successfully published
-  DISMISSED   // company skipped it
-  EXPIRED     // no longer relevant
+  OPEN
+  IN_PROGRESS
+  HUNTED
+  DISMISSED
+  EXPIRED
 }
 
 enum BountyDifficulty {
-  EASY    // very niche, near-zero competition
+  EASY
   MEDIUM
-  HARD    // broader query, more competition
+  HARD
 }
 
 enum GeoSourceType {
@@ -118,987 +769,4 @@ enum Difficulty {
 
 enum IntegrationProvider {
   Shopify
-}
-
-// ============================================================
-// COMPANY
-// ============================================================
-
-model Company {
-  id          String  @id @default(cuid())
-  name        String  @db.VarChar(255)
-  slug        String  @unique @db.VarChar(255)
-  description String? @db.Text
-  logoUrl     String? @db.VarChar(1000)
-  website     String? @db.VarChar(500)
-  email    String @unique @db.VarChar(255)
-
-  userName String @unique @db.VarChar(255)
-  password String @db.VarChar(255)
-  
-
-  // ── All asset types in one relation ──────────────
-  assets            Asset[]
-  microAssets       MicroAsset[]
-  assetIntelligence AssetIntelligence[]
-  webinars          Webinar[]
-  aeoPages          AeoPage[]
-  contentClusters   ContentCluster[]
-  brandEntity       BrandEntity?
-  citationBounties CitationBounty[]
-  geoDataSources   GeoDataSource[]
-  aeoGenerationProfiles AeoGenerationProfile[]
-  Citations Citation[]
-  LlmRadarMetrics LlmRadarMetric[]
-  llmTopics LlmTopic[]
-  shopifyShops    ShopifyShop[]
-  shopifyProducts ShopifyProduct[]
-
-  integrationCms  CompanyIntegrationCms[]
-
-  // ── Brand identity (optional 1-to-1) ─────────────
-  branding          CompanyBranding?
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([slug])
-  @@map("companies")
-}
-
-model CompanyIntegrationCms {
-  id        String @id @default(cuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  provider IntegrationProvider @default(Shopify)
-
-  apiKey    String? @db.VarChar(500)
-  apiSecret String? @db.VarChar(500)
-  scopes    String? @db.Text
-  appUrl    String? @db.VarChar(2000)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([companyId, provider])
-  @@index([companyId])
-  @@map("company_integration_cms")
-}
-
-model BrandEntity {
-  id        String  @id @default(cuid())
-  companyId String  @unique
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── Identity ──────────────────────────────────────
-  canonicalName String?  @db.VarChar(255)
-  aliases       String[] @default([])
-  entityType    String   @default("Organization") @db.VarChar(100)
-
-  // ── Descriptive layers ────────────────────────────
-  oneLiner String? @db.VarChar(500)  // ≤ 160 chars, citation-ready
-  about    String? @db.Text
-
-  // ── Structured company facts ──────────────────────
-  industry            String? @db.VarChar(100)
-  category            String? @db.VarChar(100)
-  headquartersCity    String? @db.VarChar(100)
-  headquartersCountry String? @db.VarChar(100)
-  foundedYear         Int?
-  employeeRange       String? @db.VarChar(50)   // "1-10", "11-50"
-  businessModel       String? @db.VarChar(50)   // "B2B", "B2C", "B2B2C"
-
-  // ── Topical authority ─────────────────────────────
-  topics          String[] @default([])   // ["video marketing", "AI clips"]
-  keywords        String[] @default([])
-  targetAudiences String[] @default([])
-
-  // ── GEO authority signals ─────────────────────────
-  authorityScore    Float?
-  citationCount     Int      @default(0)
-  lastCrawledAt     DateTime? @db.Timestamptz(3)
-
-  // ── Profile completeness ──────────────────────────
-  completenessScore Float     @default(0)
-  lastEnrichedAt    DateTime? @db.Timestamptz(3)
-  enrichmentSource  String?   @db.VarChar(50)   // "manual", "ai", "scrape"
-
-  // ── Relations ─────────────────────────────────────
-  sameAsLinks        EntitySameAsLink[]
-  offerings          EntityOffering[]
-  intelligence       EntityIntelligence?
-  generationProfiles AeoGenerationProfile[]
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([industry])
-  @@index([completenessScore])
-  @@map("brand_entities")
-}
-
-model EntityIntelligence {
-  id       String      @id @default(cuid())
-  entityId String      @unique
-  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  // ── Long-form intelligence texts ───────────────────
-  productDocs      String? @db.Text
-  marketResearch   String? @db.Text
-  customerFeedback String? @db.Text
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([entityId])
-  @@map("entity_intelligence")
-}
-
-
-model EntitySameAsLink {
-  id       String      @id @default(cuid())
-  entityId String
-  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  // ── Platform identity ─────────────────────────────
-  platform    String  @db.VarChar(100)  // "linkedin", "twitter", "crunchbase",
-                                        // "wikipedia", "g2", "trustpilot",
-                                        // "youtube", "instagram", "glassdoor"
-  url         String  @db.VarChar(1000)
-
-  // ── Verification ──────────────────────────────────
-  verified      Boolean   @default(false)
-  verifiedAt    DateTime? @db.Timestamptz(3)
-  verifiedBy    String?   @db.VarChar(50)  // "manual", "ai", "dns"
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([entityId, platform])  // one URL per platform per entity
-  @@index([entityId])
-  @@index([platform])
-  @@map("entity_same_as_links")
-}
-model EntityOffering {
-  id       String      @id @default(cuid())
-  entityId String
-  entity   BrandEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  // ── Core ──────────────────────────────────────────
-  name         String      @db.VarChar(255)
-  slug         String      @db.VarChar(255)
-  description  String?     @db.Text
-  offeringType OfferingType @default(PRODUCT)
-
-  // ── Discoverability ───────────────────────────────
-  url          String?  @db.VarChar(1000)  // landing/feature page
-  keywords     String[] @default([])       // specific to this offering
-  useCases     String[] @default([])       // ["clip short-form", "repurpose webinars"]
-  targetAudiences String[] @default([])
-
-  // ── Flags ─────────────────────────────────────────
-  isPrimary    Boolean  @default(false)  // flagship offering
-  isActive     Boolean  @default(true)
-
-  // ── AEO utility ───────────────────────────────────
-  // These feed directly into COMPARISON and USE_CASE page generation
-  differentiators String[] @default([])  // ["no watermark", "AI-powered clips"]
-  competitors     String[] @default([])  // ["Opus Clip", "Vidyo.ai"] — for COMPARISON pages
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([entityId, slug])
-  @@index([entityId])
-  @@index([offeringType])
-  @@index([isPrimary])
-  @@index([isActive])
-  @@map("entity_offerings")
-}
-
-// ============================================================
-// COMPANY BRANDING  (optional 1-to-1 with Company)
-// ============================================================
-
-model CompanyBranding {
-  id        String @id @default(cuid())
-  companyId String @unique
-
-  // ── Brand identity ────────────────────────────────
-  logoUrl    String? @db.VarChar(1000)
-  faviconUrl String? @db.VarChar(1000)
-  banner     String? @db.VarChar(1000) // Banner image URL
-  themeMusic String? @db.VarChar(1000) // Theme music audio URL
-
-  // ── Color scheme ──────────────────────────────────
-  primaryColor   String @default("#D7765A") @db.VarChar(20) // Main brand color
-  secondaryColor String @default("#8B5CF6") @db.VarChar(20) // Accent color
-  bgColor        String @default("#141414") @db.VarChar(20) // Background
-  surfaceColor   String @default("#181818") @db.VarChar(20) // Cards / panels
-  textColor      String @default("#FFFFFF") @db.VarChar(20) // Primary text
-
-  // ── Contact information ───────────────────────────
-  companyAddress String? @default("123 Main St, San Francisco, CA") @db.VarChar(500)
-
-  // ── Relation ──────────────────────────────────────
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@map("company_branding")
-}
-
-
-// ============================================================
-// UNIFIED ASSET TABLE  (Single Table Inheritance)
-//
-//  assetType = VIDEO    → uses: duration, fps, codec,
-//                                resolution, streamId,
-//                                playbackUrl, thumbnailUrl
-//
-//  assetType = IMAGE    → uses: resolution, mimeType
-//                         NOT:  stream fields
-//
-//  assetType = DOCUMENT → uses: mimeType, pageCount
-//                         NOT:  stream fields, resolution
-// ============================================================
-
-model Asset {
-  id           String      @id @default(cuid())
-  assetType    AssetType   // discriminator
-  title        String      @db.VarChar
-  filename     String      @db.VarChar
-  originalSize BigInt
-  status       AssetStatus @default(UPLOADING)
-
-  // ── R2 Storage — all types ────────────────────────
-  r2Key    String @db.VarChar(500)
-  r2Bucket String @db.VarChar(255)
-
-  // ── VIDEO + IMAGE: visual dimensions ─────────────
-  resolution  String? @db.VarChar(20)  // e.g. "1920x1080" — null for DOCUMENT
-
-  // ── IMAGE + DOCUMENT: MIME type ───────────────────
-  mimeType    String? @db.VarChar(100) // e.g. "image/jpeg", "application/pdf" — null for VIDEO
-
-  // ── VIDEO-only fields ─────────────────────────────
-  duration    Int?    // seconds          — null for IMAGE, DOCUMENT
-  fps         Int?    //                  — null for IMAGE, DOCUMENT
-  codec       String? @db.VarChar(50)   // — null for IMAGE, DOCUMENT
-
-  // ── Cloudflare Stream — VIDEO only ────────────────
-  // NOTE: intentionally absent for IMAGE and DOCUMENT
-  streamId     String? @unique @db.VarChar(255)
-  playbackUrl  String? @db.Text
-  thumbnailUrl String? @db.Text
-
-  // ── DOCUMENT-only fields ──────────────────────────
-  pageCount   Int?    //                  — null for VIDEO, IMAGE
-
-  // ── Metadata — all types ──────────────────────────
-  tags         String[]     @default([])
-  metadata     Json         @default("{}")
-  uploadSource UploadSource @default(NATIVE)
-
-  // ── Intelligence (VIDEO: PROCESSING after upload, READY when intel received)
-  intelligenceStatus IntelligenceStatus?
-
-  // ── Company ───────────────────────────────────────
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── Relations ─────────────────────────────────────
-  intelligence AssetIntelligence[]
-  microAssets  MicroAsset[]         // VIDEO and DOCUMENT only; enforced at app layer
-  description  AssetDescription?
-  webinars     Webinar[]
-  aeoPageSources AeoPageSource[]
-  geoDataSource GeoDataSource?
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  streamQueueItems StreamQueue[]
-
-  @@index([companyId])
-  @@index([assetType])
-  @@index([status])
-  @@index([uploadSource])
-  @@index([assetType, status])
-  @@index([assetType, companyId])
-  @@index([createdAt(sort: Desc)])
-  @@index([intelligenceStatus])
-  @@map("assets")
-}
-
-model StreamQueue {
-  id          String              @id @default(cuid())
-
-  // Link to the source asset (VIDEO only at app layer)
-  assetId     String
-  asset       Asset               @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  // R2 object to pull from (can be original or compressed)
-  r2Key       String              @db.VarChar(500)
-  r2Bucket    String              @db.VarChar(255)
-
-  // Queue state
-  status      StreamQueueStatus   @default(PENDING)
-  priority    StreamQueuePriority @default(NORMAL)
-  attempts    Int                 @default(0)
-  maxAttempts Int                 @default(3)
-  lastError   String?             @db.Text
-
-  // Cloudflare Stream fields
-  streamId    String?             @db.VarChar(255)
-
-  createdAt   DateTime            @default(now()) @db.Timestamptz(3)
-  startedAt   DateTime?           @db.Timestamptz(3)
-  completedAt DateTime?           @db.Timestamptz(3)
-
-  @@index([status, priority, createdAt])
-  @@index([assetId])
-  @@map("stream_queue")
-}
-
-model UploadSession {
-  id           String   @id @default(cuid())
-
-  // R2 multipart upload
-  uploadId     String   @db.VarChar(255)
-  key          String   @db.VarChar(500)
-
-  // File info
-  fileName     String   @db.VarChar(255)
-  fileSize     BigInt
-  fileType     String   @db.VarChar(200)
-
-  // Multipart progress
-  totalParts   Int
-  uploadedParts Int[]   @default([])
-
-  // Status and context
-  status       String   @db.VarChar(50) // e.g. IN_PROGRESS, COMPLETED, FAILED
-  campaignId   String?  @db.VarChar(255)
-  uploadedBy   String?  @db.VarChar(255)
-  metadata     String?  @db.Text
-
-  // Expiry
-  expiresAt    DateTime @db.Timestamptz(3)
-
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([status])
-  @@index([uploadedBy])
-  @@index([campaignId])
-  @@map("upload_sessions")
-}
-
-// ============================================================
-// ASSET DESCRIPTION  (1-to-1, primarily used for VIDEO)
-// ============================================================
-
-model AssetDescription {
-  id      String @id @default(cuid())
-  assetId String @unique
-
-  content    String  @db.Text
-  seoTitle   String? @db.VarChar(500)
-  seoSummary String? @db.Text
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@map("asset_descriptions")
-}
-
-
-
-// ============================================================
-// ASSET INTELLIGENCE — AI analysis across all asset types
-// ============================================================
-
-model AssetIntelligence {
-  id String @id @default(cuid())
-
-  // ── Parent asset reference ─────────────────────────
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  // ── Core metadata ─────────────────────────────────
-  language          String?  @db.VarChar(10)
-  contentType       String?  @db.VarChar(100)
-  durationSeconds   Int?     // VIDEO only — null for IMAGE, DOCUMENT
-  theme             String?  @db.VarChar(255)
-  sentiment         String?  @db.VarChar(50)  // positive, negative, neutral, mixed
-  intensityScore    Float?   // 0–100
-  spiritualElements Boolean  @default(false)
-
-  // ── Searchable text ───────────────────────────────
-  titlePrimary    String? @db.VarChar(500)
-  shortSummary    String? @db.Text
-  longDescription String? @db.Text
-
-  // ── Arrays (PostgreSQL GIN-indexable) ─────────────
-  tags           String[] @default([])
-  tone           String[] @default([])
-  topics         String[] @default([])
-  targetAudience String[] @default([])
-  bestPlatforms  String[] @default([])
-  visualContext  String[] @default([])
-  videoGenres    String[] @default([]) // VIDEO only — empty for IMAGE, DOCUMENT
-
-  // ── Complex JSON structures ────────────────────────
-  titleVariants   Json? @default("{}")  // { seo: "", emotional: "", clickbait: "" }
-  chapters        Json? @default("[]")  // [{ timestamp, title, description }]
-  shortsHooks     Json? @default("[]")  // [{ start, end, hook_type, description }]
-  clipfoxInsights Json? @default("[]")
-
-  // ── ML model metadata ─────────────────────────────
-  modelVersion String?  @db.VarChar(50)
-  confidence   Float?
-  processedAt  DateTime @default(now()) @db.Timestamptz(3)
-
-  // ── Company ───────────────────────────────────────
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  aeoPageSources AeoPageSource[]
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  // Recommended GIN indexes — run after migration:
-  // CREATE INDEX idx_intelligence_tags      ON asset_intelligence USING GIN (tags);
-  // CREATE INDEX idx_intelligence_topics    ON asset_intelligence USING GIN (topics);
-  // CREATE INDEX idx_intelligence_platforms ON asset_intelligence USING GIN ("bestPlatforms");
-
-  @@index([assetId])
-  @@index([companyId])
-  @@index([language])
-  @@index([sentiment])
-  @@index([theme])
-  @@index([contentType])
-  @@index([spiritualElements])
-  @@index([processedAt(sort: Desc)])
-  @@map("asset_intelligence")
-}
-
-// ============================================================
-// MICRO ASSET — clips / segments from VIDEO or DOCUMENT
-// (IMAGE assets are atomic and not segmentable — enforced
-//  at application layer via asset.assetType check)
-// ============================================================
-
-model MicroAsset {
-  id String @id @default(cuid())
-
-  // ── Parent asset reference ─────────────────────────
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  // ── Core ──────────────────────────────────────────
-  title       String  @db.VarChar(500)
-  startTime   Float   // seconds (VIDEO) or page number (DOCUMENT)
-  endTime     Float   // seconds (VIDEO) or page number (DOCUMENT)
-  hook        String? @db.Text
-  editingIdea String? @db.Text
-
-  // ── Optional metadata ─────────────────────────────
-  description String? @db.Text
-  thumbnail   String? @db.VarChar(1000)
-
-  // ── Status & categorisation ───────────────────────
-  status   MicroAssetStatus @default(DRAFT)
-  category String?          @db.VarChar(100) // "hook", "highlight", "b-roll"
-  tags     String[]         @default([])
-  shortType ContentStyle?   @default(CASUAL)
-
-  // ── AI / ML ───────────────────────────────────────
-  aiGenerated Boolean @default(false)
-  confidence  Float?  // 0–100
-
-
-  // ── Company ───────────────────────────────────────
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  // ── Approvals ─────────────────────────────────────
-  is_approved Boolean @default(false)
-  approved_at DateTime? @db.Timestamptz(3)
-
-  @@index([assetId])
-  @@index([companyId])
-  @@index([status])
-  @@index([category])
-  @@index([createdAt(sort: Desc)])
-  @@index([is_approved])
-  @@map("micro_assets")
-}
-
-
-
-// ============================================================
-// WEBINAR — scheduling + streaming configuration
-// ============================================================
-
-model Webinar {
-  id          String  @id @default(cuid())
-
-  // ── Core info ───────────────────────────────────────
-  title       String  @db.VarChar(255)
-  description String? @db.Text
-
-  // ── Linked streaming asset (usually VIDEO) ─────────
-  assetId String?
-  asset   Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
-
-  // ── Company ────────────────────────────────────────
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── Scheduling / recurrence ────────────────────────
-  // One-off scheduled date & time
-  scheduledAt DateTime? @db.Timestamptz(3)
-
-  // Recurring configuration
-  isRecurring        Boolean  @default(false)
-  recurringDayOfWeek String?  @db.VarChar(20)  // e.g. "MONDAY"
-  recurringTime      String?  @db.VarChar(10)  // e.g. "18:30" in HH:mm
-  timeZone           String?  @db.VarChar(50)  // e.g. "Europe/Paris"
-
-  // ── Status ─────────────────────────────────────────
-  status String @default("DRAFT") @db.VarChar(50) // DRAFT, SCHEDULED, LIVE, COMPLETED, CANCELLED
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  is_approved Boolean @default(false)
-  approved_at DateTime? @db.Timestamptz(3)
-
-
-  @@index([companyId])
-  @@index([assetId])
-  @@index([scheduledAt])
-  @@index([is_approved])
-  @@map("webinars")
-}
-
-// ============================================================
-// AEO PAGE — AI-generated content for Aeo pages
-// ============================================================
-
-model ContentCluster {
-  id          String  @id @default(cuid())
-  companyId   String
-  company     Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  name        String  @db.VarChar(255)   // e.g. "Video Marketing"
-  slug        String  @db.VarChar(255)
-  description String? @db.Text
-
-  // Pillar page (the canonical cluster root — 1 per cluster)
-  pillarPageId String?   @unique
-  pillarPage   AeoPage?  @relation("PillarPage", fields: [pillarPageId], references: [id], onDelete: SetNull)
-
-  pages        AeoPage[] @relation("ClusterPages")
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@unique([companyId, slug])
-  @@index([companyId])
-  @@map("content_clusters")
-}
-
-model AeoPage {
-  id        String @id @default(cuid())
-
-  // ── Tenant ────────────────────────────────────────
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── Routing ───────────────────────────────────────
-  slug   String @db.VarChar(255)
-  locale String @default("en") @db.VarChar(10) // "en", "fr", "hi"
-
-  // ── Type & Status ─────────────────────────────────
-  pageType AeoPageType   @default(DEFINITION)
-  status   AeoPageStatus @default(DRAFT)
-
-  // ── Content ───────────────────────────────────────
-  title       String @db.VarChar(500)
-  description String @db.Text
-
-  // ── Structured AEO blocks ─────────────────────────
-  facts          Json @default("[]")  // [{ text, source, confidence }]
-  faq            Json @default("[]")  // schema.org FAQPage items
-  claims         Json @default("[]")  // [{ claim, confidence, source }]
-  summary        Json @default("{}")  // { short, long, oneLiner }
-  knowledgeGraph Json @default("{}")  // schema.org @graph payload
-
-  // ── SEO meta ──────────────────────────────────────
-  seoTitle       String? @db.VarChar(500)
-  seoDescription String? @db.Text
-  canonicalUrl   String? @db.VarChar(1000)
-
-  // ── Topic cluster ─────────────────────────────────
-  clusterId String?
-  cluster   ContentCluster? @relation("ClusterPages", fields: [clusterId], references: [id], onDelete: SetNull)
-
-  // ── Source lineage (which asset seeded this page) ─
-  sources    AeoPageSource[]
-
-  // ── Internal linking (self-referential) ───────────
-  relatedPages    AeoPage[] @relation("RelatedAeoPages")
-  relatedPageRefs AeoPage[] @relation("RelatedAeoPages")
-
-  // ── Citation bounties ─────────────────────────────
-  citationBounties CitationBounty[]
-
-  // ── Publishing ────────────────────────────────────
-  publishedAt DateTime? @db.Timestamptz(3)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  // Reverse relations
-  pillarFor ContentCluster? @relation("PillarPage")
-  generationProfiles AeoGenerationProfile[]
-
-  @@unique([companyId, slug, locale])
-  @@index([companyId])
-  @@index([status])
-  @@index([pageType])
-  @@index([clusterId])
-  @@index([companyId, status])
-  @@index([publishedAt(sort: Desc)])
-  @@map("aeo_pages")
-}
-
-model AeoGenerationProfile {
-  id        String @id @default(cuid())
-
-  // ── Tenant & relations ─────────────────────────────
-  companyId     String
-  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  brandEntityId String?
-  brandEntity   BrandEntity? @relation(fields: [brandEntityId], references: [id], onDelete: SetNull)
-
-  // ── Core generator config ──────────────────────────
-  baseUrl       String   @db.VarChar(1000)
-  locale        String   @default("en") @db.VarChar(10)
-  clusterId     String?  @db.VarChar(255)
-  existingSlugs String[] @default([])
-
-  // ── Defaults for generation ────────────────────────
-  defaultPageType AeoPageType @default(COMPARISON)
-  defaultQuery    String?     @db.Text
-  label           String?     @db.VarChar(255)
-  slug            String?     @db.VarChar(255)
-
-  // ── Last generation linkage ────────────────────────
-  lastGeneratedAeoPageId String?
-  lastGeneratedAeoPage   AeoPage? @relation(fields: [lastGeneratedAeoPageId], references: [id], onDelete: SetNull)
-  lastRunAt              DateTime? @db.Timestamptz(3)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([companyId])
-  @@index([brandEntityId])
-  @@index([defaultPageType])
-  @@map("aeo_generation_profiles")
-}
-
-model AeoPageSource {
-  id      String  @id @default(cuid())
-  pageId  String
-  page    AeoPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  assetId           String?
-  asset             Asset?            @relation(fields: [assetId], references: [id], onDelete: SetNull)
-
-  intelligenceId    String?
-  intelligence      AssetIntelligence? @relation(fields: [intelligenceId], references: [id], onDelete: SetNull)
-
-  // How much this source contributed (for weighted regeneration)
-  contributionScore Float? // 0–1
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@index([pageId])
-  @@index([assetId])
-  @@map("aeo_page_sources")
-}
-
-model CitationBounty {
-  id        String  @id @default(cuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── The query ─────────────────────────────────────
-  query     String       @db.Text           // "edge compute startup in kerala india"
-  intent    String?      @db.VarChar(255)   // "find a regional infra provider"
-  pageType  AeoPageType                     // which page type to generate on hunt
-
-  // ── Scoring ───────────────────────────────────────
-  confidence     Float            // 0–100: how likely this gets the company cited
-  difficulty     BountyDifficulty @default(EASY)
-  estimatedReach Int?             // estimated monthly AI query volume
-
-  // ── Cluster suggestion ────────────────────────────
-  suggestedCluster String? @db.VarChar(255) // hint for ContentCluster assignment
-
-  // ── Status ────────────────────────────────────────
-  status   BountyStatus @default(OPEN)
-  huntedAt DateTime?    @db.Timestamptz(3)
-
-  // ── Output (populated after hunt) ────────────────
-  aeoPageId String?  @unique
-  aeoPage   AeoPage? @relation(fields: [aeoPageId], references: [id], onDelete: SetNull)
-
-  // ── Generation context snapshot ───────────────────
-  // Stores exactly what was fed to the LLM at mining time
-  // Used to detect if BrandEntity changed since bounty was generated
-  generationContext Json @default("{}")
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([companyId])
-  @@index([status])
-  @@index([confidence])
-  @@index([difficulty])
-  @@index([companyId, status])
-  @@index([companyId, status, confidence])  // for sorted bounty feed UI
-  @@map("citation_bounties")
-}
-
-model GeoDataSource {
-  id        String        @id @default(cuid())
-
-  // ── Tenant ──────────────────────────────────────────
-  companyId String
-  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // ── Source identity ─────────────────────────────────
-  sourceType GeoSourceType
-  label      String        @db.VarChar(255)
-
-  // ── File-based source (optional) ────────────────────
-  assetId String? @unique
-  asset   Asset?          @relation(fields: [assetId], references: [id], onDelete: SetNull)
-
-  // ── Raw & processed content ─────────────────────────
-  rawContent       String? @db.Text
-  processedContent String? @db.Text
-
-  // ── Flags ───────────────────────────────────────────
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([companyId])
-  @@index([sourceType])
-  @@map("geo_data_sources")
-}
-
-// ============================================================
-// Citation
-// ============================================================
-
-model Prompt {
-  id        String @id @default(cuid())
-
-  query     String @db.Text
-
-  topic     String? @db.VarChar(255)
-  topicId   String?
-  llmTopic  LlmTopic? @relation("LlmTopicPrompts", fields: [topicId], references: [id], onDelete: SetNull)
-  intent    String? @db.VarChar(100)
-
-  isActive  Boolean @default(true)
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
-
-  executions PromptExecution[]
-
-  @@index([intent])
-  @@index([topic])
-  @@index([topicId])
-  @@map("llm_prompts")
-}
-
-model PromptExecution {
-  id        String @id @default(cuid())
-
-  promptId  String
-  prompt    Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
-
-  model     String  @db.VarChar(100)   // gpt, claude, gemini
-  response  String  @db.Text
-
-  executedAt DateTime @default(now()) @db.Timestamptz(3)
-
-  citations Citation[]
-
-  @@index([promptId])
-  @@index([model])
-  @@index([executedAt])
-  @@map("llm_prompt_executions")
-}
-
-  model Citation {
-  id String @id @default(cuid())
-
-  executionId String
-  execution   PromptExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-
-  mentionedName String @db.VarChar(255)
-
-  rank Int?
-
-  context String? @db.VarChar(100)
-
-  confidence Float?
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@index([executionId])
-  @@index([companyId])
-  @@index([rank])
-  @@map("llm_citations")
-}
-
-model LlmTopic {
-  id String @id @default(cuid())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  name        String  @db.VarChar(255)
-  description String? @db.Text
-
-  difficulty  Difficulty @default(MEDIUM)
-
-  prompts Prompt[] @relation("LlmTopicPrompts")
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@unique([companyId, name])
-  @@index([companyId])
-
-  @@map("llm_topics")
-}
-
-model LlmRadarMetric {
-  id String @id @default(cuid())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  model String @db.VarChar(100) // GPT, Claude etc
-
-  shareOfVoice    Float?
-  top3Rate        Float?
-  queryCoverage   Float?
-  avgRank         Float?
-  competitorRank  Float?
-  topicAuthority  Float?
-
-  calculatedAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@index([companyId])
-  @@index([model])
-  @@index([companyId, calculatedAt(sort: Desc)])
-  @@map("llm_radar_metrics")
-}
-
-// ============================================================
-// SHOPIFY INTEGRATION
-// ============================================================
-
-model ShopifyShop {
-  id          String   @id @default(cuid())
-
-  // Tenant / ownership
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // Shopify identifiers & credentials
-  shopDomain  String   @unique @db.VarChar(255) // e.g. "my-store.myshopify.com"
-  accessToken String   @db.VarChar(500)
-  scopes      String[] @default([])
-
-  // Lifecycle
-  status        String   @default("installed") @db.VarChar(50) // installed, uninstalled, paused, etc.
-  installedAt   DateTime @default(now()) @db.Timestamptz(3)
-  uninstalledAt DateTime? @db.Timestamptz(3)
-
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-
-  products   ShopifyProduct[]
-
-  @@index([companyId])
-  @@map("shopify_shops")
-}
-
-model ShopifyProduct {
-  id            String   @id @default(cuid())
-
-  // Link back to shop and company
-  shopId        String
-  shop          ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  companyId     String
-  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  // Shopify identifiers
-  shopifyGid    String   @unique @db.VarChar(255) // e.g. gid://shopify/Product/123
-
-  // Core fields
-  title         String   @db.VarChar(500)
-  status        String   @db.VarChar(50)
-  handle        String   @db.VarChar(255)
-  totalInventory Int      @default(0)
-  onlineStoreUrl String? @db.VarChar(1000)
-
-  // Product description snapshot
-  description   String?  @db.Text
-
-  // Featured image snapshot
-  featuredImageUrl     String? @db.VarChar(2000)
-  featuredImageAltText String? @db.VarChar(500)
-  featuredImageWidth   Int?
-  featuredImageHeight  Int?
-
-  // Pricing snapshot
-  priceMinAmount String? @db.VarChar(64)
-  priceMaxAmount String? @db.VarChar(64)
-  currencyCode   String? @db.VarChar(10)
-
-  // Shopify timestamps
-  shopifyCreatedAt DateTime @db.Timestamptz(3)
-  shopifyUpdatedAt DateTime @db.Timestamptz(3)
-
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
-
-  @@index([shopId])
-  @@index([companyId])
-  @@index([status])
-  @@map("shopify_products")
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { IntegrationProvider } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -6,14 +7,20 @@ export async function GET() {
   const session = await getSession();
   if (!session?.companyId) {
     return NextResponse.json(
-      { success: false, error: "Not authenticated", company: null, shopify: null },
+      {
+        success: false,
+        error: "Not authenticated",
+        company: null,
+        shopify: null,
+        shopifyConnectUrl: null,
+      },
       { status: 401 }
     );
   }
 
   const companyId = session.companyId;
 
-  const [company, shop] = await Promise.all([
+  const [company, shop, cms] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: { id: true, name: true, email: true },
@@ -23,19 +30,38 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       select: { id: true, shopDomain: true, status: true },
     }),
+    prisma.companyIntegrationCms.findUnique({
+      where: {
+        companyId_provider: {
+          companyId,
+          provider: IntegrationProvider.Shopify,
+        },
+      },
+      select: { connectUrl: true },
+    }),
   ]);
 
   if (!company) {
     return NextResponse.json(
-      { success: false, error: "Company not found", company: null, shopify: null },
+      {
+        success: false,
+        error: "Company not found",
+        company: null,
+        shopify: null,
+        shopifyConnectUrl: null,
+      },
       { status: 404 }
     );
   }
+
+  const shopifyConnectUrl =
+    cms?.connectUrl?.trim() ? cms.connectUrl.trim() : null;
 
   return NextResponse.json({
     success: true,
     company,
     shopify: shop,
+    shopifyConnectUrl,
   });
 }
 

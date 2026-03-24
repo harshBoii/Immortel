@@ -19,6 +19,7 @@ type AppContextState = {
   error: string | null;
   company: CompanySummary | null;
   shopify: ShopifySummary | null;
+  shopifyConnectUrl: string | null;
   refetch: () => void;
 };
 
@@ -28,6 +29,7 @@ export function useCurrentContext(): AppContextState {
     error: null,
     company: null,
     shopify: null,
+    shopifyConnectUrl: null,
   });
   const [fetchKey, setFetchKey] = useState(0);
 
@@ -55,6 +57,7 @@ export function useCurrentContext(): AppContextState {
             error: null,
             company: data.company ?? null,
             shopify: data.shopify ?? null,
+            shopifyConnectUrl: data.shopifyConnectUrl ?? null,
           });
         }
       } catch (err) {
@@ -75,6 +78,12 @@ export function useCurrentContext(): AppContextState {
       cancelled = true;
     };
   }, [fetchKey]);
+
+  useEffect(() => {
+    const handler = () => setFetchKey((k) => k + 1);
+    window.addEventListener('immortel:refetch-context', handler);
+    return () => window.removeEventListener('immortel:refetch-context', handler);
+  }, []);
 
   return {
     ...state,

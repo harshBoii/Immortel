@@ -9,6 +9,9 @@ const PatchBodySchema = z.object({
   apiSecret: z.string().optional(),
   scopes: z.string().optional(),
   appUrl: z.union([z.string().url(), z.literal("")]).optional(),
+  connectUrl: z
+    .union([z.string().url(), z.string().regex(/^\/.+/), z.literal("")])
+    .optional(),
 });
 
 export async function GET() {
@@ -29,6 +32,7 @@ export async function GET() {
       apiSecret: true,
       scopes: true,
       appUrl: true,
+      connectUrl: true,
       updatedAt: true,
     },
   });
@@ -39,6 +43,7 @@ export async function GET() {
       apiKey: row?.apiKey ?? "",
       scopes: row?.scopes ?? "",
       appUrl: row?.appUrl ?? "",
+      connectUrl: row?.connectUrl ?? "",
       hasSecret: Boolean(row?.apiSecret?.trim()),
       updatedAt: row?.updatedAt ?? null,
     },
@@ -74,7 +79,8 @@ export async function PATCH(request: NextRequest) {
     incoming.apiKey === undefined &&
     incoming.apiSecret === undefined &&
     incoming.scopes === undefined &&
-    incoming.appUrl === undefined
+    incoming.appUrl === undefined &&
+    incoming.connectUrl === undefined
   ) {
     return NextResponse.json(
       { success: false, error: "Provide at least one field to update" },
@@ -97,6 +103,10 @@ export async function PATCH(request: NextRequest) {
     incoming.scopes !== undefined ? incoming.scopes : (existing?.scopes ?? "");
   const appUrl =
     incoming.appUrl !== undefined ? incoming.appUrl : (existing?.appUrl ?? "");
+  const connectUrl =
+    incoming.connectUrl !== undefined
+      ? incoming.connectUrl
+      : (existing?.connectUrl ?? "");
   const apiSecret =
     incoming.apiSecret !== undefined
       ? incoming.apiSecret
@@ -116,6 +126,7 @@ export async function PATCH(request: NextRequest) {
       apiSecret: apiSecret || null,
       scopes: scopes || null,
       appUrl: appUrl || null,
+      connectUrl: connectUrl || null,
     },
     update: {
       ...(incoming.apiKey !== undefined ? { apiKey: incoming.apiKey || null } : {}),
@@ -124,6 +135,9 @@ export async function PATCH(request: NextRequest) {
         : {}),
       ...(incoming.scopes !== undefined ? { scopes: incoming.scopes || null } : {}),
       ...(incoming.appUrl !== undefined ? { appUrl: incoming.appUrl || null } : {}),
+      ...(incoming.connectUrl !== undefined
+        ? { connectUrl: incoming.connectUrl || null }
+        : {}),
     },
   });
 

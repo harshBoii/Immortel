@@ -6,6 +6,7 @@ type LoadState = {
   apiKey: string;
   scopes: string;
   appUrl: string;
+  connectUrl: string;
   hasSecret: boolean;
   updatedAt: string | null;
 };
@@ -20,6 +21,7 @@ export default function CompanyDevShopifyPage() {
   const [apiSecret, setApiSecret] = useState('');
   const [scopes, setScopes] = useState('');
   const [appUrl, setAppUrl] = useState('');
+  const [connectUrl, setConnectUrl] = useState('');
   const [hasSecret, setHasSecret] = useState(false);
 
   const load = useCallback(async () => {
@@ -36,6 +38,7 @@ export default function CompanyDevShopifyPage() {
       setApiKey(d.apiKey);
       setScopes(d.scopes);
       setAppUrl(d.appUrl);
+      setConnectUrl(d.connectUrl);
       setHasSecret(d.hasSecret);
       setApiSecret('');
     } catch {
@@ -60,8 +63,14 @@ export default function CompanyDevShopifyPage() {
       if (scopes.trim()) body.scopes = scopes.trim();
       if (appUrl.trim()) body.appUrl = appUrl.trim();
       if (apiSecret.trim()) body.apiSecret = apiSecret.trim();
+      body.connectUrl = connectUrl.trim();
 
-      if (Object.keys(body).length === 0) {
+      const hasCredentialField =
+        Boolean(body.apiKey) ||
+        Boolean(body.scopes) ||
+        Boolean(body.appUrl) ||
+        Boolean(body.apiSecret);
+      if (!hasCredentialField && !body.connectUrl) {
         setError('Enter at least one field to save.');
         setSaving(false);
         return;
@@ -80,6 +89,7 @@ export default function CompanyDevShopifyPage() {
       }
       setSaved(true);
       setApiSecret('');
+      window.dispatchEvent(new Event('immortel:refetch-context'));
       await load();
     } catch {
       setError('Save failed');
@@ -153,6 +163,21 @@ export default function CompanyDevShopifyPage() {
               placeholder="https://your-app.example.com"
               className="w-full px-3 py-2 rounded-lg text-sm border border-[var(--glass-border)] bg-[var(--glass-hover)]"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">
+              Connect URL (sidebar “Connect Shopify store” link)
+            </label>
+            <input
+              type="text"
+              value={connectUrl}
+              onChange={(e) => setConnectUrl(e.target.value)}
+              placeholder="https://example.com/connect-shopify or /connect-shopify"
+              className="w-full px-3 py-2 rounded-lg text-sm border border-[var(--glass-border)] bg-[var(--glass-hover)]"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Full URL or path starting with <code className="text-[10px]">/</code>. Leave empty to use <code className="text-[10px]">/connect-shopify</code>.
+            </p>
           </div>
 
           {error && (
