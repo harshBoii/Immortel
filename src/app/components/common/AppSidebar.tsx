@@ -284,6 +284,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
         <>
           <SectionLabel label="Connection" />
           <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
+          <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
           <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
           <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
         </>
@@ -307,59 +308,7 @@ export default function AppSidebar() {
   const { theme, toggleTheme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { company, shopify, shopifyConnectUrl, expectedShopDomain, refetch } =
-    useCurrentContext();
-  const [disconnecting, setDisconnecting] = useState(false);
-  const [shopDomainDraft, setShopDomainDraft] = useState('');
-  const [shopDomainSaving, setShopDomainSaving] = useState(false);
-  const [shopDomainError, setShopDomainError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (expectedShopDomain) setShopDomainDraft(expectedShopDomain);
-  }, [expectedShopDomain]);
-
-  const handleSaveShopDomain = async () => {
-    setShopDomainError(null);
-    setShopDomainSaving(true);
-    try {
-      const res = await fetch('/api/company/shopify-app', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ expectedShopDomain: shopDomainDraft.trim() }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setShopDomainError(data.error ?? 'Could not save store domain');
-        return;
-      }
-      refetch();
-      window.dispatchEvent(new Event('immortel:refetch-context'));
-    } catch {
-      setShopDomainError('Network error');
-    } finally {
-      setShopDomainSaving(false);
-    }
-  };
-
-  const canConnectShopify = Boolean(expectedShopDomain?.trim());
-
-  const handleDisconnectShopify = async () => {
-    if (!confirm('Disconnect your Shopify store? You can reconnect later.')) return;
-    setDisconnecting(true);
-    try {
-      const res = await fetch('/shopify/disconnect', { method: 'POST', credentials: 'include' });
-      if (res.ok) {
-        refetch();
-      } else {
-        console.error('Disconnect failed');
-      }
-    } catch (err) {
-      console.error('Disconnect error:', err);
-    } finally {
-      setDisconnecting(false);
-    }
-  };
+  const { company, shopify } = useCurrentContext();
 
   const getFirstRoute = (sectionId: string) => {
     switch (sectionId) {
@@ -493,76 +442,25 @@ export default function AppSidebar() {
                   {company.email}
                 </div>
                 <div className="mt-2 text-[11px]">
-                  {shopify ? (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-emerald-400">
-                          Shopify
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-medium truncate">
-                          {shopify.shopDomain}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleDisconnectShopify}
-                        disabled={disconnecting}
-                        className="w-full text-[10px] font-medium text-destructive/70 hover:text-destructive hover:bg-destructive/10 rounded-md py-1 transition-colors disabled:opacity-50"
-                      >
-                        {disconnecting ? 'Disconnecting…' : 'Disconnect store'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <label className="block text-[10px] font-medium text-muted-foreground">
-                        Shopify store domain
-                      </label>
-                      <input
-                        type="text"
-                        value={shopDomainDraft}
-                        onChange={(e) => setShopDomainDraft(e.target.value)}
-                        placeholder="my-store.myshopify.com"
-                        className="w-full rounded-md border border-[var(--glass-border)] bg-background/80 px-2 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        autoComplete="off"
-                        spellCheck={false}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSaveShopDomain}
-                        disabled={shopDomainSaving}
-                        className="w-full rounded-md bg-primary/15 px-2 py-1.5 text-[10px] font-semibold text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
-                      >
-                        {shopDomainSaving ? 'Saving…' : 'Save store domain'}
-                      </button>
-                      {shopDomainError && (
-                        <p className="text-[10px] text-destructive">{shopDomainError}</p>
-                      )}
-                      {!canConnectShopify && (
-                        <p className="text-[10px] text-muted-foreground leading-snug">
-                          Save the exact store domain you open in Shopify Admin so we can verify
-                          requests with your app credentials.
-                        </p>
-                      )}
-                      {canConnectShopify ? (
-                        <Link
-                          href={shopifyConnectUrl?.trim() || '/connect-shopify'}
-                          prefetch={false}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary hover:underline"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                          <span>Connect Shopify store</span>
-                        </Link>
-                      ) : (
-                        <span
-                          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground/60 cursor-not-allowed"
-                          title="Save your store domain first"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-                          <span>Connect Shopify store</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <Link
+                    href="/connection/shopify"
+                    prefetch={false}
+                    className="inline-flex flex-col gap-0.5 rounded-md py-1.5 px-1 -mx-1 hover:bg-[var(--glass-hover)] transition-colors"
+                  >
+                    <span className="flex items-center gap-1.5 font-semibold text-primary">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary/80 shrink-0" />
+                      Shopify
+                    </span>
+                    {shopify ? (
+                      <span className="pl-3 text-[10px] font-mono text-emerald-400/90 truncate max-w-[11rem]">
+                        {shopify.shopDomain}
+                      </span>
+                    ) : (
+                      <span className="pl-3 text-[10px] text-muted-foreground">
+                        Not connected — configure
+                      </span>
+                    )}
+                  </Link>
                 </div>
               </div>
             )}
