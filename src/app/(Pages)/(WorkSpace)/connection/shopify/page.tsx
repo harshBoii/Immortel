@@ -186,16 +186,6 @@ export default function ConnectionShopifyPage() {
               Save the Shopify store domain you use in Admin (for HMAC / credential lookup), then
               open the install link to authorize the app.
             </p>
-            {expectedShopDomain ? (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Saved store domain (read-only)
-                </p>
-                <p className="text-sm font-mono text-foreground bg-[var(--glass-hover)] rounded-lg px-3 py-2 border border-[var(--glass-border)]">
-                  {expectedShopDomain}
-                </p>
-              </div>
-            ) : null}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                 {expectedShopDomain ? 'Update store domain' : 'Store domain'}
