@@ -442,25 +442,32 @@ export default function AppSidebar() {
                   {company.email}
                 </div>
                 <div className="mt-2 text-[11px]">
-                  <Link
-                    href="/connection/shopify"
-                    prefetch={false}
-                    className="inline-flex flex-col gap-0.5 rounded-md py-1.5 px-1 -mx-1 hover:bg-[var(--glass-hover)] transition-colors"
-                  >
-                    <span className="flex items-center gap-1.5 font-semibold text-primary">
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary/80 shrink-0" />
-                      Shopify
-                    </span>
+                  <div className="flex items-center justify-between gap-2 rounded-md py-1.5 px-1 -mx-1 hover:bg-[var(--glass-hover)] transition-colors">
+                    <Link
+                      href="/connection/shopify"
+                      prefetch={false}
+                      className="flex min-w-0 shrink items-center gap-1.5 font-semibold text-primary"
+                    >
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
+                      <span>Shopify</span>
+                    </Link>
                     {shopify ? (
-                      <span className="pl-3 text-[10px] font-mono text-emerald-400/90 truncate max-w-[11rem]">
+                      <span
+                        className="max-w-[7rem] truncate text-right font-mono text-[10px] text-emerald-400/90"
+                        title={shopify.shopDomain}
+                      >
                         {shopify.shopDomain}
                       </span>
                     ) : (
-                      <span className="pl-3 text-[10px] text-muted-foreground">
-                        connect
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => router.push('/connection/shopify')}
+                        className="shrink-0 rounded-md border border-[var(--glass-border)] bg-background/80 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow-sm transition-colors hover:border-[var(--sibling-primary)]/35 hover:bg-[var(--glass-hover)] hover:text-foreground"
+                      >
+                        Connect
+                      </button>
                     )}
-                  </Link>
+                  </div>
                 </div>
               </div>
             )}
