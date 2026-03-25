@@ -28,7 +28,7 @@ function buildConfigFromCmsRow(row: {
 
   const scopes = scopesStr.split(",").map((s) => s.trim()).filter(Boolean);
   const appUrl = appUrlRaw.replace(/\/$/, "");
-  const redirectUri = `${appUrl}/shopify/callback`;
+  const redirectUri = `https://immortel.vercel.app/shopify/callback`;
 
   return {
     SHOPIFY_API_KEY: apiKey,
