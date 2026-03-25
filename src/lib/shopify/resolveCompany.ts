@@ -17,11 +17,11 @@ export async function resolveCompanyIdForShopifyLoad(
     return null;
   }
 
-  const installed = await prisma.shopifyShop.findUnique({
-    where: { shopDomain: shop },
-    select: { companyId: true },
-  });
-  if (installed) return installed.companyId;
+  // const installed = await prisma.shopifyShop.findUnique({
+  //   where: { shopDomain: shop },
+  //   select: { companyId: true },
+  // });
+  // if (installed) return installed.companyId;
 
   const cms = await prisma.companyIntegrationCms.findFirst({
     where: {
