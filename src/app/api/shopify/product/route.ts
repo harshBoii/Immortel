@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { normalizeShopDomain } from "@/lib/shopify/client";
+import { getShopifyApiVersion, normalizeShopDomain } from "@/lib/shopify/client";
 import { indexProduct } from "@/lib/productsIndex";
-
-const API_VERSION = "2024-10";
 
 export async function GET() {
   const session = await getSession();
@@ -27,7 +25,7 @@ export async function GET() {
   }
 
   const shopDomain = normalizeShopDomain(shop.shopDomain);
-  const url = `https://${shopDomain}/admin/api/${API_VERSION}/graphql.json`;
+  const url = `https://${shopDomain}/admin/api/${getShopifyApiVersion()}/graphql.json`;
 
   const query = `
     query ListProducts($first: Int!) {

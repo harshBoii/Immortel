@@ -14,6 +14,20 @@ export type ShopifyConfig = z.infer<typeof ShopifyEnvSchema> & {
   redirectUri: string;
 };
 
+const REQUIRED_SHOPIFY_SCOPES = [
+  "read_content",
+  "write_content",
+  "read_themes",
+  "write_themes",
+] as const;
+
+function withRequiredShopifyScopes(scopes: string[]): string[] {
+  const normalized = scopes.map((s) => s.trim()).filter(Boolean);
+  const set = new Set(normalized);
+  for (const s of REQUIRED_SHOPIFY_SCOPES) set.add(s);
+  return [...set];
+}
+
 function buildConfigFromCmsRow(row: {
   apiKey: string | null;
   apiSecret: string | null;
@@ -26,7 +40,9 @@ function buildConfigFromCmsRow(row: {
   const appUrlRaw = row.appUrl?.trim() ?? "";
   if (!apiKey || !apiSecret || !scopesStr || !appUrlRaw) return null;
 
-  const scopes = scopesStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const scopes = withRequiredShopifyScopes(
+    scopesStr.split(",").map((s) => s.trim()).filter(Boolean)
+  );
   const appUrl = appUrlRaw.replace(/\/$/, "");
   const redirectUri = `https://immortel.vercel.app/shopify/callback`;
 
@@ -52,7 +68,9 @@ function getShopifyConfigFromEnv(): ShopifyConfig {
   const { SHOPIFY_API_KEY, SHOPIFY_API_SECRET, SHOPIFY_SCOPES, SHOPIFY_APP_URL } =
     parsed.data;
 
-  const scopes = SHOPIFY_SCOPES.split(",").map((s) => s.trim()).filter(Boolean);
+  const scopes = withRequiredShopifyScopes(
+    SHOPIFY_SCOPES.split(",").map((s) => s.trim()).filter(Boolean)
+  );
   const appUrl = SHOPIFY_APP_URL.replace(/\/$/, "");
   const redirectUri = `${appUrl}/shopify/callback`;
 

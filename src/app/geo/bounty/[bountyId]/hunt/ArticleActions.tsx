@@ -6,11 +6,39 @@ export function ArticleActions({ bountyId }: { bountyId: string }) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+  const [approveLoading, setApproveLoading] = useState(false);
 
-  const onApprove = () => {
-    setMessage(
-      "Approved. On approval, this page will be published at your domain and at our GEO optimized Immortel domain."
-    );
+  const onApprove = async () => {
+    setApproveLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/geo/bounty/${encodeURIComponent(bountyId)}/approve-shopify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        const err =
+          json?.error ||
+          (res.status === 207
+            ? "Published to Shopify with warnings (partial success)."
+            : "Failed to publish to Shopify.");
+        const details = json?.data?.articleId ? ` Article GID: ${json.data.articleId}` : "";
+        setMessage(`${err}${details}`);
+        return;
+      }
+
+      const articleId = json?.data?.article?.id ?? json?.data?.articleId ?? null;
+      setMessage(
+        articleId
+          ? `Published to Shopify Blog. Article GID: ${articleId}`
+          : "Published to Shopify Blog."
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Failed to publish to Shopify.");
+    } finally {
+      setApproveLoading(false);
+    }
   };
 
   const onRegenerate = () => {
@@ -35,9 +63,10 @@ export function ArticleActions({ bountyId }: { bountyId: string }) {
         <button
           type="button"
           onClick={onApprove}
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+          disabled={approveLoading}
+          className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Approve
+          {approveLoading ? "Publishing…" : "Approve"}
         </button>
         <button
           type="button"

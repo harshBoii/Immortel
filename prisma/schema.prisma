@@ -34,6 +34,7 @@ model Company {
   microAssets           MicroAsset[]
   shopifyProducts       ShopifyProduct[]
   shopifyShops          ShopifyShop[]
+  shopifyBlogChannels   ShopifyBlogChannel[]
   webinars              Webinar[]
 
   @@index([slug])
@@ -623,13 +624,39 @@ model ShopifyShop {
   status        String           @default("installed") @db.VarChar(50)
   installedAt   DateTime         @default(now()) @db.Timestamptz(3)
   uninstalledAt DateTime?        @db.Timestamptz(3)
+  /// Shopify GID for metafield definition `custom.json_ld` on ARTICLE owner type
+  articleJsonLdMetafieldDefinitionGid String? @db.VarChar(255)
+  /// Main theme ID last patched for JSON-LD injection
+  mainThemeId String? @db.VarChar(255)
+  /// Timestamp when the main theme was patched for JSON-LD injection
+  articleJsonLdThemePatchedAt DateTime? @db.Timestamptz(3)
   createdAt     DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
   products      ShopifyProduct[]
+  blogChannels  ShopifyBlogChannel[]
   company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("shopify_shops")
+}
+
+model ShopifyBlogChannel {
+  id            String     @id @default(cuid())
+  shopId        String
+  companyId     String
+  handle        String     @db.VarChar(255)
+  title         String     @db.VarChar(255)
+  shopifyBlogGid String    @unique @db.VarChar(255)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+
+  shop          ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, handle])
+  @@index([shopId])
+  @@index([companyId])
+  @@map("shopify_blog_channels")
 }
 
 model ShopifyProduct {

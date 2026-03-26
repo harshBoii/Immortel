@@ -7,6 +7,11 @@ type ShopifyOAuthTokenResponse = {
   scope: string;
 };
 
+export function getShopifyApiVersion(): string {
+  const v = (process.env.SHOPIFY_API_VERSION || "").trim();
+  return v || "2026-01";
+}
+
 export function normalizeShopDomain(raw: string): string {
   let shop = raw.trim().toLowerCase();
   shop = shop.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
@@ -160,7 +165,7 @@ export async function getShopifyClient(shopDomain: string, companyId: string) {
     throw new Error("No active Shopify shop connection found for this company.");
   }
 
-  const baseUrl = `https://${shop}/admin/api/2024-10`;
+  const baseUrl = `https://${shop}/admin/api/${getShopifyApiVersion()}`;
   const defaultHeaders = {
     "X-Shopify-Access-Token": shopRecord.accessToken,
     "Content-Type": "application/json",
