@@ -42,7 +42,7 @@ export async function buildInstallUrl(
     return u.toString();
   })();
 
-  console.log("[Shopify buildInstallUrl] installUrl being used:", safeInstallUrl);
+  console.log("[Shopify buildInstallUrl] installUrl being used:", installUrl);
 
   return installUrl;
 }

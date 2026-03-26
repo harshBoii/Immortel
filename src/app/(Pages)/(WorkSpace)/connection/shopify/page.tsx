@@ -40,6 +40,7 @@ export default function ConnectionShopifyPage() {
   const connectHref = shopifyConnectUrl?.trim() || '/connect-shopify';
   const connectAbsolute = absoluteConnectUrl(connectHref);
   const canConnect = Boolean(expectedShopDomain?.trim());
+  const hasInstallLink = Boolean(shopifyConnectUrl?.trim());
   const installShop =
     shopify?.shopDomain?.trim() ||
     expectedShopDomain?.trim() ||
@@ -150,7 +151,7 @@ export default function ConnectionShopifyPage() {
             ) : null}
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-1">
-                Install / connect URL (read-only)
+                Install URL (read-only)
               </p>
               <p className="text-sm font-mono text-muted-foreground break-all bg-[var(--glass-hover)] rounded-lg px-3 py-2 border border-[var(--glass-border)]">
                 {connectAbsolute}
@@ -162,12 +163,19 @@ export default function ConnectionShopifyPage() {
               )}
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
+              <Link
+                href="/shopify/install-app"
+                prefetch={false}
+                className="px-4 py-2 rounded-lg text-sm font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+              >
+                Install (step 1)
+              </Link>
               <button
                 type="button"
                 onClick={handleReconnect}
                 className="px-4 py-2 rounded-lg text-sm font-medium bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
               >
-                Reconnect (OAuth)
+                Connect (OAuth, step 2)
               </button>
               <button
                 type="button"
@@ -183,8 +191,8 @@ export default function ConnectionShopifyPage() {
           <section className="glass-card card-anime-float rounded-xl p-6 space-y-4">
             <h2 className="text-sm font-semibold text-foreground">Not connected</h2>
             <p className="text-sm text-muted-foreground">
-              Save the Shopify store domain you use in Admin (for HMAC / credential lookup), then
-              open the install link to authorize the app.
+              This is a two-step flow: first install the app in Shopify, then connect it here to
+              authorize access and link it to your workspace.
             </p>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -213,7 +221,7 @@ export default function ConnectionShopifyPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-1">
-                Install / connect URL (read-only)
+                Install URL (step 1, read-only)
               </p>
               <p className="text-sm font-mono text-muted-foreground break-all bg-[var(--glass-hover)] rounded-lg px-3 py-2 border border-[var(--glass-border)]">
                 {connectAbsolute}
@@ -225,17 +233,32 @@ export default function ConnectionShopifyPage() {
               )}
             </div>
             <div className="pt-2">
-              {canConnect ? (
+              <div className="flex flex-wrap gap-2">
                 <Link
-                  href={connectHref}
+                  href="/shopify/install-app"
                   prefetch={false}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-primary to-violet-500 text-primary-foreground shadow-lg hover:shadow-xl transition-all"
                 >
-                  Connect Shopify store
+                  Install app (step 1)
                 </Link>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Save a store domain above to enable <strong>Connect Shopify store</strong>.
+                {canConnect ? (
+                  <Link
+                    href="/connect-shopify"
+                    prefetch={false}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary/15 text-primary hover:bg-primary/25 transition-colors"
+                  >
+                    Connect (OAuth, step 2)
+                  </Link>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Save a store domain above to enable <strong>Connect (OAuth, step 2)</strong>.
+                  </p>
+                )}
+              </div>
+              {hasInstallLink ? null : (
+                <p className="text-xs text-muted-foreground mt-2">
+                  No install link is set for this workspace. Add a Shopify install URL in your
+                  company settings (Shopify connectUrl).
                 </p>
               )}
             </div>

@@ -52,7 +52,8 @@ export default function ConnectShopifyPage() {
           Connect your Shopify store
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Enter your Shopify store domain to start the installation flow.
+          Step 2 of 2. Enter your Shopify store domain to authorize access and link it to your
+          workspace (OAuth).
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
