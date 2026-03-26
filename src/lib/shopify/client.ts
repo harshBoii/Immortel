@@ -35,7 +35,16 @@ export async function buildInstallUrl(
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("state", state);
 
-  return url.toString();
+  const installUrl = url.toString();
+  const safeInstallUrl = (() => {
+    const u = new URL(installUrl);
+    if (u.searchParams.has("state")) u.searchParams.set("state", "[redacted]");
+    return u.toString();
+  })();
+
+  console.log("[Shopify buildInstallUrl] installUrl being used:", safeInstallUrl);
+
+  return installUrl;
 }
 
 /** Canonical string Shopify signs for Admin / OAuth query HMAC (excludes hmac & signature). */
