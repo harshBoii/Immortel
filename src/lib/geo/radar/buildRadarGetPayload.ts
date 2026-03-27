@@ -1,0 +1,512 @@
+import type { PrismaClient } from "@prisma/client";
+import { DEFAULT_CTR, DEFAULT_CVR, TOP3_BENCHMARK_PCT } from "./constants";
+import {
+  aggregatePromptStats,
+  topicAuthorityFromRollup,
+  type ExecutionLite,
+  type PromptCitationStats,
+} from "./citationAnalytics";
+import {
+  bountyPriorityScore,
+  computeBountyEstimatedRevenue,
+  effectiveBountyConversionRate,
+} from "./bountyRevenue";
+import { medianCompanyAovFromProducts } from "./shopifyAov";
+
+function normalizePercentMetric(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return null;
+  return value <= 1 ? value * 100 : value;
+}
+
+export async function buildRadarGetPayload(prisma: PrismaClient, companyId: string) {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+
+  const [
+    company,
+    assumption,
+    products,
+    metricsRaw,
+    openBounties,
+    huntedRecent,
+    promptIdsFromCites,
+    promptIdsFromRivals,
+    topicPrompts,
+    llmTopics,
+    promptMetrics,
+  ] = await Promise.all([
+    prisma.company.findUnique({
+      where: { id: companyId },
+      select: { id: true, name: true },
+    }),
+    prisma.radarAssumption.findUnique({ where: { companyId } }),
+    prisma.shopifyProduct.findMany({
+      where: { companyId },
+      select: { priceMinAmount: true, priceMaxAmount: true },
+    }),
+    prisma.llmRadarMetric.findMany({
+      where: { companyId },
+      orderBy: { calculatedAt: "desc" },
+      take: 60,
+    }),
+    prisma.citationBounty.findMany({
+      where: { companyId, status: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.citationBounty.findMany({
+      where: {
+        companyId,
+        status: "HUNTED",
+        publishedAt: { gte: thirtyDaysAgo },
+      },
+      select: { estimatedRevenue: true },
+    }),
+    prisma.citation.findMany({
+      where: { companyId },
+      select: { execution: { select: { promptId: true } } },
+    }),
+    prisma.promptRivalConsensus.findMany({
+      where: { prompt: { llmTopic: { companyId } } },
+      select: { promptId: true },
+      distinct: ["promptId"],
+    }),
+    prisma.prompt.findMany({
+      where: { llmTopic: { companyId } },
+      select: { id: true },
+    }),
+    prisma.llmTopic.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.llmPromptMetric.findMany({
+      where: { companyId },
+      include: {
+        prompt: { select: { id: true, query: true } },
+        llmTopic: { select: { name: true } },
+      },
+      orderBy: { calculatedAt: "desc" },
+      take: 200,
+    }),
+  ]);
+
+  const huntedForTiming = await prisma.citationBounty.findMany({
+    where: { companyId, status: "HUNTED", huntedAt: { not: null } },
+    take: 40,
+    select: { huntedAt: true, publishedAt: true },
+  });
+  const timingSamples = huntedForTiming.filter((b) => b.publishedAt && b.huntedAt);
+  const avgHoursToPublish =
+    timingSamples.length > 0
+      ? timingSamples.reduce((s, b) => {
+          const ms = b.publishedAt!.getTime() - b.huntedAt!.getTime();
+          return s + ms / 3600000;
+        }, 0) / timingSamples.length
+      : null;
+
+  const aovProxy = medianCompanyAovFromProducts(products, 75);
+
+  const assumptions = {
+    ctr: assumption?.ctr ?? DEFAULT_CTR,
+    cvr: assumption?.cvr ?? DEFAULT_CVR,
+    aovProxy,
+    aovMultiplier: assumption?.aovMultiplier ?? 1,
+    industryPreset: assumption?.industryPreset ?? null,
+  };
+
+  const promptIdSet = new Set<string>();
+  for (const c of promptIdsFromCites) promptIdSet.add(c.execution.promptId);
+  for (const r of promptIdsFromRivals) promptIdSet.add(r.promptId);
+  for (const p of topicPrompts) promptIdSet.add(p.id);
+  const mergedPromptIds = [...promptIdSet];
+
+  const citationIntel: PromptCitationStats[] = [];
+  if (mergedPromptIds.length > 0) {
+    const execsRaw = await prisma.promptExecution.findMany({
+      where: { promptId: { in: mergedPromptIds } },
+      include: {
+        citations: {
+          select: { companyId: true, rank: true, context: true },
+        },
+      },
+    });
+
+    const byPrompt = new Map<string, ExecutionLite[]>();
+    for (const e of execsRaw) {
+      const list = byPrompt.get(e.promptId) ?? [];
+      list.push({
+        id: e.id,
+        model: e.model,
+        executedAt: e.executedAt,
+        promptId: e.promptId,
+        citations: e.citations,
+      });
+      byPrompt.set(e.promptId, list);
+    }
+
+    const promptsMeta = await prisma.prompt.findMany({
+      where: { id: { in: mergedPromptIds } },
+      include: { llmTopic: { select: { id: true, name: true, difficulty: true } } },
+    });
+
+    for (const p of promptsMeta) {
+      const rows = byPrompt.get(p.id) ?? [];
+      citationIntel.push(
+        aggregatePromptStats(
+          p.id,
+          p.query,
+          p.llmTopic?.id ?? null,
+          p.llmTopic?.name ?? null,
+          p.llmTopic?.difficulty ?? null,
+          rows,
+          companyId
+        )
+      );
+    }
+    citationIntel.sort((a, b) => a.winRate - b.winRate);
+  }
+
+  const catalogAov = aovProxy;
+  const bountyPriorityRows = openBounties
+    .map((b) => {
+      const priorityScore = bountyPriorityScore({
+        estimatedReach: b.estimatedReach,
+        confidence: b.confidence,
+        difficulty: b.difficulty,
+      });
+      const conv = effectiveBountyConversionRate(b.conversionRate);
+      const aov = b.avgOrderValue ?? catalogAov;
+      const estRev =
+        b.estimatedRevenue ??
+        computeBountyEstimatedRevenue({
+          estimatedReach: b.estimatedReach,
+          conversionRate: conv,
+          avgOrderValue: aov,
+        });
+      return {
+        id: b.id,
+        query: b.query,
+        status: b.status,
+        estimatedReach: b.estimatedReach,
+        confidence: b.confidence,
+        difficulty: b.difficulty,
+        suggestedCluster: b.suggestedCluster,
+        priorityScore,
+        estimatedRevenue: estRev,
+        conversionRate: b.conversionRate ?? conv,
+        avgOrderValue: aov,
+      };
+    })
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+
+  const top5Open = bountyPriorityRows.slice(0, 5);
+  const top5CombinedReach = top5Open.reduce(
+    (s, b) => s + (b.estimatedReach ?? 0),
+    0
+  );
+  const top5CombinedEstimatedRevenue = top5Open.reduce(
+    (s, b) => s + (b.estimatedRevenue ?? 0),
+    0
+  );
+
+  const clusterMap = new Map<
+    string,
+    { count: number; sumReach: number; sumEstimatedRevenue: number; prioritySum: number }
+  >();
+  for (const b of bountyPriorityRows) {
+    const key = b.suggestedCluster?.trim() || "uncategorized";
+    const cur = clusterMap.get(key) ?? {
+      count: 0,
+      sumReach: 0,
+      sumEstimatedRevenue: 0,
+      prioritySum: 0,
+    };
+    cur.count += 1;
+    cur.sumReach += b.estimatedReach ?? 0;
+    cur.sumEstimatedRevenue += b.estimatedRevenue ?? 0;
+    cur.prioritySum += b.priorityScore;
+    clusterMap.set(key, cur);
+  }
+  const clusters = [...clusterMap.entries()].map(([suggestedCluster, v]) => ({
+    suggestedCluster,
+    count: v.count,
+    sumReach: v.sumReach,
+    sumEstimatedRevenue: v.sumEstimatedRevenue,
+    avgPriority: v.count ? v.prioritySum / v.count : 0,
+  }));
+
+  const topicRollupsMap = new Map<
+    string,
+    {
+      topicId: string;
+      topicName: string;
+      difficulty: string;
+      prompts: PromptCitationStats[];
+      opportunitySum: number;
+      revenueSum: number;
+    }
+  >();
+
+  for (const row of citationIntel) {
+    if (!row.topicId) continue;
+    const cur = topicRollupsMap.get(row.topicId) ?? {
+      topicId: row.topicId,
+      topicName: row.topicName ?? "",
+      difficulty: String(row.topicDifficulty ?? "MEDIUM"),
+      prompts: [],
+      opportunitySum: 0,
+      revenueSum: 0,
+    };
+    cur.prompts.push(row);
+    topicRollupsMap.set(row.topicId, cur);
+  }
+
+  for (const m of promptMetrics) {
+    if (!m.topicId) continue;
+    const cur = topicRollupsMap.get(m.topicId);
+    if (cur) {
+      cur.opportunitySum += m.opportunityScore ?? 0;
+      cur.revenueSum += m.estimatedRevenue ?? 0;
+    }
+  }
+
+  const topicRollups = [...topicRollupsMap.values()].map((t) => {
+    const winAvg =
+      t.prompts.length > 0
+        ? t.prompts.reduce((s, p) => s + p.winRate, 0) / t.prompts.length
+        : 0;
+    const wrsAvg =
+      t.prompts.length > 0
+        ? t.prompts.reduce((s, p) => s + p.wrs, 0) / t.prompts.length
+        : 0;
+    const modelAgreeMax = t.prompts.reduce(
+      (m, p) => Math.max(m, p.modelsCitingCount),
+      0
+    );
+    return {
+      topicId: t.topicId,
+      topicName: t.topicName,
+      difficulty: t.difficulty,
+      promptCount: t.prompts.length,
+      avgWinRate: winAvg,
+      avgWrs: wrsAvg,
+      maxModelsCiting: modelAgreeMax,
+      opportunitySum: t.opportunitySum,
+      revenueSum: t.revenueSum,
+    };
+  });
+
+  const topicAuthorityMap = llmTopics.map((t) =>
+    topicAuthorityFromRollup(t.id, t.name, t.difficulty, citationIntel)
+  );
+
+  const publishedImpact30d = huntedRecent.reduce(
+    (s, h) => s + (h.estimatedRevenue ?? 0),
+    0
+  );
+
+  const revenueOpportunity30d = [...promptMetrics]
+    .sort((a, b) => (b.estimatedRevenue ?? 0) - (a.estimatedRevenue ?? 0))
+    .slice(0, 10)
+    .reduce((s, m) => s + (m.estimatedRevenue ?? 0), 0);
+
+  const lowWinPrompts = citationIntel.filter((p) => p.winRate < 40);
+  const reachRisk =
+    lowWinPrompts.length > 0
+      ? bountyPriorityRows
+          .filter((b) =>
+            lowWinPrompts.some(
+              (p) => p.query.toLowerCase() === b.query.trim().toLowerCase()
+            )
+          )
+          .reduce((s, b) => s + (b.estimatedRevenue ?? 0), 0)
+      : 0;
+  const revenueAtRisk30d =
+    reachRisk > 0
+      ? Math.round(reachRisk)
+      : Math.round(
+          bountyPriorityRows.reduce((s, b) => s + (b.estimatedRevenue ?? 0), 0) *
+            0.15
+        );
+
+  const quickWinsCount = bountyPriorityRows.filter(
+    (b) => b.difficulty === "EASY" && (b.estimatedReach ?? 0) >= 500
+  ).length;
+
+  const modelGapCount = citationIntel.filter(
+    (p) =>
+      p.distinctModelTotal > 1 && p.modelsCitingCount < p.distinctModelTotal
+  ).length;
+
+  const latestRow =
+    metricsRaw.find(
+      (m) =>
+        (m.shareOfVoice != null && m.shareOfVoice > 0) ||
+        (m.top3Rate != null && m.top3Rate > 0) ||
+        (m.queryCoverage != null && m.queryCoverage > 0) ||
+        m.competitorRank != null ||
+        m.topicAuthority != null
+    ) ?? metricsRaw[0];
+
+  const sovSeries = [...metricsRaw]
+    .sort(
+      (a, b) =>
+        new Date(a.calculatedAt).getTime() - new Date(b.calculatedAt).getTime()
+    )
+    .map((m) => ({
+      id: m.id,
+      model: m.model,
+      calculatedAt: m.calculatedAt.toISOString(),
+      shareOfVoice: normalizePercentMetric(m.shareOfVoice),
+      top3Rate: normalizePercentMetric(m.top3Rate),
+      queryCoverage: normalizePercentMetric(m.queryCoverage),
+      avgRank: m.avgRank,
+      competitorRank: m.competitorRank,
+      topicAuthority: m.topicAuthority,
+    }));
+
+  const modelBreakdownMap = new Map<
+    string,
+    { sumSov: number; count: number; top3: number; coverage: number }
+  >();
+  for (const m of metricsRaw) {
+    const cur = modelBreakdownMap.get(m.model) ?? {
+      sumSov: 0,
+      count: 0,
+      top3: 0,
+      coverage: 0,
+    };
+    cur.count += 1;
+    cur.sumSov += normalizePercentMetric(m.shareOfVoice) ?? 0;
+    cur.top3 += normalizePercentMetric(m.top3Rate) ?? 0;
+    cur.coverage += normalizePercentMetric(m.queryCoverage) ?? 0;
+    modelBreakdownMap.set(m.model, cur);
+  }
+  const modelBreakdown = [...modelBreakdownMap.entries()].map(([model, v]) => ({
+    model,
+    avgShareOfVoice: v.count ? v.sumSov / v.count : 0,
+    avgTop3Rate: v.count ? v.top3 / v.count : 0,
+    avgQueryCoverage: v.count ? v.coverage / v.count : 0,
+  }));
+
+  const actionQueueDedup = new Map<
+    string,
+    {
+      promptId: string;
+      query: string;
+      topicName: string | null;
+      model: string;
+      latestRank: number | null;
+      isMentioned: boolean;
+      estimatedReach: number | null;
+      estimatedRevenue: number | null;
+      opportunityScore: number | null;
+      actionType: string | null;
+      recommendedCta: string;
+      sortKey: number;
+    }
+  >();
+  for (const row of promptMetrics) {
+    const key = `${row.promptId}:${row.model}`;
+    const combinedScore =
+      (row.estimatedRevenue ?? 0) * ((row.opportunityScore ?? 0) / 100);
+    const sortKey = Number.isFinite(combinedScore) ? combinedScore : 0;
+    const prev = actionQueueDedup.get(key);
+    if (!prev || sortKey > prev.sortKey) {
+      actionQueueDedup.set(key, {
+        promptId: row.promptId,
+        query: row.prompt.query,
+        topicName: row.llmTopic?.name ?? null,
+        model: row.model,
+        latestRank: row.latestRank,
+        isMentioned: row.isMentioned,
+        estimatedReach: row.estimatedReach,
+        estimatedRevenue: row.estimatedRevenue,
+        opportunityScore: row.opportunityScore,
+        actionType: row.actionType,
+        recommendedCta: inferCta(row.actionType),
+        sortKey,
+      });
+    }
+  }
+  const actionQueueSorted = [...actionQueueDedup.values()]
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .slice(0, 15)
+    .map((row) => {
+      const { sortKey: _rank, ...rest } = row;
+      void _rank;
+      return rest;
+    });
+
+  return {
+    company: company ?? null,
+    assumptions,
+    summaryCards: {
+      revenueAtRisk30d: Math.round(revenueAtRisk30d),
+      revenueOpportunity30d: Math.round(revenueOpportunity30d),
+      quickWinsCount,
+      publishedImpact30d: Math.round(publishedImpact30d),
+      modelGapCount,
+    },
+    latest: latestRow
+      ? {
+          shareOfVoice: normalizePercentMetric(latestRow.shareOfVoice),
+          top3Rate: normalizePercentMetric(latestRow.top3Rate),
+          queryCoverage: normalizePercentMetric(latestRow.queryCoverage),
+          competitorRank: latestRow.competitorRank,
+          topicAuthority: latestRow.topicAuthority,
+          avgRank: latestRow.avgRank,
+          calculatedAt: latestRow.calculatedAt.toISOString(),
+        }
+      : null,
+    metrics: metricsRaw.slice(0, 20).map((m) => ({
+      id: m.id,
+      model: m.model,
+      shareOfVoice: normalizePercentMetric(m.shareOfVoice),
+      top3Rate: normalizePercentMetric(m.top3Rate),
+      queryCoverage: normalizePercentMetric(m.queryCoverage),
+      competitorRank: m.competitorRank,
+      topicAuthority: m.topicAuthority,
+      avgRank: m.avgRank,
+      calculatedAt: m.calculatedAt.toISOString(),
+    })),
+    sovSeries,
+    modelBreakdown,
+    top3BenchmarkPct: TOP3_BENCHMARK_PCT,
+    citationIntelligence: citationIntel.slice(0, 80).map((c) => ({
+      promptId: c.promptId,
+      query: c.query,
+      executionCount: c.executionCount,
+      winRate: Math.round(c.winRate * 10) / 10,
+      wrs: Math.round(c.wrs * 100) / 100,
+      modelsCitingCount: c.modelsCitingCount,
+      distinctModelTotal: c.distinctModelTotal,
+      contextDistribution: c.contextDistribution,
+    })),
+    topicRollups,
+    topicAuthorityMap: topicAuthorityMap.slice(0, 30),
+    bountyPriority: {
+      open: bountyPriorityRows.slice(0, 25),
+      top5CombinedReach,
+      top5CombinedEstimatedRevenue: Math.round(top5CombinedEstimatedRevenue),
+      clusters,
+    },
+    actionQueue: actionQueueSorted,
+    commerceLinkage: {
+      avgHoursToPublish:
+        avgHoursToPublish != null ? Math.round(avgHoursToPublish * 10) / 10 : null,
+      timingSampleCount: timingSamples.length,
+    },
+  };
+}
+
+function inferCta(actionType: string | null): string {
+  switch (actionType) {
+    case "defend":
+      return "improve_page";
+    case "long_bet":
+      return "generate_page";
+    default:
+      return "generate_page";
+  }
+}

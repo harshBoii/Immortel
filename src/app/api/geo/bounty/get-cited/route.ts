@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -32,6 +33,8 @@ export async function POST(request: NextRequest) {
     },
     select: { id: true },
   });
+
+  await syncBountyRevenueForCompany(prisma, companyId);
 
   const origin = request.nextUrl.origin;
   const huntUrl = `${origin}/api/geo/bounty/${bounty.id}/hunt`;

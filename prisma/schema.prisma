@@ -36,6 +36,8 @@ model Company {
   shopifyShops          ShopifyShop[]
   shopifyBlogChannels   ShopifyBlogChannel[]
   webinars              Webinar[]
+  radarAssumption       RadarAssumption?
+  llmPromptMetrics      LlmPromptMetric[]
 
   @@index([slug])
   @@map("companies")
@@ -492,9 +494,17 @@ model CitationBounty {
   confidence        Float
   difficulty        BountyDifficulty @default(EASY)
   estimatedReach    Int?
+  /// estimatedReach × (conversionRate ?? default) × (avgOrderValue ?? company AOV)
+  estimatedRevenue  Float?
+  /// Site / funnel conversion (e.g. 0.025); defaults applied in app when null
+  conversionRate    Float?
+  /// Snapshot AOV used for revenue estimate (often from Shopify catalog median)
+  avgOrderValue     Float?
   suggestedCluster  String?          @db.VarChar(255)
   status            BountyStatus     @default(OPEN)
   huntedAt          DateTime?        @db.Timestamptz(3)
+  /// When generated content was published (e.g. AEO page go-live)
+  publishedAt       DateTime?        @db.Timestamptz(3)
   aeoPageId         String?          @unique
   generationContext Json             @default("{}")
   createdAt         DateTime         @default(now()) @db.Timestamptz(3)
@@ -535,12 +545,16 @@ model Prompt {
   query      String
   topic      String?           @db.VarChar(255)
   topicId    String?
+  reason     String?
   intent     String?           @db.VarChar(100)
   isActive   Boolean           @default(true)
   createdAt  DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
   executions PromptExecution[]
   llmTopic   LlmTopic?         @relation("LlmTopicPrompts", fields: [topicId], references: [id])
+  llmPromptMetrics LlmPromptMetric[]
+  rivalByModel PromptRivalByModel[]
+  rivalConsensus PromptRivalConsensus[]
 
   @@index([intent])
   @@index([topic])
@@ -585,15 +599,48 @@ model LlmTopic {
   id          String     @id @default(cuid())
   name        String     @db.VarChar(255)
   description String?
+  reason      String?
   createdAt   DateTime   @default(now()) @db.Timestamptz(3)
   difficulty  Difficulty @default(MEDIUM)
   companyId   String
   prompts     Prompt[]   @relation("LlmTopicPrompts")
+  llmPromptMetrics LlmPromptMetric[]
   company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, name])
   @@index([companyId])
   @@map("llm_topics")
+}
+
+model PromptRivalByModel {
+  id          String   @id @default(cuid())
+  promptId    String
+  model       String   @db.VarChar(100)
+  companyName String   @db.VarChar(255)
+  rank        Int?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  prompt      Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, model, companyName])
+  @@index([promptId])
+  @@index([model])
+  @@map("llm_prompt_rivals_by_model")
+}
+
+model PromptRivalConsensus {
+  id          String   @id @default(cuid())
+  promptId    String
+  companyName String   @db.VarChar(255)
+  avgRank     Float?
+  mentions    Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  prompt      Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@unique([promptId, companyName])
+  @@index([promptId])
+  @@map("llm_prompt_rivals_consensus")
 }
 
 model LlmRadarMetric {
@@ -613,6 +660,54 @@ model LlmRadarMetric {
   @@index([model])
   @@index([companyId, calculatedAt(sort: Desc)])
   @@map("llm_radar_metrics")
+}
+
+/// Company-level CTR/CVR assumptions for prompt revenue estimates (edit UI later)
+model RadarAssumption {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  /// Click-through from impression to site (ratio 0–1)
+  ctr             Float    @default(0.02)
+  /// Conversion to order (ratio 0–1), aligned with D2C defaults when unset on bounties
+  cvr             Float    @default(0.025)
+  aovMultiplier   Float    @default(1)
+  industryPreset  String?  @db.VarChar(50)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("radar_assumptions")
+}
+
+/// Latest snapshot per prompt × model after a radar run (upserted on POST /api/geo/radar)
+model LlmPromptMetric {
+  id               String     @id @default(cuid())
+  companyId        String
+  promptId         String
+  topicId          String?
+  model            String     @db.VarChar(100)
+  latestRank       Int?
+  isMentioned      Boolean    @default(false)
+  estimatedReach   Int?
+  confidence       Float?
+  difficulty       Difficulty?
+  businessFit      Float?
+  opportunityScore Float?
+  estimatedRevenue Float?
+  actionType       String?    @db.VarChar(32)
+  rankTrend7d      Float?
+  rankTrend30d     Float?
+  modelGapFlag     Boolean    @default(false)
+  calculatedAt     DateTime   @default(now()) @db.Timestamptz(3)
+  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  prompt           Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  llmTopic         LlmTopic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, promptId, model])
+  @@index([companyId])
+  @@index([promptId])
+  @@index([calculatedAt(sort: Desc)])
+  @@map("llm_prompt_metrics")
 }
 
 model ShopifyShop {

@@ -1,16 +1,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
+import {
+  persistPromptMetricsForCompany,
+  resolveTopicIdForPromptQuery,
+} from "@/lib/geo/radar/persistPromptMetrics";
+import { buildRadarGetPayload } from "@/lib/geo/radar/buildRadarGetPayload";
 
 type RadarInput = {
-  company: { name: string; website: string; linkedin: string };
+  company: { name: string; website: string; linkedin: string; about?: string };
   brandEntity: {
     category: string;
     topics: string[];
     keywords: string[];
+    offerings?: Array<{
+      product?: string;
+      productType?: string;
+      url?: string;
+      differentiators: string[];
+      useCases: string[];
+      targetAudiences: string[];
+      competitorGroups: string[];
+    }>;
   };
   competitors: string[];
   models: string[];
+  llmTopics?: string[];
 };
 
 type RadarOutput = {
@@ -28,9 +44,32 @@ type RadarOutput = {
     competitor_rank: number;
     topic_authority: number;
   };
+  topic_prompt_analysis?: TopicPromptAnalysisItem[];
 };
 
 type RadarMetrics = RadarOutput["metrics"];
+
+type TopicPromptAnalysisItem = {
+  topic: string;
+  link?: string;
+  reason?: string;
+  prompts?: TopicPromptAnalysisPromptItem[];
+};
+
+type TopicPromptAnalysisPromptItem = {
+  prompt: string;
+  link?: string;
+  reason?: string;
+  cited_companies_by_model?: Array<{
+    model: string;
+    companies: Array<{ name: string; rank?: number | null }>;
+  }>;
+  cited_companies_consensus?: Array<{
+    name: string;
+    avg_rank?: number | null;
+    mentions?: number | null;
+  }>;
+};
 
 type RadarServiceResponse =
   | RadarOutput
@@ -69,10 +108,10 @@ export async function POST() {
 
   const companyId = session.companyId;
 
-  const [company, brandEntity, geoDataSources] = await Promise.all([
+  const [company, brandEntity, geoDataSources, llmTopics, shopifyProducts] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
-      select: { id: true, name: true, website: true },
+      select: { id: true, name: true, website: true, description: true },
     }),
     prisma.brandEntity.findUnique({
       where: { companyId },
@@ -89,6 +128,24 @@ export async function POST() {
         isActive: true,
       },
       select: { label: true, rawContent: true },
+    }),
+    prisma.llmTopic.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        prompts: {
+          where: { isActive: true },
+          select: { query: true },
+        },
+      },
+    }),
+    prisma.shopifyProduct.findMany({
+      where: { companyId },
+      orderBy: { shopifyUpdatedAt: "desc" },
+      select: {
+        title: true,
+        onlineStoreUrl: true,
+      },
     }),
   ]);
 
@@ -114,19 +171,51 @@ export async function POST() {
   const keywords = brandEntity?.keywords ?? [];
   const category = brandEntity?.category ?? "";
 
+  const brandOfferings =
+    brandEntity?.offerings.map((o) => ({
+      product: o.name ?? undefined,
+      productType: o.offeringType ?? undefined,
+      url: o.url ?? undefined,
+      differentiators: o.differentiators ?? [],
+      useCases: o.useCases ?? [],
+      targetAudiences: o.targetAudiences ?? [],
+      competitorGroups: o.competitors ?? [],
+    })) ?? [];
+
+  const shopifyOfferings = shopifyProducts
+    .filter((p) => Boolean(p.title?.trim()))
+    .map((p) => ({
+      product: p.title.trim(),
+      productType: "PRODUCT",
+      url: p.onlineStoreUrl ?? undefined,
+      differentiators: [] as string[],
+      useCases: [] as string[],
+      targetAudiences: [] as string[],
+      competitorGroups: [] as string[],
+    }));
+
+  const offerings = [...brandOfferings, ...shopifyOfferings];
+
   const input: RadarInput = {
     company: {
       name: company.name,
       website: website || "https://example.com",
       linkedin: linkedin || "https://linkedin.com",
+      about: brandEntity?.about ?? company.description ?? undefined,
     },
     brandEntity: {
       category,
       topics,
       keywords,
+      ...(offerings.length > 0 ? { offerings } : {}),
     },
     competitors,
     models: ["gpt-4o", "claude-3.5", "gemini-1.5"],
+    ...(llmTopics.length > 0
+      ? {
+          llmTopics: llmTopics.map((t) => t.name),
+        }
+      : {}),
   };
 
   const base = process.env.MICROSERVICE_URL;
@@ -201,43 +290,119 @@ export async function POST() {
   });
 
   // Persist output.topics into LlmTopic (upsert by name)
-  const topicNames = [...new Set((radarOutput.topics ?? []).filter((t): t is string => Boolean(t?.trim())))];
+  const topicPromptAnalysis = Array.isArray(radarOutput.topic_prompt_analysis)
+    ? radarOutput.topic_prompt_analysis
+    : [];
+  const topicReasonByName = new Map<string, string | null>();
+  for (const item of topicPromptAnalysis) {
+    const name = item.topic?.trim();
+    if (!name) continue;
+    topicReasonByName.set(name, item.reason?.trim() || null);
+  }
+  const topicNames = [
+    ...new Set(
+      [
+        ...(radarOutput.topics ?? []),
+        ...topicPromptAnalysis.map((t) => t.topic),
+      ].filter((t): t is string => Boolean(t?.trim()))
+    ),
+  ];
   const topicIdMap = new Map<string, string>();
   for (const name of topicNames) {
+    const reason = topicReasonByName.get(name) ?? null;
     const topic = await prisma.llmTopic.upsert({
       where: { companyId_name: { companyId, name } },
-      create: { companyId, name, description: null },
-      update: {},
+      create: {
+        companyId,
+        name,
+        description: reason,
+        reason,
+      },
+      update: {
+        reason,
+        ...(reason ? { description: reason } : {}),
+      },
       select: { id: true },
     });
     topicIdMap.set(name, topic.id);
   }
 
-  const uniquePrompts = [...new Set(radarOutput.citations.map((c) => c.prompt))];
+  const analysisPromptMeta = new Map<
+    string,
+    {
+      topicName: string;
+      reason: string | null;
+      byModel: NonNullable<TopicPromptAnalysisPromptItem["cited_companies_by_model"]>;
+      consensus: NonNullable<TopicPromptAnalysisPromptItem["cited_companies_consensus"]>;
+    }
+  >();
+  for (const item of topicPromptAnalysis) {
+    const topicName = item.topic?.trim();
+    if (!topicName) continue;
+    for (const p of item.prompts ?? []) {
+      const q = p.prompt?.trim();
+      if (!q || analysisPromptMeta.has(q)) continue;
+      analysisPromptMeta.set(q, {
+        topicName,
+        reason: p.reason?.trim() || null,
+        byModel: p.cited_companies_by_model ?? [],
+        consensus: p.cited_companies_consensus ?? [],
+      });
+    }
+  }
+
+  const uniquePrompts = [
+    ...new Set([
+      ...radarOutput.citations.map((c) => c.prompt),
+      ...(radarOutput.prompts ?? []),
+      ...[...analysisPromptMeta.keys()],
+    ]),
+  ];
   const existingPrompts = uniquePrompts.length
     ? await prisma.prompt.findMany({
         where: { query: { in: uniquePrompts } },
-        select: { id: true, query: true },
+        select: { id: true, query: true, topicId: true },
       })
     : [];
 
-  const promptMap = new Map<string, string>();
+  const promptMap = new Map<string, { id: string; topicId: string | null }>();
   for (const p of existingPrompts) {
-    promptMap.set(p.query, p.id);
+    if (!promptMap.has(p.query)) {
+      promptMap.set(p.query, { id: p.id, topicId: p.topicId });
+    }
   }
 
   for (const promptQuery of uniquePrompts) {
-    if (promptMap.has(promptQuery)) continue;
-    const topicId = topicIdMap.get(promptQuery) ?? null;
+    const meta = analysisPromptMeta.get(promptQuery);
+    const topicIdFromAnalysis =
+      meta?.topicName != null ? topicIdMap.get(meta.topicName) ?? null : null;
+    const topicId =
+      topicIdFromAnalysis ??
+      resolveTopicIdForPromptQuery(promptQuery, topicNames, topicIdMap) ??
+      null;
+    const existing = promptMap.get(promptQuery);
+    if (existing) {
+      await prisma.prompt.update({
+        where: { id: existing.id },
+        data: {
+          topicId: topicId ?? existing.topicId,
+          topic: meta?.topicName ?? topicNames[0] ?? promptQuery,
+          reason: meta?.reason ?? undefined,
+        },
+      });
+      promptMap.set(promptQuery, { id: existing.id, topicId: topicId ?? existing.topicId });
+      continue;
+    }
     const created = await prisma.prompt.create({
       data: {
         query: promptQuery,
-        topic: promptQuery,
+        topic: meta?.topicName ?? topicNames[0] ?? promptQuery,
         topicId,
+        reason: meta?.reason ?? null,
         isActive: true,
       },
     });
-    promptMap.set(promptQuery, created.id);
+    promptMap.set(promptQuery, { id: created.id, topicId });
   }
 
   const execMap = new Map<string, string>();
@@ -247,7 +412,7 @@ export async function POST() {
 
   for (const pair of uniqueExecPairs) {
     const [promptQuery, model] = pair.split("|||");
-    const promptId = promptMap.get(promptQuery);
+    const promptId = promptMap.get(promptQuery)?.id;
     if (!promptId) continue;
     const exec = await prisma.promptExecution.create({
       data: {
@@ -267,7 +432,7 @@ export async function POST() {
   }> = [];
 
   for (const cit of radarOutput.citations) {
-    const promptId = promptMap.get(cit.prompt);
+    const promptId = promptMap.get(cit.prompt)?.id;
     if (!promptId) continue;
     const execId = execMap.get(`${promptId}:${cit.model}`);
     if (!execId) continue;
@@ -289,6 +454,69 @@ export async function POST() {
     });
   }
 
+  // Persist prompt rival rankings from topic_prompt_analysis.
+  const promptIdsWithAnalysis = [...analysisPromptMeta.keys()]
+    .map((q) => promptMap.get(q)?.id)
+    .filter((id): id is string => Boolean(id));
+  if (promptIdsWithAnalysis.length > 0) {
+    await prisma.promptRivalByModel.deleteMany({
+      where: { promptId: { in: promptIdsWithAnalysis } },
+    });
+    await prisma.promptRivalConsensus.deleteMany({
+      where: { promptId: { in: promptIdsWithAnalysis } },
+    });
+
+    const byModelRows: Array<{
+      promptId: string;
+      model: string;
+      companyName: string;
+      rank: number | null;
+    }> = [];
+    const consensusRows: Array<{
+      promptId: string;
+      companyName: string;
+      avgRank: number | null;
+      mentions: number;
+    }> = [];
+
+    for (const [query, meta] of analysisPromptMeta.entries()) {
+      const promptId = promptMap.get(query)?.id;
+      if (!promptId) continue;
+      for (const modelEntry of meta.byModel) {
+        for (const comp of modelEntry.companies ?? []) {
+          const name = comp.name?.trim();
+          if (!name) continue;
+          byModelRows.push({
+            promptId,
+            model: modelEntry.model,
+            companyName: name,
+            rank: comp.rank ?? null,
+          });
+        }
+      }
+      for (const comp of meta.consensus) {
+        const name = comp.name?.trim();
+        if (!name) continue;
+        consensusRows.push({
+          promptId,
+          companyName: name,
+          avgRank: comp.avg_rank ?? null,
+          mentions: Math.max(0, comp.mentions ?? 0),
+        });
+      }
+    }
+
+    if (byModelRows.length) {
+      await prisma.promptRivalByModel.createMany({ data: byModelRows });
+    }
+    if (consensusRows.length) {
+      await prisma.promptRivalConsensus.createMany({ data: consensusRows });
+    }
+  }
+
+  await syncBountyRevenueForCompany(prisma, companyId);
+  await persistPromptMetricsForCompany(prisma, companyId);
+
   return NextResponse.json({
     success: true,
     input,
@@ -308,61 +536,27 @@ export async function GET() {
   }
 
   const companyId = session.companyId;
-
-  const [metrics, company] = await Promise.all([
-    prisma.llmRadarMetric.findMany({
-      where: { companyId },
-      orderBy: { calculatedAt: "desc" },
-      take: 10,
-    }),
-    prisma.company.findUnique({
-      where: { id: companyId },
-      select: { id: true, name: true },
-    }),
-  ]);
-
-  const latest = metrics[0];
-  const latestMeaningful =
-    metrics.find(
-      (m) =>
-        (m.shareOfVoice != null && m.shareOfVoice > 0) ||
-        (m.top3Rate != null && m.top3Rate > 0) ||
-        (m.queryCoverage != null && m.queryCoverage > 0) ||
-        m.competitorRank != null ||
-        m.topicAuthority != null
-    ) ?? latest;
+  const payload = await buildRadarGetPayload(prisma, companyId);
 
   return NextResponse.json({
     success: true,
-    company: company ?? null,
-    metrics: metrics.map((m) => ({
-      id: m.id,
-      model: m.model,
-      shareOfVoice: normalizePercentMetric(m.shareOfVoice),
-      share_of_voice: normalizePercentMetric(m.shareOfVoice),
-      top3Rate: normalizePercentMetric(m.top3Rate),
-      top3_rate: normalizePercentMetric(m.top3Rate),
-      queryCoverage: normalizePercentMetric(m.queryCoverage),
-      query_coverage: normalizePercentMetric(m.queryCoverage),
-      competitorRank: m.competitorRank,
+    ...payload,
+    metrics: payload.metrics.map((m) => ({
+      ...m,
+      share_of_voice: m.shareOfVoice,
+      top3_rate: m.top3Rate,
+      query_coverage: m.queryCoverage,
       competitor_rank: m.competitorRank,
-      topicAuthority: m.topicAuthority,
       topic_authority: m.topicAuthority,
-      calculatedAt: m.calculatedAt.toISOString(),
     })),
-    latest: latestMeaningful
+    latest: payload.latest
       ? {
-          shareOfVoice: normalizePercentMetric(latestMeaningful.shareOfVoice),
-          share_of_voice: normalizePercentMetric(latestMeaningful.shareOfVoice),
-          top3Rate: normalizePercentMetric(latestMeaningful.top3Rate),
-          top3_rate: normalizePercentMetric(latestMeaningful.top3Rate),
-          queryCoverage: normalizePercentMetric(latestMeaningful.queryCoverage),
-          query_coverage: normalizePercentMetric(latestMeaningful.queryCoverage),
-          competitorRank: latestMeaningful.competitorRank,
-          competitor_rank: latestMeaningful.competitorRank,
-          topicAuthority: latestMeaningful.topicAuthority,
-          topic_authority: latestMeaningful.topicAuthority,
-          calculatedAt: latestMeaningful.calculatedAt.toISOString(),
+          ...payload.latest,
+          share_of_voice: payload.latest.shareOfVoice,
+          top3_rate: payload.latest.top3Rate,
+          query_coverage: payload.latest.queryCoverage,
+          competitor_rank: payload.latest.competitorRank,
+          topic_authority: payload.latest.topicAuthority,
         }
       : null,
   });

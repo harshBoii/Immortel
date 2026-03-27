@@ -1,10 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { buildRadarGetPayload } from "@/lib/geo/radar/buildRadarGetPayload";
 import { CitationsTable } from "./citations-table";
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
+import { ModelBreakdownChart, SovTrendChart } from "./sov-charts";
 
 function formatMetric(
   value: number | null | undefined,
@@ -15,9 +13,11 @@ function formatMetric(
   return `${prefix}${Number(value).toFixed(digits)}${suffix}`;
 }
 
-function normalizePercentMetric(value: number | null | undefined) {
-  if (value == null || Number.isNaN(value)) return null;
-  return value <= 1 ? value * 100 : value;
+function formatUsd(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M/mo`;
+  if (value >= 10_000) return `$${(value / 1_000).toFixed(1)}k/mo`;
+  return `$${Math.round(value).toLocaleString()}/mo`;
 }
 
 function citationTypeLabel(query: string) {
@@ -41,29 +41,8 @@ export default async function RadarContent() {
     );
   }
 
-  const [metrics, company, brandEntity, ownCompanyCitations] = await Promise.all([
-    prisma.llmRadarMetric.findMany({
-      where: { companyId },
-      orderBy: { calculatedAt: "desc" },
-      take: 20,
-    }),
-    prisma.company.findUnique({
-      where: { id: companyId },
-      select: { name: true },
-    }),
-    prisma.brandEntity.findUnique({
-      where: { companyId },
-      select: {
-        topics: true,
-        offerings: {
-          select: {
-            competitors: true,
-          },
-          where: { isActive: true },
-          take: 3,
-        },
-      },
-    }),
+  const [payload, ownCompanyCitations] = await Promise.all([
+    buildRadarGetPayload(prisma, companyId),
     prisma.citation.findMany({
       where: { companyId },
       orderBy: { createdAt: "desc" },
@@ -78,119 +57,32 @@ export default async function RadarContent() {
     }),
   ]);
 
-  const normalizedMetrics = metrics.map((m) => ({
-    ...m,
-    shareOfVoice: normalizePercentMetric(m.shareOfVoice),
-    top3Rate: normalizePercentMetric(m.top3Rate),
-    queryCoverage: normalizePercentMetric(m.queryCoverage),
-  }));
-  const latest =
-    normalizedMetrics.find(
-      (m) =>
-        (m.shareOfVoice != null && m.shareOfVoice > 0) ||
-        (m.top3Rate != null && m.top3Rate > 0) ||
-        (m.queryCoverage != null && m.queryCoverage > 0) ||
-        m.competitorRank != null ||
-        m.topicAuthority != null
-    ) ?? normalizedMetrics[0];
+  console.log(payload);
+  
+  const hasRadarMetrics = payload.metrics.length > 0;
+  const hasIntel = payload.citationIntelligence.length > 0;
+  const hasBounties = payload.bountyPriority.open.length > 0;
 
-  if (metrics.length === 0) {
+  if (!hasRadarMetrics && !hasIntel && !hasBounties) {
     return (
       <div className="rounded-xl glass-card card-anime-float p-6">
         <p className="text-sm text-muted-foreground">
-          No radar data yet. Click <strong>Refresh data</strong> to fetch from the microservice.
+          No radar data yet. Click <strong>Refresh data</strong> to fetch from the microservice, or add bounties / topic prompts.
         </p>
       </div>
     );
   }
 
-  const ourName = company?.name?.trim() ?? "Your company";
+  const ourName = payload.company?.name?.trim() ?? "Your company";
+  const latest = payload.latest;
 
-  const executionIds = Array.from(
-    new Set(ownCompanyCitations.map((c) => c.executionId).filter(Boolean))
-  );
+  const executionIds = Array.from(new Set(ownCompanyCitations.map((c) => c.executionId)));
   const executionCitations = executionIds.length
     ? await prisma.citation.findMany({
         where: { executionId: { in: executionIds } },
-        select: {
-          executionId: true,
-          mentionedName: true,
-          rank: true,
-        },
+        select: { executionId: true, mentionedName: true, rank: true },
       })
     : [];
-
-  const mentionMap = new Map<
-    string,
-    { mentions: number; rankSum: number; rankCount: number }
-  >();
-  for (const citation of executionCitations) {
-    const key = citation.mentionedName.trim();
-    if (!key) continue;
-    const prev = mentionMap.get(key) ?? { mentions: 0, rankSum: 0, rankCount: 0 };
-    prev.mentions += 1;
-    if (citation.rank != null) {
-      prev.rankSum += citation.rank;
-      prev.rankCount += 1;
-    }
-    mentionMap.set(key, prev);
-  }
-
-  // Ensure our company exists in the landscape
-  if (!mentionMap.has(ourName)) {
-    mentionMap.set(ourName, { mentions: 1, rankSum: latest?.competitorRank ?? 3, rankCount: 1 });
-  }
-
-  // Fallback competitor names from brand identity if citations are sparse
-  if (mentionMap.size < 3) {
-    const fallbackCompetitors = (brandEntity?.offerings ?? [])
-      .flatMap((o) => o.competitors ?? [])
-      .filter(Boolean)
-      .slice(0, 4);
-    for (const name of fallbackCompetitors) {
-      if (!mentionMap.has(name)) {
-        mentionMap.set(name, { mentions: 1, rankSum: 4, rankCount: 1 });
-      }
-    }
-  }
-
-  const landscapeRaw = Array.from(mentionMap.entries()).map(([name, data]) => {
-    const avgRank = data.rankCount ? data.rankSum / data.rankCount : 5;
-    const authorityScore =
-      name.toLowerCase() === ourName.toLowerCase()
-        ? latest?.topicAuthority ?? 55
-        : clamp(34 + data.mentions * 7 - avgRank * 3, 8, 94);
-    return {
-      name,
-      mentions: data.mentions,
-      avgRank,
-      authorityScore,
-      isOurCompany: name.toLowerCase() === ourName.toLowerCase(),
-    };
-  });
-
-  const maxMentions = Math.max(...landscapeRaw.map((p) => p.mentions), 1);
-  const landscapePoints = landscapeRaw
-    .sort((a, b) => b.mentions - a.mentions)
-    .slice(0, 6)
-    .map((point) => ({
-      ...point,
-      x: clamp(point.authorityScore, 8, 92),
-      y: clamp((point.mentions / maxMentions) * 80 + 10, 12, 90),
-    }));
-
-  const ourPoint = landscapePoints.find((p) => p.isOurCompany);
-
-  const topicNames = (brandEntity?.topics ?? [])
-    .filter((t) => t.trim().length > 0)
-    .slice(0, 3);
-  const fallbackTopics = ["Brand visibility", "Category positioning", "Product comparisons"];
-  const shownTopics = topicNames.length ? topicNames : fallbackTopics;
-  const baseTopicScore = clamp(latest?.topicAuthority ?? 6.2, 3, 9.5);
-  const topicScores = shownTopics.map((topic, i) => ({
-    topic,
-    score: clamp(baseTopicScore * (1 - i * 0.18), 2.2, 9.8),
-  }));
 
   const siblingsByExecution = new Map<string, Array<{ name: string; rank: number | null }>>();
   for (const cit of executionCitations) {
@@ -200,8 +92,9 @@ export default async function RadarContent() {
   }
 
   const recentCitations = ownCompanyCitations.map((c) => {
-    const siblings = (siblingsByExecution.get(c.executionId) ?? [])
-      .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
+    const siblings = (siblingsByExecution.get(c.executionId) ?? []).sort(
+      (a, b) => (a.rank ?? 99) - (b.rank ?? 99)
+    );
     return {
       id: c.id,
       prompt: c.execution.prompt.query,
@@ -212,50 +105,45 @@ export default async function RadarContent() {
     };
   });
 
-  let positive = Math.round(clamp((latest?.top3Rate ?? 35) * 1.7, 32, 78));
-  let negative = Math.round(clamp(18 - (latest?.queryCoverage ?? 25) * 0.2, 3, 18));
-  let neutral = 100 - positive - negative;
-  if (neutral < 8) {
-    neutral = 8;
-    positive = Math.max(24, 100 - negative - neutral);
+  const contextAgg = new Map<string, number>();
+  for (const row of payload.citationIntelligence) {
+    for (const c of row.contextDistribution) {
+      contextAgg.set(c.label, (contextAgg.get(c.label) ?? 0) + c.count);
+    }
   }
-  negative = 100 - positive - neutral;
+  const ctxTotal = [...contextAgg.values()].reduce((a, b) => a + b, 0);
+  const contextRows = [...contextAgg.entries()]
+    .map(([label, count]) => ({
+      label,
+      count,
+      pct: ctxTotal > 0 ? Math.round((count / ctxTotal) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
 
   return (
     <div className="space-y-6">
       <section className="glass-card card-anime-float rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-foreground">Radar snapshot</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {company?.name} · {latest?.calculatedAt
-            ? new Date(latest.calculatedAt).toLocaleString()
-            : "—"}
-        </p>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <h2 className="text-sm font-semibold text-foreground">Business summary</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Estimates use reach × conversion × AOV where data exists. Label is monthly-style.</p>
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           {[
+            { label: "Revenue at risk (est.)", value: formatUsd(payload.summaryCards.revenueAtRisk30d), note: "Low win / open exposure" },
+            { label: "Revenue opportunity", value: formatUsd(payload.summaryCards.revenueOpportunity30d), note: "Top prompt picks" },
+            { label: "Quick-win bounties", value: String(payload.summaryCards.quickWinsCount), note: "Easy + reach" },
+            { label: "Published impact (30d)", value: formatUsd(payload.summaryCards.publishedImpact30d), note: "Hunted + published" },
+            { label: "Model gaps", value: String(payload.summaryCards.modelGapCount), note: "Prompts missing models" },
             {
-              label: "AI Share of Voice",
-              value: formatMetric(latest?.shareOfVoice, { suffix: "%", digits: 1 }),
-              note: "Relative mentions",
-            },
-            {
-              label: "Top-3 Mention Rate",
-              value: formatMetric(latest?.top3Rate, { suffix: "%", digits: 0 }),
-              note: "Appear in top 3",
-            },
-            {
-              label: "Query Coverage",
-              value: formatMetric(latest?.queryCoverage, { suffix: "%", digits: 1 }),
-              note: "Queries cited",
-            },
-            {
-              label: "Competitor Rank",
-              value: formatMetric(latest?.competitorRank, { prefix: "#", digits: 1 }),
-              note: "Avg position",
+              label: "Avg hours to publish",
+              value: payload.commerceLinkage.avgHoursToPublish != null ? `${payload.commerceLinkage.avgHoursToPublish}h` : "—",
+              note: `${payload.commerceLinkage.timingSampleCount} samples`,
             },
           ].map((card) => (
-            <div key={card.label} className="rounded-lg bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-4">
+            <div
+              key={card.label}
+              className="rounded-lg bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-4"
+            >
               <p className="text-[11px] font-semibold text-foreground">{card.label}</p>
-              <p className="mt-2 text-4xl font-semibold text-foreground tabular-nums tracking-tight">
+              <p className="mt-2 text-2xl font-semibold text-foreground tabular-nums tracking-tight">
                 {card.value}
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">{card.note}</p>
@@ -264,128 +152,227 @@ export default async function RadarContent() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-4">
-        {/* Left column ~70% */}
-        <div className="space-y-4">
-          <section className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-            <div className="glass-card card-anime-float rounded-xl p-4 xl:col-span-3">
-              <h3 className="text-sm font-semibold text-foreground">Top Topics Authority</h3>
-              <div className="mt-4 space-y-2">
-                {topicScores.map((row) => (
-                  <div
-                    key={row.topic}
-                    className="flex items-center justify-between rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/65 px-3 py-2"
-                  >
-                    <span className="text-xs font-medium text-foreground truncate pr-2">{row.topic}</span>
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {row.score.toFixed(1)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass-card card-anime-float rounded-xl p-4 xl:col-span-6">
-              <h3 className="text-sm font-semibold text-foreground">Competitor Landscape</h3>
-              <div className="mt-4 relative h-72 rounded-lg border border-[var(--glass-border)]/70 bg-[var(--glass)]/40 overflow-hidden">
-                <div
-                  className="absolute inset-0 opacity-55"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(to right, rgba(21,29,53,0.08) 1px, transparent 1px), linear-gradient(to top, rgba(21,29,53,0.08) 1px, transparent 1px)",
-                    backgroundSize: "20% 25%",
-                  }}
-                />
-
-                {ourPoint ? (
-                  <div
-                    className="absolute w-36 h-36 rounded-full border border-dashed border-[var(--glass-border)]/80"
-                    style={{
-                      left: `${ourPoint.x}%`,
-                      top: `${100 - ourPoint.y}%`,
-                      transform: "translate(-50%, -50%)",
-                    }}
-                  />
-                ) : null}
-
-                {landscapePoints.map((point, idx) => {
-                  const colors = [
-                    "bg-amber-400",
-                    "bg-sky-500",
-                    "bg-indigo-500",
-                    "bg-emerald-500",
-                  ];
-                  const pointColor = point.isOurCompany ? "bg-primary" : colors[idx % colors.length];
-                  return (
-                    <div
-                      key={point.name}
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
-                      style={{ left: `${point.x}%`, top: `${100 - point.y}%` }}
-                    >
-                      <div
-                        className={`h-3.5 w-3.5 rounded-full border border-white/70 shadow-sm ${pointColor}`}
-                      />
-                      <p className="mt-1 text-xs font-semibold text-foreground whitespace-nowrap">
-                        {point.name}
-                      </p>
-                    </div>
-                  );
-                })}
-
-                <p className="absolute left-3 bottom-2 text-[11px] text-muted-foreground">Topic Authority</p>
-                <p className="absolute left-2 top-3 -rotate-90 origin-left text-[11px] text-muted-foreground">
-                  Citation Frequency
-                </p>
-              </div>
-            </div>
-
-            <div className="glass-card card-anime-float rounded-xl p-4 xl:col-span-3">
-              <h3 className="text-sm font-semibold text-foreground">Recent Citations</h3>
-              <CitationsTable citations={recentCitations} ourCompanyName={ourName} />
-            </div>
-          </section>
-
-          <section className="glass-card card-anime-float rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground">Sentiment & Context</h3>
-            <div className="mt-3 overflow-hidden rounded-lg border border-[var(--glass-border)]/70">
-              <div className="flex h-10 text-sm font-semibold tabular-nums text-white">
-                <div className="bg-emerald-600 flex items-center justify-center" style={{ width: `${positive}%` }}>
-                  {positive}%
-                </div>
-                <div className="bg-slate-500 flex items-center justify-center" style={{ width: `${neutral}%` }}>
-                  {neutral}%
-                </div>
-                <div className="bg-red-500 flex items-center justify-center" style={{ width: `${negative}%` }}>
-                  {negative}%
-                </div>
-              </div>
-              <div className="grid grid-cols-3 text-[11px] text-muted-foreground border-t border-[var(--glass-border)]/60">
-                <p className="px-3 py-1.5">Positive</p>
-                <p className="px-3 py-1.5 text-center">Neutral</p>
-                <p className="px-3 py-1.5 text-right">Negative</p>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* Right column ~30% */}
+      {hasRadarMetrics ? (
         <section className="glass-card card-anime-float rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-foreground">Model History</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Recent radar runs by model</p>
-          <div className="mt-4 overflow-x-auto">
+          <h2 className="text-sm font-semibold text-foreground">Radar snapshot</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {ourName} · {latest?.calculatedAt ? new Date(latest.calculatedAt).toLocaleString() : "—"}
+          </p>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: "AI Share of Voice", value: formatMetric(latest?.shareOfVoice, { suffix: "%", digits: 1 }), note: "Relative mentions" },
+              { label: "Top-3 Mention Rate", value: formatMetric(latest?.top3Rate, { suffix: "%", digits: 0 }), note: `Benchmark ~${payload.top3BenchmarkPct}%` },
+              { label: "Query Coverage", value: formatMetric(latest?.queryCoverage, { suffix: "%", digits: 1 }), note: "Tracked queries" },
+              { label: "Rank vs competitors", value: `${formatMetric(latest?.competitorRank, { prefix: "#", digits: 1 })} vs ${formatMetric(latest?.avgRank, { prefix: "#", digits: 1 })}`, note: "Competitor vs avg" },
+            ].map((card) => (
+              <div
+                key={card.label}
+                className="rounded-lg bg-[var(--glass)]/60 border border-[var(--glass-border)]/60 p-4"
+              >
+                <p className="text-[11px] font-semibold text-foreground">{card.label}</p>
+                <p className="mt-2 text-3xl font-semibold text-foreground tabular-nums tracking-tight">
+                  {card.value}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{card.note}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      
+      {hasRadarMetrics ? (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="glass-card card-anime-float rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-foreground">Share of voice trend</h3>
+            <p className="text-xs text-muted-foreground mt-1">Recent radar runs</p>
+            <div className="mt-2 h-[240px]">
+              <SovTrendChart series={payload.sovSeries} />
+            </div>
+          </div>
+          <div className="glass-card card-anime-float rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-foreground">Model breakdown</h3>
+            <p className="text-xs text-muted-foreground mt-1">Average SoV by model</p>
+            <div className="mt-2 h-[240px]">
+              <ModelBreakdownChart rows={payload.modelBreakdown} />
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="glass-card card-anime-float rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-foreground">Citation intelligence</h2>
+        <p className="text-xs text-muted-foreground mt-1">Sorted by lowest win rate first</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--glass-border)]">
+                <th className="text-left py-2 font-medium text-muted-foreground">Prompt</th>
+                <th className="text-right py-2 font-medium text-muted-foreground">Runs</th>
+                <th className="text-right py-2 font-medium text-muted-foreground">Win %</th>
+                <th className="text-right py-2 font-medium text-muted-foreground">WRS</th>
+                <th className="text-right py-2 font-medium text-muted-foreground">Models</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payload.citationIntelligence.slice(0, 40).map((row) => (
+                <tr key={row.promptId} className="border-b border-[var(--glass-border)]/50">
+                  <td className="py-2 max-w-[240px] truncate" title={row.query}>
+                    {row.query}
+                  </td>
+                  <td className="text-right py-2 tabular-nums">{row.executionCount}</td>
+                  <td className="text-right py-2 tabular-nums">{row.winRate}%</td>
+                  <td className="text-right py-2 tabular-nums">{row.wrs}</td>
+                  <td className="text-right py-2 tabular-nums">
+                    {row.modelsCitingCount}/{row.distinctModelTotal}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold text-foreground">Citation context mix</h3>
+          {contextRows.length === 0 || (contextRows.length === 1 && contextRows[0]!.label === "unknown") ? (
+            <p className="text-xs text-muted-foreground mt-1">Insufficient context labels — enrich citations upstream.</p>
+          ) : (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {contextRows.map((c) => (
+                <li
+                  key={c.label}
+                  className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/65 px-2 py-1 text-[11px]"
+                >
+                  {c.label}: {c.pct}%
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4">
+        <div className="glass-card card-anime-float rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-foreground">Topic authority map</h2>
+          <p className="text-xs text-muted-foreground mt-1">Quadrants from win rate × topic difficulty</p>
+          <div className="mt-3 space-y-2 max-h-72 overflow-y-auto glass-scrollbar">
+            {payload.topicAuthorityMap.map((t) => (
+              <div
+                key={t.topicId}
+                className="flex items-center justify-between rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-3 py-2 text-xs"
+              >
+                <span className="font-medium truncate pr-2">{t.topicName}</span>
+                <span className="text-muted-foreground shrink-0">
+                  {t.difficulty} · {t.avgWinRate.toFixed(0)}% win ·{" "}
+                  <span className="text-foreground capitalize">{t.quadrant.replace("_", " ")}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="glass-card card-anime-float rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-foreground">Bounty priority</h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          Top 5 combined reach: {payload.bountyPriority.top5CombinedReach.toLocaleString()} · combined est. revenue:{" "}
+          {formatUsd(payload.bountyPriority.top5CombinedEstimatedRevenue)}
+        </p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--glass-border)]">
+                <th className="text-left py-2">Query</th>
+                <th className="text-right py-2">Priority</th>
+                <th className="text-right py-2">Reach</th>
+                <th className="text-right py-2">Est. $/mo</th>
+                <th className="text-left py-2">Cluster</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payload.bountyPriority.open.slice(0, 15).map((b) => (
+                <tr key={b.id} className="border-b border-[var(--glass-border)]/40">
+                  <td className="py-2 max-w-xs truncate" title={b.query}>
+                    {b.query}
+                  </td>
+                  <td className="text-right tabular-nums">{Math.round(b.priorityScore)}</td>
+                  <td className="text-right tabular-nums">{b.estimatedReach ?? "—"}</td>
+                  <td className="text-right tabular-nums">{formatUsd(b.estimatedRevenue)}</td>
+                  <td className="py-2 text-muted-foreground">{b.suggestedCluster ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4">
+          <h3 className="text-xs font-semibold text-foreground">By suggested cluster</h3>
+          <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-muted-foreground">
+            {payload.bountyPriority.clusters.slice(0, 8).map((c) => (
+              <li key={c.suggestedCluster} className="rounded-md border border-[var(--glass-border)]/60 px-2 py-1.5">
+                <span className="text-foreground font-medium">{c.suggestedCluster}</span> · {c.count} bounties · reach{" "}
+                {c.sumReach} · est. {formatUsd(c.sumEstimatedRevenue)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="glass-card card-anime-float rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-foreground">Action queue</h2>
+        <p className="text-xs text-muted-foreground mt-1">Ranked by estimated revenue × opportunity</p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-[var(--glass-border)]">
+                <th className="text-left py-2">Prompt</th>
+                <th className="text-left py-2">Model</th>
+                <th className="text-right py-2">Rank</th>
+                <th className="text-right py-2">Est. $/mo</th>
+                <th className="text-left py-2">Action</th>
+                <th className="text-left py-2">CTA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payload.actionQueue.map((row) => (
+                <tr key={`${row.promptId}-${row.model}`} className="border-b border-[var(--glass-border)]/40">
+                  <td className="py-2 max-w-[200px] truncate" title={row.query}>
+                    {row.query}
+                  </td>
+                  <td className="py-2">{row.model}</td>
+                  <td className="text-right tabular-nums">
+                    {row.isMentioned ? row.latestRank ?? "—" : "—"}
+                  </td>
+                  <td className="text-right tabular-nums">{formatUsd(row.estimatedRevenue)}</td>
+                  <td className="py-2 capitalize">{row.actionType?.replace("_", " ") ?? "—"}</td>
+                  <td className="py-2 font-mono text-[10px]">{row.recommendedCta}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      < section className="grid grid-cols-1 xl:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] gap-4">
+        <div className="glass-card card-anime-float rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-foreground">Recent citations</h3>
+          <CitationsTable citations={recentCitations} ourCompanyName={ourName} />
+        </div>
+        <div className="glass-card card-anime-float rounded-xl p-5">
+          <h2 className="text-sm font-semibold text-foreground">Model history</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Recent radar metrics</p>
+          <div className="mt-4 overflow-x-auto max-h-96 overflow-y-auto glass-scrollbar">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-[var(--glass-border)]">
                   <th className="text-left py-2 font-medium text-muted-foreground">Model</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Share of voice</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Top 3 rate</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Query coverage</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">SoV</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Top 3</th>
+                  <th className="text-right py-2 font-medium text-muted-foreground">Coverage</th>
                   <th className="text-right py-2 font-medium text-muted-foreground">Calculated</th>
                 </tr>
               </thead>
               <tbody>
-                {normalizedMetrics.map((m) => (
-                  <tr key={m.id} className="border-b border-[var(--glass-border)]/50 hover:bg-[var(--glass-hover)]/30">
+                {payload.metrics.map((m) => (
+                  <tr key={m.id} className="border-b border-[var(--glass-border)]/50">
                     <td className="py-2.5 font-medium text-foreground">{m.model}</td>
                     <td className="text-right py-2.5 tabular-nums">
                       {m.shareOfVoice != null ? `${m.shareOfVoice.toFixed(1)}%` : "—"}
@@ -404,7 +391,7 @@ export default async function RadarContent() {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </section>
     </div>
   );

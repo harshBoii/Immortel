@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ShopifyAdminError, shopifyGraphql } from "@/lib/shopify/admin";
+import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
 
 const BLOG_CHANNEL_HANDLE = "vlogs";
 
@@ -422,6 +423,12 @@ export async function POST(
       { status: 400 }
     );
   }
+
+  await prisma.citationBounty.update({
+    where: { id: bountyId },
+    data: { publishedAt: new Date() },
+  });
+  await syncBountyRevenueForCompany(prisma, companyId);
 
   return NextResponse.json({
     success: true,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
+import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
 
 function buildPriceString(params: {
   priceMinAmount?: string | null;
@@ -290,6 +291,8 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
         generationContext: payload as unknown as Prisma.InputJsonValue,
       },
     });
+
+    await syncBountyRevenueForCompany(prisma, companyId);
 
     const response = { success: true, aeoPageId: aeoPage.id };
     console.log("[geo/bounty/hunt] returning response", response);
