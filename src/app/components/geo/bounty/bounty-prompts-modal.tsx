@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { BountyNiche } from "./bounty-table";
+import type { BountyNiche, BountyNichePrompt } from "./bounty-table";
+import { RevenueChip } from "@/app/components/geo/revenue-chip";
 
 type BountyPromptsModalProps = {
   bounty: BountyNiche | null;
@@ -75,11 +76,13 @@ export function BountyPromptsModal({ bounty, onClose }: BountyPromptsModalProps)
             Prompts ({bounty.prompts.length})
           </p>
           <ul className="space-y-3">
-            {bounty.prompts.map((p) => (
-              <li key={p.id}>
-                <GetCitedRow query={p.query} />
-              </li>
-            ))}
+            {bounty.prompts
+              .filter((p): p is BountyNichePrompt => Boolean(p?.id && typeof p.query === "string"))
+              .map((p) => (
+                <li key={p.id}>
+                  <GetCitedRow prompt={p} />
+                </li>
+              ))}
           </ul>
         </div>
       </div>
@@ -87,7 +90,9 @@ export function BountyPromptsModal({ bounty, onClose }: BountyPromptsModalProps)
   );
 }
 
-function GetCitedRow({ query }: { query: string }) {
+function GetCitedRow({ prompt }: { prompt: BountyNichePrompt }) {
+  const query = prompt?.query?.trim() ?? "";
+  if (!prompt || !query) return null;
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -119,7 +124,15 @@ function GetCitedRow({ query }: { query: string }) {
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-[var(--glass-border)]/70 bg-[var(--glass)]/50 p-3">
-      <p className="text-sm text-foreground">{query}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-foreground min-w-0 flex-1">{query}</p>
+        <RevenueChip
+          amount={prompt.resolvedRevenue ?? 0}
+          tooltipTitle="Prompt revenue estimate"
+          breakdown={prompt.revenueBreakdown ?? undefined}
+          size="sm"
+        />
+      </div>
       <div className="flex items-center gap-2 flex-wrap">
         <button
           type="button"

@@ -89,6 +89,25 @@ const IconRadar = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconKnight = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18 20H7a2 2 0 0 1-2-2v-1l3-3v-4l-3-2V6l4-2 3 2h2l3-3h2l-1 4-2 2v9a2 2 0 0 1-2 2Z" />
+    <path d="M7 20h13" />
+    <circle cx="11.5" cy="8.5" r="0.5" />
+  </svg>
+);
+
 const IconTarget = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10" />
@@ -268,6 +287,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconDatabase} label="Data Mine" href="/geo/data-mine" />
           <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" />
           <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
+          <SecondaryNavItem icon={IconKnight} label="GeoKnight" href="/geo/geoknight" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
           <SecondaryNavItem icon={IconFileText} label="Generated Bounty Pages" href="/geo/bounty-pages" />
         </>

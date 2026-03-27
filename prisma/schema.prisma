@@ -546,13 +546,16 @@ model Prompt {
   topic      String?           @db.VarChar(255)
   topicId    String?
   reason     String?
+  expectedRevenue Float?
   intent     String?           @db.VarChar(100)
   isActive   Boolean           @default(true)
   createdAt  DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
+
   executions PromptExecution[]
   llmTopic   LlmTopic?         @relation("LlmTopicPrompts", fields: [topicId], references: [id])
   llmPromptMetrics LlmPromptMetric[]
+  revenue PromptRevenue?
   rivalByModel PromptRivalByModel[]
   rivalConsensus PromptRivalConsensus[]
 
@@ -560,6 +563,23 @@ model Prompt {
   @@index([topic])
   @@index([topicId])
   @@map("llm_prompts")
+}
+
+model PromptRevenue {
+  id                 String   @id @default(cuid())
+  promptId           String   @unique
+  monthlyPromptReach Float?
+  visibilityWeight   Float?
+  ctr                Float?
+  cvr                Float?
+  aov                Float?
+  estimatedRevenue   Float?
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  prompt             Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([estimatedRevenue])
+  @@map("llm_prompt_revenues")
 }
 
 model PromptExecution {

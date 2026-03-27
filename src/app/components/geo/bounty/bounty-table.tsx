@@ -1,22 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import type { BountyFilterTab } from "./bounty-filter-tabs";
 import { DifficultyBadge } from "./difficulty-badge";
 import { BountyPromptsModal } from "./bounty-prompts-modal";
+import { RevenueChip, type RevenueBreakdown } from "@/app/components/geo/revenue-chip";
+
+export type BountyNichePrompt = {
+  id: string;
+  query: string;
+  resolvedRevenue: number;
+  revenueBreakdown: RevenueBreakdown | null;
+};
 
 export type BountyNiche = {
   id: string;
   topic: string;
   description: string;
   difficulty: string;
-  prompts: Array<{ id: string; query: string }>;
+  createdAt: string;
+  topicEstimatedRevenue: number;
+  prompts: BountyNichePrompt[];
   prompt_count: number;
 };
 
 type BountyTableProps = {
   niches: BountyNiche[];
-  filter: BountyFilterTab;
+  /** When filters yield no rows but the company has topics, show a different empty message. */
+  hadTopicsBeforeFilter?: boolean;
 };
 
 const ENGINES_COLORS = [
@@ -26,20 +36,19 @@ const ENGINES_COLORS = [
   "bg-[var(--chart-4)]",
 ];
 
-function filterNiches(niches: BountyNiche[], filter: BountyFilterTab): BountyNiche[] {
-  if (filter === "all") return niches;
-  return niches.filter((n) => n.difficulty.toLowerCase() === filter);
-}
-
-export function BountyTable({ niches, filter }: BountyTableProps) {
+export function BountyTable({
+  niches,
+  hadTopicsBeforeFilter = false,
+}: BountyTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modalBounty, setModalBounty] = useState<BountyNiche | null>(null);
-  const filtered = filterNiches(niches, filter);
 
-  if (filtered.length === 0) {
+  if (niches.length === 0) {
     return (
       <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)] p-8 text-center text-sm text-muted-foreground">
-        No niches yet. Run a scan to discover topics and prompts.
+        {hadTopicsBeforeFilter
+          ? "No topics match your filters or search. Try clearing filters or broadening your search."
+          : "No niches yet. Run a scan to discover topics and prompts."}
       </div>
     );
   }
@@ -68,7 +77,7 @@ export function BountyTable({ niches, filter }: BountyTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--glass-border)]/60">
-            {filtered.map((row) => {
+            {niches.map((row) => {
               const isExpanded = expandedId === row.id;
               return (
                 <tr
@@ -76,15 +85,25 @@ export function BountyTable({ niches, filter }: BountyTableProps) {
                   className="transition-colors hover:bg-[var(--glass-hover)]/40"
                 >
                   <td className="px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setExpandedId(isExpanded ? null : row.id)
-                      }
-                      className="text-left font-medium text-foreground hover:underline"
-                    >
-                      {row.topic}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedId(isExpanded ? null : row.id)
+                        }
+                        className="text-left font-medium text-foreground hover:underline"
+                      >
+                        {row.topic}
+                      </button>
+                      <RevenueChip
+                        amount={row.topicEstimatedRevenue}
+                        tooltipTitle="Estimated revenue for this topic"
+                        tooltipLines={[
+                          "Sum of estimates for each distinct prompt query (duplicates counted once). Combines PromptRevenue and citation bounty fallback per query.",
+                        ]}
+                        size="md"
+                      />
+                    </div>
                     {row.description && (
                       <p className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
                         {row.description.slice(0, 120)}
@@ -138,7 +157,7 @@ export function BountyTable({ niches, filter }: BountyTableProps) {
       </div>
 
       {expandedId && (() => {
-        const row = filtered.find((r) => r.id === expandedId);
+        const row = niches.find((r) => r.id === expandedId);
         if (!row) return null;
         return (
           <div
@@ -158,13 +177,30 @@ export function BountyTable({ niches, filter }: BountyTableProps) {
                 Close
               </button>
             </div>
-            <ul className="mt-2 max-h-60 space-y-1 overflow-y-auto glass-scrollbar pr-2">
-              {row.prompts.map((p) => (
+            <ul className="mt-2 max-h-60 space-y-2 overflow-y-auto glass-scrollbar pr-2">
+              {[...row.prompts]
+                .sort(
+                  (a, b) =>
+                    b.resolvedRevenue - a.resolvedRevenue ||
+                    a.query.localeCompare(b.query)
+                )
+                .map((p) => (
                 <li
                   key={p.id}
-                  className="text-xs text-foreground"
+                  className="flex flex-wrap items-center justify-between gap-2 text-xs text-foreground"
                 >
-                  {p.query}
+                  <span className="min-w-0 flex-1">{p.query}</span>
+                  <RevenueChip
+                    amount={p.resolvedRevenue}
+                    tooltipTitle="Prompt revenue estimate"
+                    tooltipLines={[
+                      "From PromptRevenue or citation bounty estimate for this query.",
+                    ]}
+                    breakdown={
+                      p.revenueBreakdown ?? undefined
+                    }
+                    size="sm"
+                  />
                 </li>
               ))}
             </ul>

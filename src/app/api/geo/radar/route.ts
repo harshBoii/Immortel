@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Agent } from "undici";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
@@ -7,6 +8,33 @@ import {
   resolveTopicIdForPromptQuery,
 } from "@/lib/geo/radar/persistPromptMetrics";
 import { buildRadarGetPayload } from "@/lib/geo/radar/buildRadarGetPayload";
+
+const radarDispatcher = new Agent({
+  // Default undici header timeout can be too aggressive for slow LLM workflows.
+  headersTimeout: 420_000, // 7 min
+  bodyTimeout: 600_000, // 10 min
+});
+
+async function fetchRadarWithRetry(url: string, init: RequestInit, retries = 2) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fetch(url, {
+        ...(init as any),
+        dispatcher: radarDispatcher,
+      } as RequestInit);
+    } catch (err) {
+      lastErr = err;
+      const code = (err as any)?.cause?.code ?? (err as any)?.code;
+      const isHeaderTimeout = code === "UND_ERR_HEADERS_TIMEOUT";
+      const isFetchFailed = String((err as any)?.message ?? "").includes("fetch failed");
+      if (attempt >= retries || (!isHeaderTimeout && !isFetchFailed)) throw err;
+      const backoffMs = 750 * Math.pow(2, attempt);
+      await new Promise((r) => setTimeout(r, backoffMs));
+    }
+  }
+  throw lastErr;
+}
 
 type RadarInput = {
   company: { name: string; website: string; linkedin: string; about?: string };
@@ -32,6 +60,12 @@ type RadarInput = {
 type RadarOutput = {
   topics: string[];
   prompts: string[];
+  raw_responses_with_prompt?: Array<{
+    prompt: string;
+    model: string;
+    response: string;
+    error?: string | null;
+  }>;
   citations: Array<{
     prompt: string;
     model: string;
@@ -45,6 +79,7 @@ type RadarOutput = {
     topic_authority: number;
   };
   topic_prompt_analysis?: TopicPromptAnalysisItem[];
+  revenue_by_prompt?: Record<string, PromptRevenuePayload>;
 };
 
 type RadarMetrics = RadarOutput["metrics"];
@@ -60,6 +95,7 @@ type TopicPromptAnalysisPromptItem = {
   prompt: string;
   link?: string;
   reason?: string;
+  estimated_revenue?: number | null;
   cited_companies_by_model?: Array<{
     model: string;
     companies: Array<{ name: string; rank?: number | null }>;
@@ -69,6 +105,15 @@ type TopicPromptAnalysisPromptItem = {
     avg_rank?: number | null;
     mentions?: number | null;
   }>;
+};
+
+type PromptRevenuePayload = {
+  monthlyPromptReach?: number | null;
+  visibilityWeight?: number | null;
+  ctr?: number | null;
+  cvr?: number | null;
+  aov?: number | null;
+  estimatedRevenue?: number | null;
 };
 
 type RadarServiceResponse =
@@ -98,6 +143,11 @@ function normalizeRadarMetrics(metrics: RadarMetrics): RadarMetrics {
     competitor_rank: metrics.competitor_rank,
     topic_authority: metrics.topic_authority,
   };
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return value;
 }
 
 export async function POST() {
@@ -230,15 +280,28 @@ export async function POST() {
   let payload: RadarServiceResponse;
 
   try {
-    const res = await fetch(radarUrl, {
+    const requestPayload = {
+      ...input,
+      session_id: `company-radar-${companyId}`,
+    };
+
+
+    // console.log(
+    //     "[geo/radar] POST /company/radar payload:",
+    //     JSON.stringify(requestPayload, null, 2)
+    //   );
+
+
+    const res = await fetchRadarWithRetry(radarUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...input,
-        session_id: `company-radar-${companyId}`,
+        ...requestPayload,
       }),
     });
 
+
+    
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       return NextResponse.json(
@@ -293,6 +356,13 @@ export async function POST() {
   const topicPromptAnalysis = Array.isArray(radarOutput.topic_prompt_analysis)
     ? radarOutput.topic_prompt_analysis
     : [];
+  const revenueByPrompt =
+    radarOutput.revenue_by_prompt && typeof radarOutput.revenue_by_prompt === "object"
+      ? radarOutput.revenue_by_prompt
+      : {};
+  const rawResponses = Array.isArray(radarOutput.raw_responses_with_prompt)
+    ? radarOutput.raw_responses_with_prompt
+    : [];
   const topicReasonByName = new Map<string, string | null>();
   for (const item of topicPromptAnalysis) {
     const name = item.topic?.trim();
@@ -332,6 +402,7 @@ export async function POST() {
     {
       topicName: string;
       reason: string | null;
+      estimatedRevenue: number | null;
       byModel: NonNullable<TopicPromptAnalysisPromptItem["cited_companies_by_model"]>;
       consensus: NonNullable<TopicPromptAnalysisPromptItem["cited_companies_consensus"]>;
     }
@@ -345,6 +416,7 @@ export async function POST() {
       analysisPromptMeta.set(q, {
         topicName,
         reason: p.reason?.trim() || null,
+        estimatedRevenue: toNullableNumber(p.estimated_revenue),
         byModel: p.cited_companies_by_model ?? [],
         consensus: p.cited_companies_consensus ?? [],
       });
@@ -355,6 +427,8 @@ export async function POST() {
     ...new Set([
       ...radarOutput.citations.map((c) => c.prompt),
       ...(radarOutput.prompts ?? []),
+      ...rawResponses.map((r) => r.prompt),
+      ...Object.keys(revenueByPrompt),
       ...[...analysisPromptMeta.keys()],
     ]),
   ];
@@ -405,20 +479,80 @@ export async function POST() {
     promptMap.set(promptQuery, { id: created.id, topicId });
   }
 
+  const promptRevenueRows = Object.entries(revenueByPrompt)
+    .map(([query, payload]) => {
+      const normalizedQuery = query?.trim();
+      if (!normalizedQuery) return null;
+      const promptId = promptMap.get(normalizedQuery)?.id;
+      if (!promptId) return null;
+      return {
+        promptId,
+        monthlyPromptReach: toNullableNumber(payload?.monthlyPromptReach),
+        visibilityWeight: toNullableNumber(payload?.visibilityWeight),
+        ctr: toNullableNumber(payload?.ctr),
+        cvr: toNullableNumber(payload?.cvr),
+        aov: toNullableNumber(payload?.aov),
+        estimatedRevenue:
+          toNullableNumber(payload?.estimatedRevenue) ??
+          toNullableNumber(analysisPromptMeta.get(normalizedQuery)?.estimatedRevenue),
+      };
+    })
+    .filter(
+      (
+        row
+      ): row is {
+        promptId: string;
+        monthlyPromptReach: number | null;
+        visibilityWeight: number | null;
+        ctr: number | null;
+        cvr: number | null;
+        aov: number | null;
+        estimatedRevenue: number | null;
+      } => Boolean(row)
+    );
+
+  for (const row of promptRevenueRows) {
+    await prisma.promptRevenue.upsert({
+      where: { promptId: row.promptId },
+      create: row,
+      update: row,
+    });
+  }
+
   const execMap = new Map<string, string>();
+  const rawResponseByPair = new Map<
+    string,
+    { response: string; error: string | null | undefined }
+  >();
+  for (const item of rawResponses) {
+    const prompt = item.prompt?.trim();
+    const model = item.model?.trim();
+    if (!prompt || !model) continue;
+    const key = `${prompt}|||${model}`;
+    rawResponseByPair.set(key, { response: item.response ?? "", error: item.error });
+  }
   const uniqueExecPairs = [
-    ...new Set(radarOutput.citations.map((c) => `${c.prompt}|||${c.model}`)),
+    ...new Set([
+      ...radarOutput.citations.map((c) => `${c.prompt}|||${c.model}`),
+      ...[...rawResponseByPair.keys()],
+    ]),
   ];
 
   for (const pair of uniqueExecPairs) {
     const [promptQuery, model] = pair.split("|||");
     const promptId = promptMap.get(promptQuery)?.id;
     if (!promptId) continue;
+    const rawEntry = rawResponseByPair.get(pair);
+    const rawResponse = rawEntry?.response?.trim() ?? "";
+    const rawError = rawEntry?.error?.trim() ?? "";
+    const executionResponse =
+      rawResponse ||
+      (rawError ? `[error] ${rawError}` : "");
     const exec = await prisma.promptExecution.create({
       data: {
         promptId,
         model,
-        response: "",
+        response: executionResponse,
       },
     });
     execMap.set(`${promptId}:${model}`, exec.id);
@@ -507,10 +641,51 @@ export async function POST() {
     }
 
     if (byModelRows.length) {
-      await prisma.promptRivalByModel.createMany({ data: byModelRows });
+      const byModelUnique = new Map<
+        string,
+        { promptId: string; model: string; companyName: string; rank: number | null }
+      >();
+      for (const row of byModelRows) {
+        const key = `${row.promptId}|||${row.model}|||${row.companyName.toLowerCase()}`;
+        const prev = byModelUnique.get(key);
+        if (!prev || (row.rank ?? 999) < (prev.rank ?? 999)) {
+          byModelUnique.set(key, row);
+        }
+      }
+      await prisma.promptRivalByModel.createMany({
+        data: [...byModelUnique.values()],
+        skipDuplicates: true,
+      });
     }
     if (consensusRows.length) {
-      await prisma.promptRivalConsensus.createMany({ data: consensusRows });
+      const consensusUnique = new Map<
+        string,
+        { promptId: string; companyName: string; avgRank: number | null; mentions: number }
+      >();
+      for (const row of consensusRows) {
+        const key = `${row.promptId}|||${row.companyName.toLowerCase()}`;
+        const prev = consensusUnique.get(key);
+        if (!prev) {
+          consensusUnique.set(key, row);
+          continue;
+        }
+        const mergedMentions = Math.max(prev.mentions, row.mentions);
+        const mergedAvgRank =
+          prev.avgRank == null
+            ? row.avgRank
+            : row.avgRank == null
+              ? prev.avgRank
+              : Math.min(prev.avgRank, row.avgRank);
+        consensusUnique.set(key, {
+          ...prev,
+          mentions: mergedMentions,
+          avgRank: mergedAvgRank,
+        });
+      }
+      await prisma.promptRivalConsensus.createMany({
+        data: [...consensusUnique.values()],
+        skipDuplicates: true,
+      });
     }
   }
 

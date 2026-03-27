@@ -1,10 +1,13 @@
-export default function Home() {
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-semibold text-foreground font-heading">Home</h1>
-      <p className="mt-2 text-muted-foreground">
-        Welcome. Use the sidebar to navigate.
-      </p>
-    </div>
-  );
+import { OverviewDashboard } from "@/app/components/home/OverviewDashboard";
+import { getSession } from "@/lib/auth";
+import { getHomeOverviewStats } from "@/lib/home/getHomeOverviewStats";
+import { redirect } from "next/navigation";
+
+export default async function Home() {
+  const session = await getSession();
+  if (!session?.companyId) redirect("/login");
+
+  const snapshot = await getHomeOverviewStats(session.companyId);
+
+  return <OverviewDashboard snapshot={snapshot} />;
 }

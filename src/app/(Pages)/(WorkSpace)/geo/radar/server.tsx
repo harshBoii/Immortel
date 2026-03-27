@@ -57,7 +57,7 @@ export default async function RadarContent() {
     }),
   ]);
 
-  console.log(payload);
+
   
   const hasRadarMetrics = payload.metrics.length > 0;
   const hasIntel = payload.citationIntelligence.length > 0;
