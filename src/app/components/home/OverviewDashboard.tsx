@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import WelcomeAnimation from "../animations/welcome";
 
 import type { HomeOverviewSnapshot } from "@/lib/home/getHomeOverviewStats";
 
@@ -135,6 +136,7 @@ export function OverviewDashboard({
           </section>
 
           <div className="flex flex-col gap-4 lg:col-span-5 lg:-mt-2 lg:justify-end">
+            <WelcomeAnimation />
             <section className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-4 shadow-sm lg:translate-x-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--sibling-accent)]">
                 Company snapshot
