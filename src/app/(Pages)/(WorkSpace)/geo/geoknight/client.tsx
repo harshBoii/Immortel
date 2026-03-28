@@ -29,6 +29,8 @@ export type PromptView = {
   id: string;
   query: string;
   reason: string | null;
+  /** ISO timestamp for client-side sort (recent prompts first, etc.) */
+  createdAt: string;
   revenue: PromptRevenueView;
   consensus: RivalConsensus[];
   byModel: RivalByModel[];
@@ -39,6 +41,8 @@ export type TopicView = {
   name: string;
   reason: string | null;
   difficulty: "EASY" | "MEDIUM" | "HARD";
+  /** ISO timestamp for client-side sort (recent topics first, etc.) */
+  createdAt: string;
   prompts: PromptView[];
 };
 
@@ -46,8 +50,25 @@ function rankText(rank: number | null) {
   return rank == null ? "—" : `#${Math.round(rank * 10) / 10}`;
 }
 
-type SortMode = "mostPrompts" | "fewestPrompts" | "name";
+type SortMode = "recentTopics" | "mostPrompts" | "fewestPrompts" | "name";
 type DifficultyFilter = "ALL" | "EASY" | "MEDIUM" | "HARD";
+type PromptSortMode = "recentFirst" | "oldestFirst" | "queryAz";
+
+function sortPromptsForDisplay(prompts: PromptView[], mode: PromptSortMode): PromptView[] {
+  const copy = [...prompts];
+  if (mode === "recentFirst") {
+    copy.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  } else if (mode === "oldestFirst") {
+    copy.sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+  } else {
+    copy.sort((a, b) => a.query.localeCompare(b.query));
+  }
+  return copy;
+}
 
 function uniqueCompanyNamesForPrompt(prompt: PromptView): string[] {
   const names = new Set<string>();
@@ -74,6 +95,10 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
   const [q, setQ] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("mostPrompts");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("ALL");
+  /** Per-topic prompt order (default: recent first). */
+  const [promptSortByTopicId, setPromptSortByTopicId] = useState<
+    Record<string, PromptSortMode>
+  >({});
   const [simOpen, setSimOpen] = useState(false);
   const [simPrompt, setSimPrompt] = useState<{ id: string; query: string } | null>(null);
   const [simLoading, setSimLoading] = useState(false);
@@ -125,7 +150,11 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
     }
 
     const clone = [...rows];
-    if (sortMode === "name") {
+    if (sortMode === "recentTopics") {
+      clone.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    } else if (sortMode === "name") {
       clone.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortMode === "fewestPrompts") {
       clone.sort((a, b) => a.prompts.length - b.prompts.length);
@@ -182,6 +211,7 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
           onChange={(e) => setSortMode(e.target.value as SortMode)}
           className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/70 px-3 py-2 text-sm outline-none focus:border-[var(--sibling-primary)]"
         >
+          <option value="recentTopics">Sort: Recent topics first</option>
           <option value="mostPrompts">Sort: Most prompts first</option>
           <option value="fewestPrompts">Sort: Fewest prompts first</option>
           <option value="name">Sort: Topic name A-Z</option>
@@ -255,7 +285,31 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                     No prompts linked to this topic.
                   </p>
                 ) : (
-                  topic.prompts.map((prompt) => (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/40 px-3 py-2">
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        Prompts in this topic
+                      </span>
+                      <select
+                        value={promptSortByTopicId[topic.id] ?? "recentFirst"}
+                        onChange={(e) =>
+                          setPromptSortByTopicId((prev) => ({
+                            ...prev,
+                            [topic.id]: e.target.value as PromptSortMode,
+                          }))
+                        }
+                        className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/70 px-2 py-1.5 text-[11px] outline-none focus:border-[var(--sibling-primary)]"
+                        aria-label={`Sort prompts for ${topic.name}`}
+                      >
+                        <option value="recentFirst">Recent prompts first</option>
+                        <option value="oldestFirst">Oldest prompts first</option>
+                        <option value="queryAz">Prompt text A–Z</option>
+                      </select>
+                    </div>
+                    {sortPromptsForDisplay(
+                      topic.prompts,
+                      promptSortByTopicId[topic.id] ?? "recentFirst"
+                    ).map((prompt) => (
                     <div
                       key={prompt.id}
                       className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/55 p-4 space-y-3"
@@ -405,7 +459,8 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                         </div>
                       </div>
                     </div>
-                  ))
+                    ))}
+                  </>
                 )}
               </div>
             </details>

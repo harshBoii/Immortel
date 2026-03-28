@@ -40,6 +40,7 @@ export default async function GeoKnightPage() {
           id: true,
           query: true,
           reason: true,
+          createdAt: true,
           revenue: {
             select: {
               monthlyPromptReach: true,
@@ -109,10 +110,12 @@ export default async function GeoKnightPage() {
     name: topic.name,
     reason: topic.reason ?? topic.description ?? null,
     difficulty: topic.difficulty,
+    createdAt: topic.createdAt.toISOString(),
     prompts: topic.prompts.map((prompt) => ({
       id: prompt.id,
       query: prompt.query,
       reason: prompt.reason ?? null,
+      createdAt: prompt.createdAt.toISOString(),
       revenue: (() => {
         const rev = prompt.revenue;
         if (!rev) return null;
