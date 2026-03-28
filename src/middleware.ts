@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isLoginPage = pathname === '/login';
+  const isLandingPage = pathname === '/landing';
   const isAuthApi = pathname.startsWith('/api/auth');
   const isCronApi = pathname.startsWith('/api/cron');
   const isVideosDownloadApi =
@@ -33,6 +34,7 @@ export function middleware(request: NextRequest) {
 
   const isPublic =
     isLoginPage ||
+    isLandingPage ||
     isAuthApi ||
     isCronApi ||
     isVideosDownloadApi ||
@@ -56,9 +58,9 @@ export function middleware(request: NextRequest) {
   }
 
   if (!hasValidAuthCookie(request)) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(loginUrl);
+    const landingUrl = new URL('/landing', request.url);
+    landingUrl.searchParams.set('from', pathname);
+    return NextResponse.redirect(landingUrl);
   }
 
   return NextResponse.next();
