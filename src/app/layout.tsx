@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   title: "Immortel",
   description: "Next.js app with Prisma and API routes",
   icons: {
-    icon: "/Immortel_Logo.png",
+    icon: "/Immortel_Logo_Dark.png",
   },
 };
 export default function RootLayout({

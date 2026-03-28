@@ -169,15 +169,15 @@ export default function AuthPage() {
 
       {/* Logo + glow ring */}
       <div className="relative flex items-center justify-center">
-        <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-[#d4500a]/20 via-violet-400/10 to-transparent blur-2xl" />
-        <div className="relative w-20 h-20 rounded-2xl bg-white border border-[var(--glass-border)] shadow-lg flex items-center justify-center">
+        <div className="absolute w-44 h-44 rounded-full bg-gradient-to-br from-[#d4500a]/20 via-violet-400/10 to-transparent blur-2xl" />
+        <div className="relative w-32 h-32 rounded-2xl bg-white border border-[var(--glass-border)] shadow-lg flex items-center justify-center">
           <Image
-            src="/Immortel_Logo.png"
+            src="/Immortel_Logo_Dark.png"
             alt="Immortell"
             fill
             className="object-contain object-center p-2"
             priority
-            sizes="80px"
+            sizes="128px"
           />
         </div>
         {/* Live status dot */}
@@ -200,19 +200,15 @@ export default function AuthPage() {
           {
             label: 'Rank in AI Search',
             color: 'from-[#d4500a] to-[#f26820]',
-            bg: 'bg-[#d4500a]/8',
-            border: 'border-[#d4500a]/20',
           },
           {
             label: 'Convert What It Sends',
             color: 'from-violet-500 to-blue-500',
-            bg: 'bg-violet-500/8',
-            border: 'border-violet-400/20',
           },
         ].map((badge) => (
           <span
             key={badge.label}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${badge.bg} ${badge.border}`}
+            className="glass-card !rounded-full px-3.5 py-1.5 text-xs font-semibold hover:!translate-y-0"
           >
             <span className={`bg-gradient-to-r ${badge.color} bg-clip-text text-transparent`}>
               {badge.label}

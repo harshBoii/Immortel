@@ -203,6 +203,17 @@ async function ensureBlogChannel(opts: {
   return { blogId, existing: false };
 }
 
+function storefrontBlogArticleUrl(opts: {
+  shopDomain: string;
+  blogHandle: string;
+  articleHandle: string;
+}): string {
+  const host = opts.shopDomain.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  const blog = opts.blogHandle.trim();
+  const handle = opts.articleHandle.trim();
+  return `https://${host}/blogs/${blog}/${handle}`;
+}
+
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function POST(
@@ -401,6 +412,19 @@ export async function POST(
   const userErrors = res.data.articleCreate.userErrors ?? [];
 
   if (userErrors.length > 0 && article?.id) {
+    const publishedCanonical =
+      article.handle &&
+      storefrontBlogArticleUrl({
+        shopDomain: shop.shopDomain,
+        blogHandle: BLOG_CHANNEL_HANDLE,
+        articleHandle: article.handle,
+      });
+    if (publishedCanonical) {
+      await prisma.aeoPage.update({
+        where: { id: aeoPage.id },
+        data: { canonicalUrl: publishedCanonical },
+      });
+    }
     console.warn("[geo/approve-shopify] articleCreate partial success", {
       bountyId,
       articleId: article.id,
@@ -410,7 +434,12 @@ export async function POST(
       {
         success: false,
         error: "Article created with userErrors (partial success)",
-        data: { articleId: article.id, blogId, channelHandle: BLOG_CHANNEL_HANDLE },
+        data: {
+          articleId: article.id,
+          blogId,
+          channelHandle: BLOG_CHANNEL_HANDLE,
+          canonicalUrl: publishedCanonical ?? undefined,
+        },
         userErrors,
       },
       { status: 207 }
@@ -424,6 +453,20 @@ export async function POST(
     );
   }
 
+  const publishedCanonical =
+    article?.handle &&
+    storefrontBlogArticleUrl({
+      shopDomain: shop.shopDomain,
+      blogHandle: BLOG_CHANNEL_HANDLE,
+      articleHandle: article.handle,
+    });
+  if (publishedCanonical) {
+    await prisma.aeoPage.update({
+      where: { id: aeoPage.id },
+      data: { canonicalUrl: publishedCanonical },
+    });
+  }
+
   await prisma.citationBounty.update({
     where: { id: bountyId },
     data: { publishedAt: new Date() },
@@ -432,6 +475,11 @@ export async function POST(
 
   return NextResponse.json({
     success: true,
-    data: { article, blogId, channelHandle: BLOG_CHANNEL_HANDLE },
+    data: {
+      article,
+      blogId,
+      channelHandle: BLOG_CHANNEL_HANDLE,
+      canonicalUrl: publishedCanonical ?? undefined,
+    },
   });
 }

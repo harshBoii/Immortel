@@ -100,7 +100,7 @@ export function OverviewDashboard({
               <div className="relative mb-5 min-h-[34.75rem] w-full sm:min-h-[5.5rem] lg:mb-7 lg:min-h-[28.5rem] lg:flex-1 ">
                 <div className="absolute inset-0">
                   <Image
-                    src="/Immortel_Logo.png"
+                    src="/Immortel_Logo_Dark.png"
                     alt="Immortel"
                     fill
                     className="object-cover object-center"

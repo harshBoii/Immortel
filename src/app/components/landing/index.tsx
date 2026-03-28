@@ -287,11 +287,11 @@ export default function ImmortelLanding() {
         <Link href="/" className="nav-logo">
           <div className="nav-mark">
             <Image
-              src="/Immortel_Logo.png"
+              src="/Immortel_Logo_Dark.png"
               alt="Immortell"
-              width={30}
-              height={30}
+              fill
               className="nav-mark-img"
+              sizes="68px"
               priority
             />
           </div>
