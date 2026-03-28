@@ -1,5 +1,6 @@
 'use client';
 
+import LoginBottomAnimation from '@/app/components/animations/login/bottom';
 import CurvedLoop from '@/app/components/CircularText';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
@@ -11,6 +12,12 @@ const WORKSPACE_TYPES = [
   { value: 'TEAM', label: 'Team', description: 'For small teams (2-50 members)', icon: '👥' },
   { value: 'ENTERPRISE', label: 'Enterprise', description: 'For large organizations (50+ members)', icon: '🏢' },
 ];
+
+const LOGIN_LEFT_SLOGANS = [
+  'Own how AI talks about your brand.',
+  'Your videos, made immortal — and working for you.',
+  'Generative engine optimization, one workspace.',
+] as const;
 
 export default function AuthPage() {
   const router = useRouter();
@@ -132,23 +139,147 @@ export default function AuthPage() {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen w-screen font-sans">
-      {/* Left wallpaper */}
-      <motion.div
-        initial={{ opacity: 0, x: -50 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full lg:w-1/2 relative min-h-[50vh] lg:min-h-screen items-center justify-center hidden lg:flex overflow-hidden bg-gradient-to-br from-primary via-violet-500 to-blue-500"
+      {/* Left: 30% Immortel cover (80% width) · 30% slogans · 40% Lottie */}
+      {/* ── LEFT PANEL ─────────────────────────────────────────────────────── */}
+<motion.div
+  initial={{ opacity: 0, x: -50 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ duration: 0.8 }}
+  className="hidden lg:grid w-full lg:w-1/2 lg:h-screen grid-rows-[60%_40%] overflow-hidden bg-gradient-to-br from-background via-background to-primary/5"
+>
+  {/* ── TOP 60% ─────────────────────────────────────────────────── */}
+  <div className="relative flex flex-col overflow-hidden">
+
+    {/* Ambient glows — soft, light-mode friendly */}
+    <div className="pointer-events-none absolute -top-16 -left-16 w-72 h-72 rounded-full bg-[#d4500a]/10 blur-[90px]" />
+    <div className="pointer-events-none absolute top-1/3 right-0 w-56 h-56 rounded-full bg-violet-400/10 blur-[70px]" />
+    <div className="pointer-events-none absolute bottom-0 left-1/3 w-48 h-48 rounded-full bg-blue-400/10 blur-[60px]" />
+
+    {/* Subtle dot-grid overlay */}
+    <div
+      className="pointer-events-none absolute inset-0 opacity-[0.035]"
+      style={{
+        backgroundImage: 'radial-gradient(circle, #0a0a0a 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }}
+    />
+
+    {/* ── Brand hero ─────────────────────────────────────────────── */}
+    <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-8 pt-10 pb-2 gap-5">
+
+      {/* Logo + glow ring */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute w-28 h-28 rounded-full bg-gradient-to-br from-[#d4500a]/20 via-violet-400/10 to-transparent blur-2xl" />
+        <div className="relative w-20 h-20 rounded-2xl bg-white border border-[var(--glass-border)] shadow-lg flex items-center justify-center">
+          <Image
+            src="/Immortel_Logo.png"
+            alt="Immortell"
+            fill
+            className="object-contain object-center p-2"
+            priority
+            sizes="80px"
+          />
+        </div>
+        {/* Live status dot */}
+        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-background shadow-sm shadow-emerald-400/50 animate-pulse" />
+      </div>
+
+      {/* Brand name */}
+      <div className="text-center">
+        <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+          Immortell
+        </h2>
+        <p className="mt-1.5 text-xs text-muted-foreground font-mono tracking-widest uppercase">
+          GEO · AEO · AI Radar
+        </p>
+      </div>
+
+      {/* Pill badges */}
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {[
+          {
+            label: 'Rank in AI Search',
+            color: 'from-[#d4500a] to-[#f26820]',
+            bg: 'bg-[#d4500a]/8',
+            border: 'border-[#d4500a]/20',
+          },
+          {
+            label: 'Convert What It Sends',
+            color: 'from-violet-500 to-blue-500',
+            bg: 'bg-violet-500/8',
+            border: 'border-violet-400/20',
+          },
+        ].map((badge) => (
+          <span
+            key={badge.label}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border ${badge.bg} ${badge.border}`}
+          >
+            <span className={`bg-gradient-to-r ${badge.color} bg-clip-text text-transparent`}>
+              {badge.label}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+
+
+{/* ── Poem ───────────────────────────────────────────────────────── */}
+<div className="relative z-10 flex flex-col items-center justify-center px-10 py-6 gap-6">
+
+  {/* Opening quote mark */}
+  <span
+    className="self-start text-6xl leading-none text-[#d4500a]/20 select-none"
+    style={{ fontFamily: 'Georgia, serif' }}
+    aria-hidden
+  >
+    &ldquo;
+  </span>
+
+  <div className="flex flex-col gap-4 -mt-4">
+    {[
+      'I live between the systems',
+      'where your silent engines grow,',
+      'In every synced and searchable path —',
+      'I\u2019m the force you never know.',
+    ].map((line, i) => (
+      <motion.p
+        key={i}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 + i * 0.1, duration: 0.65, ease: [0.17, 0.99, 0.28, 1] }}
+        className="text-center leading-relaxed text-foreground/70"
+        style={{
+          fontFamily: "'Fraunces', Georgia, serif",
+          fontStyle: 'italic',
+          fontWeight: 300,
+          fontSize: i % 2 === 0 ? '1.05rem' : '1.0rem',
+          letterSpacing: '-0.02em',
+        }}
       >
-        <Image
-          src="/Immortel_Side.png"
-          alt="Immortel"
-          fill
-          className="object-cover opacity-90"
-          priority
-          sizes="50vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-blue-500/10 pointer-events-none" />
-      </motion.div>
+        {line}
+      </motion.p>
+    ))}
+  </div>
+
+  {/* Closing ornament */}
+  <div className="flex items-center gap-3 mt-1">
+    <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#d4500a]/30" />
+    <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground/50">
+      Immortell
+    </span>
+    <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#d4500a]/30" />
+  </div>
+
+</div>
+  </div>
+
+  {/* ── BOTTOM 40% — Lottie ──────────────────────────────────────── */}
+  <div className="relative min-h-0 flex items-center justify-center overflow-hidden">
+    <div className="h-full w-full max-h-full p-3 sm:p-4">
+      <LoginBottomAnimation />
+    </div>
+  </div>
+</motion.div>
 
       {/* Right Auth Section */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-6 sm:p-8 md:p-12 overflow-y-auto min-h-screen">
