@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import {
@@ -284,7 +285,16 @@ export default function ImmortelLanding() {
         transition={{ duration: 0.45, ease: easeOut }}
       >
         <Link href="/" className="nav-logo">
-          <div className="nav-mark">I</div>
+          <div className="nav-mark">
+            <Image
+              src="/Immortel_Logo.png"
+              alt="Immortell"
+              width={30}
+              height={30}
+              className="nav-mark-img"
+              priority
+            />
+          </div>
           <div className="nav-name">Immortell</div>
         </Link>
         <div className="nav-right">
