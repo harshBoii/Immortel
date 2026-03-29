@@ -21,6 +21,10 @@
   --color-sibling-surface:        var(--sibling-surface);
   --color-sibling-surface-hover:  var(--sibling-surface-hover);
 
+  --color-alien-glow-green:   var(--alien-glow-green);
+  --color-alien-core-green:   var(--alien-core-green);
+  --color-alien-accent-green: var(--alien-accent-green);
+
   --color-success:            var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning:            var(--warning);
@@ -123,6 +127,11 @@
   --sibling-accent-light:  oklch(0.40 0.08 240);   /* Navy mid             */
   --sibling-surface:       oklch(0.98 0.010 85);   /* Warm parchment       */
   --sibling-surface-hover: oklch(0.95 0.012 85);   /* Parchment hover      */
+
+  /* ── Alien greens ── */
+  --alien-glow-green:   #19F5A8; /* primary glow      */
+  --alien-core-green:   #12D98E; /* core solid        */
+  --alien-accent-green: #0B8F63; /* darker accent     */
 
   /* ── Semantic ── */
   --success:            oklch(0.52 0.18 145);
@@ -248,6 +257,11 @@
   --sibling-accent-light:  oklch(0.58 0.010 60);
   --sibling-surface:       oklch(0.10 0.008 60);
   --sibling-surface-hover: oklch(0.14 0.010 60);
+
+  /* ── Alien greens (same in dark) ── */
+  --alien-glow-green:   #19F5A8;
+  --alien-core-green:   #12D98E;
+  --alien-accent-green: #0B8F63;
 
   /* ── Semantic (Dark) ── */
   --success:            oklch(0.68 0.18 145);
@@ -469,6 +483,53 @@
   border-color: rgba(21, 29, 53, 0.16);
   border-top-color: rgba(255, 255, 255, 0.94);
   transform: translateY(-2px);
+}
+
+/* Login auth panel: light top/left edge, soft alien green on right/bottom + offset shadow = 3D lift */
+.glass-card.login-card-alien {
+  border-width: 1px 3px 3px 1px;
+  border-style: solid;
+  border-color: var(--glass-border-top)
+    color-mix(in srgb, var(--alien-core-green) 48%, transparent)
+    color-mix(in srgb, var(--alien-accent-green) 52%, transparent)
+    var(--glass-border);
+  box-shadow:
+    5px 5px 0 0 color-mix(in srgb, var(--alien-accent-green) 38%, transparent),
+    0 0 28px -6px color-mix(in srgb, var(--alien-glow-green) 22%, transparent),
+    var(--glass-shadow);
+  transition: box-shadow 0.28s ease, transform 0.28s ease, border-color 0.28s ease;
+}
+.glass-card.login-card-alien:hover {
+  border-color: var(--glass-border-top)
+    color-mix(in srgb, var(--alien-glow-green) 55%, transparent)
+    color-mix(in srgb, var(--alien-accent-green) 58%, transparent)
+    var(--glass-border);
+  box-shadow:
+    6px 6px 0 0 color-mix(in srgb, var(--alien-core-green) 42%, transparent),
+    0 0 36px -4px color-mix(in srgb, var(--alien-glow-green) 28%, transparent),
+    var(--glass-shadow-lg);
+  transform: translateY(-2px);
+}
+
+:is(.dark) .glass-card.login-card-alien {
+  border-color: oklch(0.22 0.012 60)
+    color-mix(in srgb, var(--alien-core-green) 42%, transparent)
+    color-mix(in srgb, var(--alien-accent-green) 46%, transparent)
+    oklch(0.16 0.010 60);
+  box-shadow:
+    5px 5px 0 0 color-mix(in srgb, var(--alien-accent-green) 32%, transparent),
+    0 0 32px -6px color-mix(in srgb, var(--alien-glow-green) 18%, transparent),
+    var(--glass-shadow);
+}
+:is(.dark) .glass-card.login-card-alien:hover {
+  border-color: oklch(0.22 0.012 60)
+    color-mix(in srgb, var(--alien-glow-green) 48%, transparent)
+    color-mix(in srgb, var(--alien-accent-green) 52%, transparent)
+    oklch(0.16 0.010 60);
+  box-shadow:
+    6px 6px 0 0 color-mix(in srgb, var(--alien-core-green) 36%, transparent),
+    0 0 40px -4px color-mix(in srgb, var(--alien-glow-green) 24%, transparent),
+    var(--glass-shadow-lg);
 }
 
 

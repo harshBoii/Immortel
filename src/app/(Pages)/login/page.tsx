@@ -1,7 +1,7 @@
 'use client';
 
 import LoginBottomAnimation from '@/app/components/animations/login/bottom';
-import CurvedLoop from '@/app/components/CircularText';
+import CurvedLoop from '@/app/components/animations/login/CircularText';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { useState } from 'react';
@@ -18,6 +18,22 @@ const LOGIN_LEFT_SLOGANS = [
   'Your videos, made immortal — and working for you.',
   'Generative engine optimization, one workspace.',
 ] as const;
+
+/** Segments with `accent` use --sibling-primary (burnt orange in light, theme gold in dark) */
+const LOGIN_PILL_BADGES: { id: string; segments: { text: string; accent?: boolean }[] }[] = [
+  {
+    id: 'rank',
+    segments: [{ text: 'Rank ', accent: true }, { text: 'in AI Search'}],
+  },
+  {
+    id: 'convert',
+    segments: [{ text: 'Convert', accent: true }, { text: ' What It Sends' }],
+  },
+];
+
+/** Glassmorphism primary CTA — matches --glass-blur / --glass-saturate from globals */
+const AUTH_SUBMIT_GLASS_CLASS =
+  'relative w-full overflow-hidden rounded-xl border border-white/35 bg-gradient-to-r from-[var(--sibling-primary)]/78 to-[var(--sibling-primary-dark)]/82 py-3.5 font-semibold text-primary-foreground backdrop-blur-[var(--glass-blur)] backdrop-saturate-[var(--glass-saturate)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_24px_-2px_rgba(21,29,53,0.12)] transition-all hover:border-white/45 hover:from-[var(--sibling-primary)]/88 hover:to-[var(--sibling-primary-dark)]/90 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_32px_-2px_rgba(21,29,53,0.16)] dark:border-white/15 dark:from-[var(--sibling-primary)]/72 dark:to-[var(--sibling-primary-dark)]/76 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_6px_28px_-2px_rgba(0,0,0,0.45)] dark:hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-50 mt-6 [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -145,15 +161,30 @@ export default function AuthPage() {
   initial={{ opacity: 0, x: -50 }}
   animate={{ opacity: 1, x: 0 }}
   transition={{ duration: 0.8 }}
-  className="hidden lg:grid w-full lg:w-1/2 lg:h-screen grid-rows-[60%_40%] overflow-hidden bg-gradient-to-br from-background via-background to-primary/5"
+  className="relative hidden lg:grid w-full lg:w-1/2 lg:h-screen overflow-hidden bg-background"
 >
-  {/* ── TOP 60% ─────────────────────────────────────────────────── */}
-  <div className="relative flex flex-col overflow-hidden">
+  {/* Tint only from top-left — fades out well before the right edge (split with RHS) */}
+  <div
+    className="pointer-events-none absolute inset-0 z-0"
+    style={{
+      background: `
+        linear-gradient(90deg, color-mix(in srgb, var(--alien-glow-green) 2.5%, transparent) 0%, transparent 34%),
+        linear-gradient(180deg, color-mix(in srgb, var(--alien-core-green) 2%, transparent) 0%, transparent 36%)
+      `,
+    }}
+    aria-hidden
+  />
 
-    {/* Ambient glows — soft, light-mode friendly */}
-    <div className="pointer-events-none absolute -top-16 -left-16 w-72 h-72 rounded-full bg-[#d4500a]/10 blur-[90px]" />
-    <div className="pointer-events-none absolute top-1/3 right-0 w-56 h-56 rounded-full bg-violet-400/10 blur-[70px]" />
-    <div className="pointer-events-none absolute bottom-0 left-1/3 w-48 h-48 rounded-full bg-blue-400/10 blur-[60px]" />
+  <div className="relative z-[1] grid h-full min-h-0 grid-rows-[60%_40%]">
+  {/* ── TOP 60% ─────────────────────────────────────────────────── */}
+  <div className="relative flex min-h-0 flex-col overflow-hidden">
+
+    {/* Ambient glows — left-weighted; clip right so blur never touches the split with RHS */}
+    <div className="pointer-events-none absolute inset-0 overflow-hidden [clip-path:inset(0_12%_0_0)]">
+      <div className="pointer-events-none absolute -top-20 -left-20 w-52 h-52 rounded-full bg-[var(--alien-glow-green)]/5 blur-[56px]" />
+      <div className="pointer-events-none absolute top-1/3 left-[6%] w-40 h-40 rounded-full bg-[var(--alien-core-green)]/4 blur-[48px]" />
+      <div className="pointer-events-none absolute bottom-8 left-[14%] w-36 h-36 rounded-full bg-[var(--alien-accent-green)]/4 blur-[44px]" />
+    </div>
 
     {/* Subtle dot-grid overlay */}
     <div
@@ -169,7 +200,7 @@ export default function AuthPage() {
 
       {/* Logo + glow ring */}
       <div className="relative flex items-center justify-center">
-        <div className="absolute w-44 h-44 rounded-full bg-gradient-to-br from-[#d4500a]/20 via-violet-400/10 to-transparent blur-2xl" />
+        <div className="absolute w-36 h-36 rounded-full bg-gradient-to-br from-[var(--alien-glow-green)]/10 via-[var(--alien-core-green)]/6 to-transparent blur-2xl" />
         <div className="relative w-32 h-32 rounded-2xl bg-white border border-[var(--glass-border)] shadow-lg flex items-center justify-center">
           <Image
             src="/Immortel_Logo_Dark.png"
@@ -194,25 +225,21 @@ export default function AuthPage() {
         </p>
       </div>
 
-      {/* Pill badges */}
+      {/* Pill badges — neutral glass; accent words use --sibling-primary */}
       <div className="flex flex-wrap items-center justify-center gap-2">
-        {[
-          {
-            label: 'Rank in AI Search',
-            color: 'from-[#d4500a] to-[#f26820]',
-          },
-          {
-            label: 'Convert What It Sends',
-            color: 'from-violet-500 to-blue-500',
-          },
-        ].map((badge) => (
+        {LOGIN_PILL_BADGES.map((badge) => (
           <span
-            key={badge.label}
-            className="glass-card !rounded-full px-3.5 py-1.5 text-xs font-semibold hover:!translate-y-0"
+            key={badge.id}
+            className="rounded-full border border-[var(--glass-border)] border-t-[var(--glass-border-top)]/90 bg-[var(--glass-bg)]/62 px-3.5 py-1.5 text-xs font-semibold text-black shadow-[var(--glass-shadow)] backdrop-blur-[var(--glass-blur)] backdrop-saturate-[var(--glass-saturate)] dark:border-[var(--glass-border)] dark:border-t-white/15 dark:bg-[var(--glass)]/40 dark:text-neutral-100 dark:shadow-[0_4px_24px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)]"
           >
-            <span className={`bg-gradient-to-r ${badge.color} bg-clip-text text-transparent`}>
-              {badge.label}
-            </span>
+            {badge.segments.map((seg, i) => (
+              <span
+                key={`${badge.id}-${i}`}
+                className={seg.accent ? 'text-[var(--sibling-primary)]' : undefined}
+              >
+                {seg.text}
+              </span>
+            ))}
           </span>
         ))}
       </div>
@@ -224,7 +251,7 @@ export default function AuthPage() {
 
   {/* Opening quote mark */}
   <span
-    className="self-start text-6xl leading-none text-[#d4500a]/20 select-none"
+    className="self-start text-6xl leading-none text-[var(--alien-core-green)]/12 select-none"
     style={{ fontFamily: 'Georgia, serif' }}
     aria-hidden
   >
@@ -259,11 +286,11 @@ export default function AuthPage() {
 
   {/* Closing ornament */}
   <div className="flex items-center gap-3 mt-1">
-    <div className="h-px w-10 bg-gradient-to-r from-transparent to-[#d4500a]/30" />
+    <div className="h-px w-10 bg-gradient-to-r from-transparent to-[var(--alien-glow-green)]/16" />
     <span className="text-[10px] font-mono tracking-[0.2em] uppercase text-muted-foreground/50">
       Immortell
     </span>
-    <div className="h-px w-10 bg-gradient-to-l from-transparent to-[#d4500a]/30" />
+    <div className="h-px w-10 bg-gradient-to-l from-transparent to-[var(--alien-glow-green)]/16" />
   </div>
 
 </div>
@@ -275,12 +302,13 @@ export default function AuthPage() {
       <LoginBottomAnimation />
     </div>
   </div>
+  </div>
 </motion.div>
 
       {/* Right Auth Section */}
       <div className="w-full lg:w-1/2 flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-6 sm:p-8 md:p-12 overflow-y-auto min-h-screen">
         <CurvedLoop
-          marqueeText="Immortel ✦ Your Videos made Immortal ✦"
+          marqueeText="Immortell ✦ GEO · MCP · AI Radar"
           speed={3}
           curveAmount={500}
           direction="right"
@@ -291,7 +319,7 @@ export default function AuthPage() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="w-full max-w-md glass-card p-8 md:p-10"
+          className="w-full max-w-md glass-card login-card-alien p-8 md:p-10"
         >
           <motion.h1
             key={mode}
@@ -299,9 +327,21 @@ export default function AuthPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary via-violet-500 to-blue-500 bg-clip-text text-transparent mb-6 tracking-wide text-center"
+            className="mb-6 text-center text-2xl font-bold tracking-wide md:text-3xl"
           >
-            {mode === 'login' ? 'Welcome Back' : 'Create Account'}
+            {mode === 'login' ? (
+              <>
+                <span className="text-[var(--sibling-primary)]">Welcome</span>
+                {' '}
+                <span className="">
+                  Back
+                </span>
+              </>
+            ) : (
+              <span className="bg-gradient-to-r from-primary via-violet-500 to-blue-500 bg-clip-text text-transparent">
+                Create Account
+              </span>
+            )}
           </motion.h1>
 
           <AnimatePresence mode="wait">
@@ -365,7 +405,7 @@ export default function AuthPage() {
                   disabled={loading}
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-primary to-violet-500 text-primary-foreground py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className={AUTH_SUBMIT_GLASS_CLASS}
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </motion.button>
@@ -474,7 +514,7 @@ export default function AuthPage() {
                   disabled={loading}
                   whileHover={{ scale: 1.02, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-gradient-to-r from-primary to-violet-500 text-primary-foreground py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className={AUTH_SUBMIT_GLASS_CLASS}
                 >
                   {loading ? 'Creating Account...' : 'Create Account'}
                 </motion.button>
