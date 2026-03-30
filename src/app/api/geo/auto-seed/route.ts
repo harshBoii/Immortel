@@ -182,7 +182,7 @@ export async function POST(_request: NextRequest) {
     if (microCompany.description !== undefined) data.description = microCompany.description;
     if (microCompany.logoUrl !== undefined) data.logoUrl = microCompany.logoUrl;
     if (microCompany.website !== undefined) data.website = microCompany.website;
-    if (microCompany.email !== undefined && microCompany.email) data.email = microCompany.email;
+
 
     if (Object.keys(data).length > 0) {
       await prisma.company.update({ where: { id: companyId }, data });

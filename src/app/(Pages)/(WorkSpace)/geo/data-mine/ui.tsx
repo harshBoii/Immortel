@@ -1390,7 +1390,7 @@ export default function DataMinePageClient({
                 {isAutoFilling ? (
                   <MiniLoadingAnimation />
                  ) : (
-                  "Auto-fill Using Immortel AI"
+                  "Auto-fill Using Immortell AI"
                 )}
               </button>
               {autoFillMessage && (
