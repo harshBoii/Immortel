@@ -94,6 +94,24 @@ function toNullableNumber(value: unknown): number | null {
   return value;
 }
 
+function coerceToText(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const v = value as Record<string, unknown>;
+    // Common radar payload shapes
+    if (typeof v.content === "string") return v.content;
+    if (typeof v.raw_content === "string") return v.raw_content;
+    if (typeof v.answer === "string") return v.answer;
+    if (typeof v.response === "string") return v.response;
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 /** Parse JSON from the radar microservice (bare output or `{ input, output }` envelope). */
 export function parseRadarMicroservicePayload(value: unknown): RadarOutput | null {
   if (typeof value !== "object" || value === null) return null;
@@ -303,11 +321,14 @@ export async function applyRadarOutput(
     { response: string; error: string | null | undefined }
   >();
   for (const item of rawResponses) {
-    const prompt = item.prompt?.trim();
-    const model = item.model?.trim();
+    const prompt = typeof item.prompt === "string" ? item.prompt.trim() : "";
+    const model = typeof item.model === "string" ? item.model.trim() : "";
     if (!prompt || !model) continue;
     const key = `${prompt}|||${model}`;
-    rawResponseByPair.set(key, { response: item.response ?? "", error: item.error });
+    rawResponseByPair.set(key, {
+      response: coerceToText(item.response),
+      error: item.error == null ? undefined : coerceToText(item.error),
+    });
   }
   const uniqueExecPairs = [
     ...new Set([
@@ -321,7 +342,7 @@ export async function applyRadarOutput(
     const promptId = promptMap.get(promptQuery)?.id;
     if (!promptId) continue;
     const rawEntry = rawResponseByPair.get(pair);
-    const rawResponse = rawEntry?.response?.trim() ?? "";
+    const rawResponse = rawEntry?.response.trim() ?? "";
     const rawError = rawEntry?.error?.trim() ?? "";
     const executionResponse = rawResponse || (rawError ? `[error] ${rawError}` : "");
     const exec = await prisma.promptExecution.create({

@@ -101,7 +101,7 @@ export default async function GeneratedBountyPagesPage() {
                   ) : null}
                   {page?.locale && page?.slug ? (
                     <div className="text-xs text-muted-foreground">
-                      /{page.locale}/{page.slug}
+                      {page.canonicalUrl}
                     </div>
                   ) : null}
                 </div>

@@ -91,10 +91,40 @@ function uniqueCompanyNamesForTopic(topic: TopicView): string[] {
   return [...names.values()].sort((a, b) => a.localeCompare(b));
 }
 
-export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
+function isCompanyRankedSomewhereForPrompt(prompt: PromptView, companyNeedle: string) {
+  const cNeedle = companyNeedle.trim().toLowerCase();
+  if (!cNeedle) return false;
+
+  const inConsensus = (prompt.consensus ?? []).some((c) => {
+    const n = c.companyName?.trim().toLowerCase();
+    return n === cNeedle && c.avgRank != null;
+  });
+
+  const inByModel = (prompt.byModel ?? []).some((c) => {
+    const n = c.companyName?.trim().toLowerCase();
+    return n === cNeedle && c.rank != null;
+  });
+
+  return inConsensus || inByModel;
+}
+
+export default function GeoKnightClient({
+  topics,
+  companyName,
+}: {
+  topics: TopicView[];
+  companyName: string | null;
+}) {
   const [q, setQ] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("mostPrompts");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("ALL");
+  const [onlyCompanyRanked, setOnlyCompanyRanked] = useState(false);
+  const [showAllTopicCompanies, setShowAllTopicCompanies] = useState<
+    Record<string, boolean>
+  >({});
+  const [showAllPromptCompanies, setShowAllPromptCompanies] = useState<
+    Record<string, boolean>
+  >({});
   /** Per-topic prompt order (default: recent first). */
   const [promptSortByTopicId, setPromptSortByTopicId] = useState<
     Record<string, PromptSortMode>
@@ -133,6 +163,7 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
 
   const filteredTopics = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const companyNeedle = companyName?.trim().toLowerCase() ?? "";
     let rows = topics.filter((t) =>
       difficulty === "ALL" ? true : t.difficulty === difficulty
     );
@@ -149,6 +180,18 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
       });
     }
 
+    if (onlyCompanyRanked && companyNeedle) {
+      rows = rows
+        .map((t) => {
+          const prompts = t.prompts.filter((p) =>
+            isCompanyRankedSomewhereForPrompt(p, companyNeedle)
+          );
+          if (prompts.length === 0) return null;
+          return { ...t, prompts };
+        })
+        .filter((t): t is TopicView => t != null);
+    }
+
     const clone = [...rows];
     if (sortMode === "recentTopics") {
       clone.sort(
@@ -162,7 +205,7 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
       clone.sort((a, b) => b.prompts.length - a.prompts.length);
     }
     return clone;
-  }, [topics, q, sortMode, difficulty]);
+  }, [topics, companyName, q, sortMode, difficulty, onlyCompanyRanked]);
 
   const promptCount = filteredTopics.reduce((s, t) => s + t.prompts.length, 0);
 
@@ -189,7 +232,7 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
         </div>
       </section>
 
-      <section className="glass-card rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <section className="glass-card rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -216,6 +259,19 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
           <option value="fewestPrompts">Sort: Fewest prompts first</option>
           <option value="name">Sort: Topic name A-Z</option>
         </select>
+
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={onlyCompanyRanked}
+            disabled={!companyName}
+            onChange={(e) => setOnlyCompanyRanked(e.target.checked)}
+            className="h-4 w-4 rounded border border-[var(--glass-border)] bg-[var(--glass)]/70 accent-[var(--sibling-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <span className="whitespace-nowrap">
+            Only show fronts where your company ranks
+          </span>
+        </label>
       </section>
 
       {filteredTopics.length === 0 ? (
@@ -245,9 +301,13 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                   {(() => {
                     const topicCompanies = uniqueCompanyNamesForTopic(topic);
                     if (topicCompanies.length === 0) return null;
+                    const showAll = showAllTopicCompanies[topic.id] ?? false;
+                    const visibleCompanies = showAll
+                      ? topicCompanies
+                      : topicCompanies.slice(0, 18);
                     return (
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {topicCompanies.slice(0, 18).map((name) => (
+                        {visibleCompanies.map((name) => (
                           <span
                             key={name}
                             className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--glass-border)_80%,var(--destructive)_20%)] bg-[color-mix(in_oklch,var(--glass)_88%,var(--destructive)_12%)] px-2.5 py-0.5 text-foreground/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur-md"
@@ -257,9 +317,18 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                           </span>
                         ))}
                         {topicCompanies.length > 18 ? (
-                          <span className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--destructive)_38%,transparent)] bg-[color-mix(in_oklch,var(--destructive)_16%,transparent)] px-2.5 py-0.5 text-[var(--sibling-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                            +{topicCompanies.length - 18}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowAllTopicCompanies((prev) => ({
+                                ...prev,
+                                [topic.id]: !showAll,
+                              }))
+                            }
+                            className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--destructive)_38%,transparent)] bg-[color-mix(in_oklch,var(--destructive)_16%,transparent)] px-2.5 py-0.5 text-[var(--sibling-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md hover:opacity-90 transition-opacity"
+                          >
+                            {showAll ? "Less" : `+.. more`}
+                          </button>
                         ) : null}
                       </div>
                     );
@@ -343,9 +412,13 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                             {(() => {
                               const companies = uniqueCompanyNamesForPrompt(prompt);
                               if (companies.length === 0) return null;
+                              const showAllCompanies = showAllPromptCompanies[prompt.id] ?? false;
+                              const visibleCompanies = showAllCompanies
+                                ? companies
+                                : companies.slice(0, 14);
                               return (
                                 <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {companies.slice(0, 14).map((name) => (
+                                  {visibleCompanies.map((name) => (
                                     <span
                                       key={name}
                                       className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--glass-border)_80%,var(--destructive)_20%)] bg-[color-mix(in_oklch,var(--glass)_88%,var(--destructive)_12%)] px-2.5 py-0.5 text-foreground/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_10px_rgba(0,0,0,0.18)] backdrop-blur-md"
@@ -355,9 +428,18 @@ export default function GeoKnightClient({ topics }: { topics: TopicView[] }) {
                                     </span>
                                   ))}
                                   {companies.length > 14 ? (
-                                    <span className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--destructive)_38%,transparent)] bg-[color-mix(in_oklch,var(--destructive)_16%,transparent)] px-2.5 py-0.5 text-[var(--sibling-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
-                                      +{companies.length - 14}
-                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setShowAllPromptCompanies((prev) => ({
+                                          ...prev,
+                                          [prompt.id]: !showAllCompanies,
+                                        }))
+                                      }
+                                      className="text-[11px] rounded-full border border-[color-mix(in_oklch,var(--destructive)_38%,transparent)] bg-[color-mix(in_oklch,var(--destructive)_16%,transparent)] px-2.5 py-0.5 text-[var(--sibling-accent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md hover:opacity-90 transition-opacity"
+                                    >
+                                      {showAllCompanies ? "Less" : `+.. more`}
+                                    </button>
                                   ) : null}
                                 </div>
                               );

@@ -29,6 +29,11 @@ export default async function GeoKnightPage() {
     );
   }
 
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { name: true },
+  });
+
   const topics = await prisma.llmTopic.findMany({
     where: { companyId },
     orderBy: [{ createdAt: "desc" }],
@@ -135,6 +140,6 @@ export default async function GeoKnightPage() {
     })),
   }));
 
-  return <GeoKnightClient topics={topicViews} />;
+  return <GeoKnightClient topics={topicViews} companyName={company?.name ?? null} />;
 }
 

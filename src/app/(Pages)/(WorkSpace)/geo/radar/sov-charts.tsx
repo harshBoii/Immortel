@@ -38,12 +38,12 @@ export function SovTrendChart({ series }: { series: SovPoint[] }) {
       <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--glass-border)]" />
         <XAxis dataKey="ts" tick={{ fontSize: 10 }} tickFormatter={(_, i) => data[i]?.label ?? ""} />
-        <YAxis tick={{ fontSize: 10 }} unit="%" />
+        <YAxis tick={{ fontSize: 10 }} />
         <Tooltip
           labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ""}
           formatter={(value: number | string | undefined) => {
             const n = typeof value === "number" ? value : Number(value ?? 0);
-            return [`${n.toFixed(1)}%`, "Share of voice"];
+            return [`${n.toFixed(1)}`, "Share of voice"];
           }}
           contentStyle={{
             background: "var(--glass)",
