@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { ShopifyAdminError, shopifyGraphql } from "@/lib/shopify/admin";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
 
-const BLOG_CHANNEL_HANDLE = "vlogs";
+const BLOG_CHANNEL_HANDLE = "quick-reads";
 
 const JSON_LD_NAMESPACE = "custom";
 const JSON_LD_KEY = "json_ld";
