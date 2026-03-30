@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import LoadingAnimation from '@/app/components/animations/loading';
 
 type CheckoutProduct = {
   id: string;
@@ -111,7 +112,7 @@ export default function PaymentPortalPage() {
   if (!session) {
     return (
       <PageShell>
-        <div className="text-sm text-muted-foreground animate-pulse">Loading payment details…</div>
+        <LoadingAnimation text={`Helloww Richy ! Give me a sec...`} />
       </PageShell>
     );
   }

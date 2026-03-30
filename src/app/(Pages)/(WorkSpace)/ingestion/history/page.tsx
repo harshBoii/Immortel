@@ -19,6 +19,7 @@ import type {
   SortBy,
   SortOrder,
 } from '@/app/components/ingestion';
+import LoadingAnimation from '@/app/components/animations/loading';
 
 const DEFAULT_CONTENT_USAGE: ContentUsageData = {
   webinar24x7: 0,
@@ -174,7 +175,7 @@ export default function IngestionHistoryPage() {
 
       <div className="mt-4">
         {loading ? (
-          <div className="glass-card card-anime-float rounded-xl p-12 text-center text-muted-foreground text-sm">Loading…</div>
+          <LoadingAnimation text={`Fetching Your Records From The Cloud...`} />
         ) : viewMode === 'raw' ? (
           <AssetGrid
             assets={assets}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { WebinarPlayer } from '@/app/components/webinar/WebinarPlayer';
 import { SimulatedChatPanel, SimulatedChatMessage } from '@/app/components/webinar/SimulatedChatPanel';
 import { AttendeeGrid, WebinarParticipant } from '@/app/components/webinar/AttendeeGrid';
+import LoadingAnimation from '@/app/components/animations/loading';
 
 type WebinarDetailResponse = {
   success: boolean;
@@ -94,7 +95,7 @@ export default function WebinarExperience({
       <div className="flex min-h-screen items-center justify-center bg-[#f5f6f8]">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading webinar…</p>
+          <LoadingAnimation text={`Joining You In , Hang tight...`} />
         </div>
       </div>
     );

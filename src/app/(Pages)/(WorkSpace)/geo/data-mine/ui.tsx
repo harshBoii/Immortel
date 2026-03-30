@@ -7,6 +7,7 @@ import { ImagePreviewModal } from "@/app/components/general/ImagePreviewModal";
 import { DocumentPreviewModal } from "@/app/components/general/DocumentPreviewModal";
 import { ViewMoreDropdown } from "@/app/components/common/UI/ViewMoreDropdown";
 import type { AssetCardData } from "@/app/components/common/AssetCard";
+import MiniLoadingAnimation from "@/app/components/animations/loading/miniLoading";
 
 type GeoSourceType = "FILE" | "TEXT" | "URL";
 
@@ -1386,7 +1387,11 @@ export default function DataMinePageClient({
                 disabled={isAutoFilling}
                 className={`${btnPrimary} mt-3 w-full justify-center`}
               >
-                {isAutoFilling ? "Filling from GEO…" : "Auto-fill Using Immortel AI"}
+                {isAutoFilling ? (
+                  <MiniLoadingAnimation />
+                 ) : (
+                  "Auto-fill Using Immortel AI"
+                )}
               </button>
               {autoFillMessage && (
                 <p className="mt-2 text-[11px] text-muted-foreground">

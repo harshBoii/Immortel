@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-
+import LoadingAnimation from '@/app/components/animations/loading';
 type LoadState = {
   apiKey: string;
   scopes: string;
@@ -114,7 +114,7 @@ export default function CompanyDevShopifyPage() {
       </p>
 
       {loading ? (
-        <p className="mt-8 text-sm text-muted-foreground">Loading…</p>
+        <LoadingAnimation />
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 space-y-4 glass-card card-anime-float rounded-xl p-6">
           <div>

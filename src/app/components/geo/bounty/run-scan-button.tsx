@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import MiniLoadingAnimation from "@/app/components/animations/loading/miniLoading";
 
 type RunScanButtonProps = {
   onSuccess?: () => void;
@@ -50,8 +51,7 @@ export function RunScanButton({ onSuccess, scanInProgress: externalProgress }: R
       >
         {loadingState ? (
           <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Running…
+            <MiniLoadingAnimation />
           </>
         ) : (
           <>

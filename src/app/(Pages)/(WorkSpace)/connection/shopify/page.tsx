@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Store } from 'lucide-react';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
+import LoadingAnimation from '@/app/components/animations/loading';
 
 function absoluteConnectUrl(connectHref: string): string {
   if (connectHref.startsWith('http://') || connectHref.startsWith('https://')) {
@@ -100,7 +101,7 @@ export default function ConnectionShopifyPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto min-h-[50vh] px-6 pb-6 pt-2">
-        <p className="text-sm text-muted-foreground mt-8">Loading…</p>
+        <LoadingAnimation text={`Jus A Sec...`} />
       </div>
     );
   }

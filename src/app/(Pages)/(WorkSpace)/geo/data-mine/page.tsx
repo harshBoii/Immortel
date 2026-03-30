@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import DataMineContent from "./server";
+import LoadingAnimation from "@/app/components/animations/loading";
 
 export default function DataMinePage() {
   return (
@@ -12,7 +13,7 @@ export default function DataMinePage() {
       </p>
 
       <div className="mt-6">
-        <Suspense fallback={<div className="text-sm text-muted-foreground">Loading Data Mine…</div>}>
+        <Suspense fallback={<LoadingAnimation text={`Pheww ! That's Heavy... Gimme some waterrrr !...`} />}>
           <DataMineContent />
         </Suspense>
       </div>

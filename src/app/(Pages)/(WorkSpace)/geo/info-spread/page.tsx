@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import InfoSpreadContent from "./server";
+import LoadingAnimation from "@/app/components/animations/loading";
 
 export default function InfoSpreadPage() {
   return (
@@ -12,7 +13,7 @@ export default function InfoSpreadPage() {
       </p>
 
       <div className="mt-6">
-        <Suspense fallback={<div className="text-sm text-muted-foreground">Loading Info Spread…</div>}>
+        <Suspense fallback={<LoadingAnimation text={`Fetching Your Records From The Cloud...`} />}>
           <InfoSpreadContent />
         </Suspense>
       </div>

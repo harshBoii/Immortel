@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import MiniLoadingAnimation from "@/app/components/animations/loading/miniLoading";
 
 export default function RadarRefreshButton() {
   const router = useRouter();
@@ -41,10 +42,8 @@ export default function RadarRefreshButton() {
         className="inline-flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)] px-4 py-2 text-sm font-medium text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading ? (
-          <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Refreshing…
-          </>
+
+            <MiniLoadingAnimation />
         ) : (
           <>
             <RefreshIcon />

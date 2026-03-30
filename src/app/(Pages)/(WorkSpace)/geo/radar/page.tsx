@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import RadarContent from "./server";
 import RadarRefreshButton from "./refresh-button";
+import LoadingAnimation from "@/app/components/animations/loading";
 
 export default function RadarPage() {
   return (
@@ -18,7 +19,7 @@ export default function RadarPage() {
       </div>
 
       <div className="mt-6">
-        <Suspense fallback={<div className="text-sm text-muted-foreground">Loading radar…</div>}>
+        <Suspense fallback={<LoadingAnimation text={`Dammn ! That's Heavy... So much data to process !...`} />}>
           <RadarContent />
         </Suspense>
       </div>

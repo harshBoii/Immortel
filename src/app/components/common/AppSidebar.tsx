@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Store } from 'lucide-react';
 import { SiGoogle,SiOpenai } from 'react-icons/si';
+import { DayNightLottieToggle } from '../animations/dayNight/DayNightLottieToggle';
 import { useTheme } from './ThemeProvider';
 import { useCurrentContext } from './useCurrentContext';
 
@@ -116,19 +119,6 @@ const IconTarget = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const IconSun = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" />
-  </svg>
-);
-
-const IconMoon = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-  </svg>
-);
-
 const IconShop = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l1-5h16l1 5" />
@@ -208,7 +198,7 @@ const PrimarySidebarIcon = ({
         w-10 h-10 rounded-xl sidebar-icon
         transition-all duration-200
         ${isActive ? 'active' : ''}
-        ${isActive ? 'text-[var(--sibling-primary)]' : 'text-muted-foreground hover:text-foreground'}
+        ${isActive ? 'text-black dark:text-white' : 'text-muted-foreground hover:text-black dark:hover:text-[var(--alien-glow-green)]'}
       `}
         >
       <Icon className="w-5 h-5" />
@@ -241,12 +231,16 @@ const SecondaryNavItem = ({
         flex items-center gap-2.5 px-3 py-2 rounded-lg
         text-sm transition-all duration-200 font-body
         ${isActive
-          ? 'glass-button text-foreground font-medium'
-          : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
+          ? 'glass-button font-medium text-[var(--sibling-primary)]'
+          : 'text-muted-foreground hover:text-[var(--sibling-primary)] hover:bg-[var(--glass-hover)]'
         }
       `}
     >
-      {Icon && <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[var(--sibling-primary)]' : ''}`} />}
+      {Icon && (
+        <Icon
+          className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-[var(--sibling-primary)]' : ''}`}
+        />
+      )}
       <span className="flex-1 truncate">{label}</span>
     </Link>
   );
@@ -325,7 +319,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
 export default function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { company, shopify } = useCurrentContext();
@@ -375,13 +369,27 @@ export default function AppSidebar() {
   const currentSection = MAIN_SECTIONS.find((s) => s.id === activeSection);
   const showSecondary = !sidebarCollapsed && currentSection?.hasSecondary;
 
+  const secondaryNavTransition = {
+    type: 'spring' as const,
+    stiffness: 420,
+    damping: 38,
+    mass: 0.85,
+  };
+
   return (
-    <div className="flex h-screen sticky top-0">
+    <div className="flex h-screen sticky top-0 overflow-x-hidden">
       {/* Primary Sidebar */}
       <aside className="w-16 flex-shrink-0 glass-sidebar flex flex-col items-center py-4 z-20">
         <div className="mb-6">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--sibling-primary)] to-[var(--sibling-primary-dark)] flex items-center justify-center text-primary-foreground font-bold text-sm shadow-lg">
-            I
+          <div className="relative h-25 w-18 overflow-hidden rounded-xl ">
+            <Image
+              src="/Immortel_Logo_Dark.png"
+              alt="Immortell"
+              fill
+              className="object-contain object-center"
+              sizes="50px"
+              priority
+            />
           </div>
         </div>
 
@@ -400,16 +408,15 @@ export default function AppSidebar() {
         </nav>
 
         <div className="mt-auto pt-4 flex flex-col items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+          <DayNightLottieToggle
+            labelId="sidebar-theme-toggle-label"
+            className="w-16 h-12 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-black dark:hover:text-[var(--alien-glow-green)] transition-colors"
+          />
+          <span
+            id="sidebar-theme-toggle-label"
+            className="inline-flex min-w-[3.25rem] items-center justify-center rounded-md border border-[var(--glass-border)] border-t-[var(--glass-border-top)]/90 bg-[var(--glass-bg)]/85 px-2 py-1 font-sans text-[12px] font-bold leading-none text-center text-muted-foreground shadow-[var(--glass-shadow)] backdrop-blur-[var(--glass-blur)] backdrop-saturate-[var(--glass-saturate)] [-webkit-backdrop-filter:blur(var(--glass-blur))_saturate(var(--glass-saturate))] dark:border-[var(--glass-border)] dark:border-t-white/15 dark:bg-[var(--glass)]/40 dark:text-neutral-100/95 dark:shadow-[0_4px_24px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.08)]"
           >
-            {theme === 'dark' ? <IconSun className="w-5 h-5" /> : <IconMoon className="w-5 h-5" />}
-          </button>
-          <span className="text-[10px] leading-none text-center text-muted-foreground">
-            {theme === 'dark' ? 'Light' : 'Dark'}
+            {theme === 'dark' ? 'Dark' : 'Light'}
           </span>
           <button
             type="button"
@@ -424,10 +431,16 @@ export default function AppSidebar() {
       </aside>
 
       {/* Secondary Sidebar */}
+      <AnimatePresence initial={false}>
       {showSecondary && (
-        <aside
+          <motion.aside
+            key="secondary-sidebar"
           className="flex-shrink-0 glass-sidebar-secondary flex flex-col h-screen overflow-hidden w-56"
           style={{ minWidth: 224 }}
+            initial={{ x: '-100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0 }}
+            transition={secondaryNavTransition}
         >
           <div className="p-4 nav-section-header flex items-center justify-between">
             <h2 className="text-sm font-semibold text-foreground">
@@ -436,10 +449,33 @@ export default function AppSidebar() {
             <button
               type="button"
               onClick={() => setSidebarCollapsed(true)}
-              className="p-1 rounded hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+              className={`
+                group/collapse flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
+                border border-[color-mix(in_srgb,var(--alien-core-green)_42%,var(--glass-border))]
+                bg-[color-mix(in_srgb,var(--alien-glow-green)_16%,var(--glass-hover))]
+                text-black
+                shadow-[inset_0_1px_0_color-mix(in_srgb,white_55%,transparent),0_1px_3px_rgba(21,29,53,0.08),0_0_14px_-4px_color-mix(in_srgb,var(--alien-glow-green)_45%,transparent)]
+                ring-1 ring-[color-mix(in_srgb,var(--alien-glow-green)_28%,transparent)]
+                backdrop-blur-sm transition-all duration-200
+                hover:border-[color-mix(in_srgb,var(--alien-glow-green)_58%,var(--glass-border))]
+                hover:bg-[color-mix(in_srgb,var(--alien-glow-green)_26%,var(--glass-hover))]
+                hover:text-black
+                hover:shadow-[inset_0_1px_0_color-mix(in_srgb,white_70%,transparent),0_4px_16px_-4px_color-mix(in_srgb,var(--alien-glow-green)_55%,transparent),0_0_22px_-2px_color-mix(in_srgb,var(--alien-glow-green)_40%,transparent)]
+                hover:ring-[color-mix(in_srgb,var(--alien-glow-green)_42%,transparent)]
+                active:scale-[0.96]
+                dark:border-[color-mix(in_srgb,var(--alien-core-green)_48%,oklch(0.22_0.02_160))]
+                dark:bg-[color-mix(in_srgb,var(--alien-glow-green)_12%,oklch(0.14_0.015_160_/_0.85))]
+                dark:text-white
+                dark:shadow-[inset_0_1px_0_oklch(0.32_0.02_160_/_0.35),0_2px_12px_-2px_rgba(0,0,0,0.45),0_0_18px_-4px_color-mix(in_srgb,var(--alien-glow-green)_35%,transparent)]
+                dark:ring-[color-mix(in_srgb,var(--alien-glow-green)_22%,transparent)]
+                dark:hover:border-[color-mix(in_srgb,var(--alien-glow-green)_55%,oklch(0.28_0.02_160))]
+                dark:hover:bg-[color-mix(in_srgb,var(--alien-glow-green)_22%,oklch(0.18_0.02_160_/_0.92))]
+                dark:hover:text-white
+                dark:hover:shadow-[inset_0_1px_0_oklch(0.38_0.025_160_/_0.4),0_0_28px_-2px_color-mix(in_srgb,var(--alien-glow-green)_45%,transparent)]
+              `}
               title="Collapse sidebar"
             >
-              <IconChevronLeft className="w-4 h-4" />
+              <IconChevronLeft className="h-5 w-5 transition-transform duration-200 group-hover/collapse:-translate-x-px" />
             </button>
           </div>
 
@@ -447,14 +483,14 @@ export default function AppSidebar() {
             <SecondarySidebarContent activeSection={activeSection} />
           </nav>
 
-          <div className="p-3 border-t border-[var(--sidebar-secondary-glass-border)] space-y-3 bg-[var(--glass-hover)]/40">
+            <div className="space-y-3 border-t border-[var(--sidebar-secondary-glass-border)] bg-[var(--glass-hover)]/40 p-3">
             {company && (
               <div className="text-xs text-muted-foreground">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <div className="font-semibold text-foreground truncate">
                     {company.name}
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)]">
+                    <span className="rounded-full bg-[color-mix(in_srgb,var(--sibling-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sibling-primary)]">
                     Workspace
                   </span>
                 </div>
@@ -482,7 +518,7 @@ export default function AppSidebar() {
                       <button
                         type="button"
                         onClick={() => router.push('/connection/shopify')}
-                        className="shrink-0 rounded-md border border-[var(--glass-border)] bg-background/80 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow-sm transition-colors hover:border-[var(--sibling-primary)]/35 hover:bg-[var(--glass-hover)] hover:text-foreground"
+                          className="shrink-0 rounded-md border border-[var(--glass-border)] bg-background/80 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow-sm transition-colors hover:border-[color-mix(in_srgb,var(--sibling-primary)_35%,var(--glass-border))] hover:bg-[var(--glass-hover)] hover:text-[var(--sibling-primary)]"
                       >
                         Connect
                       </button>
@@ -494,24 +530,25 @@ export default function AppSidebar() {
             <button
               type="button"
               onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors font-body"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-[var(--glass-hover)] hover:text-[var(--sibling-primary)] transition-colors font-body"
             >
               <IconLogOut className="w-4 h-4 flex-shrink-0" />
               <span>Log out</span>
             </button>
           </div>
-        </aside>
+          </motion.aside>
       )}
+      </AnimatePresence>
 
       {/* Collapsed secondary: expand button */}
       {sidebarCollapsed && currentSection?.hasSecondary && (
         <button
           type="button"
           onClick={() => setSidebarCollapsed(false)}
-          className="fixed left-16 top-1/2 -translate-y-1/2 p-2 glass-card rounded-r-lg shadow-lg z-10 hover:bg-[var(--glass-hover)] transition-colors"
+          className="group fixed left-16 top-1/2 z-10 -translate-y-1/2 rounded-r-lg border border-l-0 border-[var(--glass-border)] bg-[var(--glass-bg)]/90 p-2 text-muted-foreground shadow-lg backdrop-blur-md transition-colors hover:bg-[var(--glass-hover)] hover:text-[var(--sibling-primary)]"
           title="Expand sidebar"
         >
-          <IconChevronRight className="w-4 h-4 text-muted-foreground" />
+          <IconChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-[var(--sibling-primary)]" />
         </button>
       )}
     </div>
