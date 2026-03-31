@@ -40,10 +40,11 @@ export async function POST(req: Request) {
   }
 
   const normalized = normalizeSiteUrl(raw);
-  const { valid, error, authUrl, siteTitle } = await validateWordPressSite(normalized);
-  if (!valid) {
-    return NextResponse.json({ error }, { status: 400 });
+  const validation = await validateWordPressSite(normalized);
+  if (!validation.valid) {
+    return NextResponse.json({ error: validation.error }, { status: 400 });
   }
+  const { authUrl, siteTitle } = validation;
 
   const companyId = session.companyId;
 
