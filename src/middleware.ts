@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isLoginPage = pathname === '/login';
+  const isDevLoginPage = pathname === '/dev/login';
   const isLandingPage = pathname === '/landing';
   const isAuthApi = pathname.startsWith('/api/auth');
   const isCronApi = pathname.startsWith('/api/cron');
@@ -34,6 +35,7 @@ export function middleware(request: NextRequest) {
 
   const isPublic =
     isLoginPage ||
+    isDevLoginPage ||
     isLandingPage ||
     isAuthApi ||
     isCronApi ||
@@ -51,7 +53,7 @@ export function middleware(request: NextRequest) {
     isPublicBountyHuntArticle;
 
   if (isPublic) {
-    if (isLoginPage && hasValidAuthCookie(request)) {
+    if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {
       return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();

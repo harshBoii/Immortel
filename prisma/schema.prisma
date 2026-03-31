@@ -38,6 +38,7 @@ model Company {
   webinars              Webinar[]
   radarAssumption       RadarAssumption?
   llmPromptMetrics      LlmPromptMetric[]
+  wordpressIntegration  WordPressIntegration?
 
   @@index([slug])
   @@map("companies")
@@ -803,6 +804,23 @@ model ShopifyProduct {
   @@index([companyId])
   @@index([status])
   @@map("shopify_products")
+}
+
+model WordPressIntegration {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  siteUrl     String
+  authUrl     String
+  userLogin   String
+  credentials String
+  siteTitle   String?
+  status      String   @default("active")
+  connectedAt DateTime @default(now())
+
+  company Company @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("wordpress_integrations")
 }
 
 enum AssetType {
