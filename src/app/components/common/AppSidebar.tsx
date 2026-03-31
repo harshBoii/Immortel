@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Store } from 'lucide-react';
+import { Globe, Store } from 'lucide-react';
 import { SiGoogle,SiOpenai } from 'react-icons/si';
 import { DayNightLottieToggle } from '../animations/dayNight/DayNightLottieToggle';
 import { useTheme } from './ThemeProvider';
@@ -298,9 +298,11 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
         <>
           <SectionLabel label="Connection" />
           <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
-          <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
           <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
           <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
+          <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
+          <SecondaryNavItem icon={Globe} label="WordPress" href="/connection/wordpress" />
+
         </>
       );
     default:

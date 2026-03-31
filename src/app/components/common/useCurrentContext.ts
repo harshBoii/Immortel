@@ -14,6 +14,16 @@ type ShopifySummary = {
   status: string;
 };
 
+type WordPressIntegrationSummary = {
+  tenantId: string;
+  siteUrl: string;
+  siteTitle: string | null;
+  authUrl: string;
+  userLogin: string;
+  status: string;
+  connectedAt: string;
+};
+
 type AppContextState = {
   loading: boolean;
   error: string | null;
@@ -22,6 +32,7 @@ type AppContextState = {
   shopifyConnectUrl: string | null;
   /** Normalized *.myshopify.com saved for credential resolution before install */
   expectedShopDomain: string | null;
+  wordpressIntegration: WordPressIntegrationSummary | null;
   refetch: () => void;
 };
 
@@ -33,6 +44,7 @@ export function useCurrentContext(): AppContextState {
     shopify: null,
     shopifyConnectUrl: null,
     expectedShopDomain: null,
+    wordpressIntegration: null,
   });
   const [fetchKey, setFetchKey] = useState(0);
 
@@ -62,6 +74,7 @@ export function useCurrentContext(): AppContextState {
             shopify: data.shopify ?? null,
             shopifyConnectUrl: data.shopifyConnectUrl ?? null,
             expectedShopDomain: data.expectedShopDomain ?? null,
+            wordpressIntegration: data.wordpressIntegration ?? null,
           });
         }
       } catch (err) {

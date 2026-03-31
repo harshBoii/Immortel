@@ -14,6 +14,7 @@ export async function GET() {
         shopify: null,
         shopifyConnectUrl: null,
         expectedShopDomain: null,
+        wordpressIntegration: null,
       },
       { status: 401 }
     );
@@ -21,7 +22,7 @@ export async function GET() {
 
   const companyId = session.companyId;
 
-  const [company, shop, cms] = await Promise.all([
+  const [company, shop, cms, wp] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: { id: true, name: true, email: true },
@@ -40,6 +41,18 @@ export async function GET() {
       },
       select: { connectUrl: true, expectedShopDomain: true },
     }),
+    prisma.wordPressIntegration.findUnique({
+      where: { tenantId: companyId },
+      select: {
+        tenantId: true,
+        siteUrl: true,
+        siteTitle: true,
+        authUrl: true,
+        userLogin: true,
+        status: true,
+        connectedAt: true,
+      },
+    }),
   ]);
 
   if (!company) {
@@ -51,6 +64,7 @@ export async function GET() {
         shopify: null,
         shopifyConnectUrl: null,
         expectedShopDomain: null,
+        wordpressIntegration: null,
       },
       { status: 404 }
     );
@@ -67,6 +81,7 @@ export async function GET() {
     shopify: shop,
     shopifyConnectUrl,
     expectedShopDomain,
+    wordpressIntegration: wp,
   });
 }
 
