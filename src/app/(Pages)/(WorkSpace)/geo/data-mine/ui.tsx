@@ -845,7 +845,11 @@ export default function DataMinePageClient({
   const [rivalsLoading, setRivalsLoading] = useState(false);
   const [rivalsMessage, setRivalsMessage] = useState<string | null>(null);
   const [rivalDomain, setRivalDomain] = useState("");
+  const [rivalCompanyName, setRivalCompanyName] = useState("");
   const [isAddingRival, setIsAddingRival] = useState(false);
+  const [editingRivalId, setEditingRivalId] = useState<string | null>(null);
+  const [editingRivalName, setEditingRivalName] = useState("");
+  const [isSavingRivalName, setIsSavingRivalName] = useState(false);
 
   const [textContent, setTextContent] = useState("");
   const [urlValue, setUrlValue] = useState("");
@@ -938,6 +942,7 @@ export default function DataMinePageClient({
 
   const handleAddRival = useCallback(async () => {
     const domain = rivalDomain.trim();
+    const name = rivalCompanyName.trim();
     if (!domain) return;
     setIsAddingRival(true);
     setRivalsMessage(null);
@@ -946,7 +951,7 @@ export default function DataMinePageClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ domain }),
+        body: JSON.stringify({ domain, name: name || undefined }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.success) {
@@ -954,6 +959,7 @@ export default function DataMinePageClient({
         return;
       }
       setRivalDomain("");
+      setRivalCompanyName("");
       await loadRivals();
       setRivalsMessage(data?.created ? "Rival added." : "Rival already exists.");
     } catch (err) {
@@ -984,6 +990,47 @@ export default function DataMinePageClient({
       setRivalsMessage("Something went wrong while removing rival.");
     }
   }, [loadRivals]);
+
+  const handleStartEditRivalName = useCallback((r: RivalLink) => {
+    setRivalsMessage(null);
+    setEditingRivalId(r.rivalCompanyId);
+    setEditingRivalName(r.rivalCompany?.name ?? "");
+  }, []);
+
+  const handleCancelEditRivalName = useCallback(() => {
+    setEditingRivalId(null);
+    setEditingRivalName("");
+  }, []);
+
+  const handleSaveRivalName = useCallback(async () => {
+    const rivalCompanyId = editingRivalId;
+    const name = editingRivalName.trim();
+    if (!rivalCompanyId || !name) return;
+    setIsSavingRivalName(true);
+    setRivalsMessage(null);
+    try {
+      const res = await fetch(`/api/company/rivals/${encodeURIComponent(rivalCompanyId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setRivalsMessage(data?.error ?? "Failed to update rival name.");
+        return;
+      }
+      await loadRivals();
+      setRivalsMessage("Rival name updated.");
+      setEditingRivalId(null);
+      setEditingRivalName("");
+    } catch (err) {
+      console.error("Edit rival name error", err);
+      setRivalsMessage("Something went wrong while updating rival name.");
+    } finally {
+      setIsSavingRivalName(false);
+    }
+  }, [editingRivalId, editingRivalName, loadRivals]);
 
   const handleFileUpload = useCallback(
     async (files: File[]) => {
@@ -1528,13 +1575,22 @@ export default function DataMinePageClient({
               </div>
 
               <div className="mt-3 flex gap-2">
-                <input
-                  className={inputClass}
-                  value={rivalDomain}
-                  onChange={(e) => setRivalDomain(e.target.value)}
-                  placeholder="example.com or https://example.com"
-                  aria-label="Rival company domain"
-                />
+                <div className="flex-1 grid grid-cols-1 gap-2">
+                  <input
+                    className={inputClass}
+                    value={rivalCompanyName}
+                    onChange={(e) => setRivalCompanyName(e.target.value)}
+                    placeholder="Company name (optional)"
+                    aria-label="Rival company name"
+                  />
+                  <input
+                    className={inputClass}
+                    value={rivalDomain}
+                    onChange={(e) => setRivalDomain(e.target.value)}
+                    placeholder="example.com or https://example.com"
+                    aria-label="Rival company domain"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={handleAddRival}
@@ -1563,20 +1619,61 @@ export default function DataMinePageClient({
                       className="flex items-center justify-between gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/50 px-3 py-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-foreground truncate">
-                          {r.rivalCompany?.name ?? r.rivalCompanyId}
-                        </p>
+                        {editingRivalId === r.rivalCompanyId ? (
+                          <div className="space-y-1">
+                            <input
+                              className={inputClass}
+                              value={editingRivalName}
+                              onChange={(e) => setEditingRivalName(e.target.value)}
+                              placeholder="Rival name"
+                              aria-label="Edit rival company name"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={handleSaveRivalName}
+                                disabled={isSavingRivalName || !editingRivalName.trim()}
+                                className="rounded-md border border-[var(--glass-border)] bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15 disabled:opacity-50"
+                              >
+                                {isSavingRivalName ? "Saving…" : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditRivalName}
+                                disabled={isSavingRivalName}
+                                className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-xs font-semibold text-foreground truncate">
+                            {r.rivalCompany?.name ?? r.rivalCompanyId}
+                          </p>
+                        )}
                         <p className="text-[11px] text-muted-foreground truncate">
                           {r.rivalCompany?.domain ?? r.rivalCompany?.website ?? "—"}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRival(r.rivalCompanyId)}
-                        className="shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]"
-                      >
-                        Remove
-                      </button>
+                      <div className="shrink-0 flex flex-col gap-2 items-end">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditRivalName(r)}
+                          disabled={editingRivalId != null && editingRivalId !== r.rivalCompanyId}
+                          className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRival(r.rivalCompanyId)}
+                          disabled={isSavingRivalName}
+                          className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}

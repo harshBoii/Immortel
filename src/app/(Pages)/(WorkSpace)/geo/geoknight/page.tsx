@@ -150,15 +150,20 @@ export default async function GeoKnightPage() {
     })),
   }));
 
-  const rivalNames = rivals
-    .map((r) => r.rivalCompany.name?.trim())
-    .filter((n): n is string => Boolean(n));
+  const rivalCompanies = rivals
+    .map((r) => r.rivalCompany)
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
 
   return (
     <GeoKnightClient
       topics={topicViews}
       companyName={company?.name ?? null}
-      rivalCompanyNames={rivalNames}
+      rivals={rivalCompanies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        domain: c.domain ?? null,
+        website: c.website ?? null,
+      }))}
     />
   );
 }

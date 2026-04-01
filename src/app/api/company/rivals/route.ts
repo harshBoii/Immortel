@@ -74,9 +74,11 @@ export async function POST(request: Request) {
   }
 
   let domainInput: string | undefined;
+  let nameInput: string | undefined;
   try {
     const body = await request.json().catch(() => ({}));
     domainInput = body?.domain ?? body?.url ?? body?.website ?? undefined;
+    nameInput = typeof body?.name === "string" ? body.name : undefined;
   } catch {
     // ignore
   }
@@ -116,6 +118,7 @@ export async function POST(request: Request) {
   }
 
   const websiteUrl = domainToWebsiteUrl(domain);
+  const desiredName = (nameInput ?? "").trim();
 
   // Ensure a rival company record exists for this domain.
   // Note: `Company.domain` is not unique in the schema, so we do best-effort find/update/create.
@@ -127,13 +130,17 @@ export async function POST(request: Request) {
   const rivalCompany = found
     ? await prisma.company.update({
         where: { id: found.id },
-        data: { website: websiteUrl, isExternal: true },
+        data: {
+          website: websiteUrl,
+          isExternal: true,
+          ...(desiredName ? { name: desiredName } : {}),
+        },
         select: { id: true, domain: true, website: true },
       })
     : await prisma.company.create({
         data: {
-          name: domain,
-          slug: await uniqueCompanySlug(domain),
+          name: desiredName || domain,
+          slug: await uniqueCompanySlug(desiredName || domain),
           domain,
           website: websiteUrl,
           isExternal: true,

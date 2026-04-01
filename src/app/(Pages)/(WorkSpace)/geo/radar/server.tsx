@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { buildRadarGetPayload } from "@/lib/geo/radar/buildRadarGetPayload";
 import { CitationsTable } from "./citations-table";
-import { ModelBreakdownChart, SovTrendChart } from "./sov-charts";
+import { RadarCompareCharts } from "./sov-charts";
 
 function formatMetric(
   value: number | null | undefined,
@@ -41,7 +41,7 @@ export default async function RadarContent() {
     );
   }
 
-  const [payload, ownCompanyCitations] = await Promise.all([
+  const [payload, ownCompanyCitations, rivals] = await Promise.all([
     buildRadarGetPayload(prisma, companyId),
     prisma.citation.findMany({
       where: { companyId },
@@ -53,6 +53,13 @@ export default async function RadarContent() {
             prompt: { select: { query: true } },
           },
         },
+      },
+    }),
+    prisma.companyRival.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        rivalCompany: { select: { id: true, name: true } },
       },
     }),
   ]);
@@ -182,22 +189,12 @@ export default async function RadarContent() {
 
       
       {hasRadarMetrics ? (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="glass-card card-anime-float rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground">Share of voice trend</h3>
-            <p className="text-xs text-muted-foreground mt-1">Recent radar runs</p>
-            <div className="mt-2 h-[240px]">
-              <SovTrendChart series={payload.sovSeries} />
-            </div>
-          </div>
-          <div className="glass-card card-anime-float rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-foreground">Model breakdown</h3>
-            <p className="text-xs text-muted-foreground mt-1">Average SoV by model</p>
-            <div className="mt-2 h-[240px]">
-              <ModelBreakdownChart rows={payload.modelBreakdown} />
-            </div>
-          </div>
-        </section>
+        <RadarCompareCharts
+          base={{ sovSeries: payload.sovSeries, modelBreakdown: payload.modelBreakdown }}
+          rivals={rivals
+            .map((r) => r.rivalCompany)
+            .filter((c): c is { id: string; name: string } => Boolean(c))}
+        />
       ) : null}
 
       <section className="glass-card card-anime-float rounded-xl p-5">
