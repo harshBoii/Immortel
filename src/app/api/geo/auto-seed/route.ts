@@ -92,7 +92,9 @@ export async function POST(_request: NextRequest) {
     );
   }
 
-  const [nextCompany, nextBrandEntity, nextOfferingsRaw, nextBrandingRaw] = await Promise.all([
+  const nextBrandEntity = await prisma.brandEntity.findUnique({ where: { companyId } });
+
+  const [nextCompany, nextOfferingsRaw, nextBrandingRaw] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: {
@@ -104,10 +106,9 @@ export async function POST(_request: NextRequest) {
         email: true,
       },
     }),
-    prisma.brandEntity.findUnique({ where: { companyId } }),
-    brandEntity
+    nextBrandEntity
       ? prisma.entityOffering.findMany({
-          where: { entityId: brandEntity.id },
+          where: { entityId: nextBrandEntity.id },
           orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
         })
       : Promise.resolve([]),

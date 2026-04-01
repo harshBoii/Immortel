@@ -117,22 +117,29 @@ export async function POST(request: Request) {
 
   const websiteUrl = domainToWebsiteUrl(domain);
 
-  // Upsert target company by canonical domain (unique).
-  const rivalCompany = await prisma.company.upsert({
+  // Ensure a rival company record exists for this domain.
+  // Note: `Company.domain` is not unique in the schema, so we do best-effort find/update/create.
+  const found = await prisma.company.findFirst({
     where: { domain },
-    create: {
-      name: domain,
-      slug: await uniqueCompanySlug(domain),
-      domain,
-      website: websiteUrl,
-      isExternal: true,
-    },
-    update: {
-      website: websiteUrl,
-      isExternal: true,
-    },
     select: { id: true, domain: true, website: true },
   });
+
+  const rivalCompany = found
+    ? await prisma.company.update({
+        where: { id: found.id },
+        data: { website: websiteUrl, isExternal: true },
+        select: { id: true, domain: true, website: true },
+      })
+    : await prisma.company.create({
+        data: {
+          name: domain,
+          slug: await uniqueCompanySlug(domain),
+          domain,
+          website: websiteUrl,
+          isExternal: true,
+        },
+        select: { id: true, domain: true, website: true },
+      });
 
   if (rivalCompany.id === companyId) {
     return NextResponse.json(
