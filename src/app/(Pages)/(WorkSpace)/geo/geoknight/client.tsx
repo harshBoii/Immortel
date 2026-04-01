@@ -221,22 +221,21 @@ function buildInsightTopics(topics: TopicView[]) {
   }));
 }
 
-/** One row per company: best (lowest) consensus avgRank, mentions summed. */
+/** One row per company: best (lowest) consensus rank, mentions summed. */
 function mergeConsensusRowsBestRank(rows: RivalConsensus[]) {
-  const map = new Map<string, { ranks: number[]; mentions: number }>();
+  const map = new Map<string, { bestRank: number | null; mentions: number }>();
   for (const c of rows) {
-    const cur = map.get(c.companyName) ?? { ranks: [], mentions: 0 };
-    if (c.avgRank != null && !Number.isNaN(c.avgRank)) cur.ranks.push(c.avgRank);
+    const cur = map.get(c.companyName) ?? { bestRank: null as number | null, mentions: 0 };
     cur.mentions += c.mentions;
+    if (c.avgRank != null && !Number.isNaN(c.avgRank)) {
+      cur.bestRank =
+        cur.bestRank == null ? c.avgRank : Math.min(cur.bestRank, c.avgRank);
+    }
     map.set(c.companyName, cur);
   }
   const out: Array<{ companyName: string; bestRank: number | null; mentions: number }> = [];
-  for (const [companyName, { ranks, mentions }] of map) {
-    out.push({
-      companyName,
-      bestRank: ranks.length === 0 ? null : Math.min(...ranks),
-      mentions,
-    });
+  for (const [companyName, { bestRank, mentions }] of map) {
+    out.push({ companyName, bestRank, mentions });
   }
   out.sort((a, b) => a.companyName.localeCompare(b.companyName));
   return out;
@@ -244,19 +243,30 @@ function mergeConsensusRowsBestRank(rows: RivalConsensus[]) {
 
 /** Collapse duplicate model+company keys to a single best (lowest) rank. */
 function mergeByModelRowsBestRank(rows: RivalByModel[]) {
-  const map = new Map<string, { ranks: number[]; model: string; companyName: string }>();
+  const map = new Map<
+    string,
+    { bestRank: number | null; model: string; companyName: string }
+  >();
   for (const c of rows) {
     const key = `${c.model}\0${c.companyName}`;
-    const cur = map.get(key) ?? { ranks: [], model: c.model, companyName: c.companyName };
-    if (c.rank != null && !Number.isNaN(c.rank)) cur.ranks.push(c.rank);
+    const cur =
+      map.get(key) ?? {
+        bestRank: null as number | null,
+        model: c.model,
+        companyName: c.companyName,
+      };
+    if (c.rank != null && !Number.isNaN(c.rank)) {
+      cur.bestRank =
+        cur.bestRank == null ? c.rank : Math.min(cur.bestRank, c.rank);
+    }
     map.set(key, cur);
   }
   const out: RivalByModel[] = [];
-  for (const { ranks, model, companyName } of map.values()) {
+  for (const { bestRank, model, companyName } of map.values()) {
     out.push({
       model,
       companyName,
-      rank: ranks.length === 0 ? null : Math.min(...ranks),
+      rank: bestRank,
     });
   }
   out.sort((a, b) => a.model.localeCompare(b.model) || a.companyName.localeCompare(b.companyName));
@@ -418,7 +428,10 @@ export default function GeoKnightClient({
     return () => true;
   }, [focusNameRegex]);
 
-  const promptCount = filteredTopics.reduce((s, t) => s + t.prompts.length, 0);
+  let promptCount = 0;
+  for (const t of filteredTopics) {
+    promptCount += t.prompts.length;
+  }
 
   const sendRivalInsight = useCallback(async () => {
     const parsed = parseShowFocus(showFocus);
@@ -864,8 +877,10 @@ export default function GeoKnightClient({
                             Rival Consensus Board
                           </p>
                             {(() => {
-                              const rows = (prompt.consensus ?? []).filter((c) =>
-                                filterTableRowsForFocus(c.companyName)
+                              const rows = mergeConsensusRowsBestRank(
+                                (prompt.consensus ?? []).filter((c) =>
+                                  filterTableRowsForFocus(c.companyName)
+                                )
                               );
                               if (rows.length === 0) {
                                 return (
@@ -880,7 +895,7 @@ export default function GeoKnightClient({
                                     <thead>
                                       <tr className="border-b border-[var(--glass-border)]/60">
                                         <th className="text-left py-1.5">Company</th>
-                                        <th className="text-right py-1.5">Avg rank</th>
+                                        <th className="text-right py-1.5">Best rank</th>
                                         <th className="text-right py-1.5">Mentions</th>
                                       </tr>
                                     </thead>
@@ -892,7 +907,7 @@ export default function GeoKnightClient({
                                         >
                                           <td className="py-1.5">{c.companyName}</td>
                                           <td className="py-1.5 text-right tabular-nums">
-                                            {rankText(c.avgRank)}
+                                            {rankText(c.bestRank)}
                                           </td>
                                           <td className="py-1.5 text-right tabular-nums">
                                             {c.mentions}
@@ -911,8 +926,10 @@ export default function GeoKnightClient({
                             Model Duel Board
                           </p>
                           {(() => {
-                            const rows = (prompt.byModel ?? []).filter((c) =>
-                              filterTableRowsForFocus(c.companyName)
+                            const rows = mergeByModelRowsBestRank(
+                              (prompt.byModel ?? []).filter((c) =>
+                                filterTableRowsForFocus(c.companyName)
+                              )
                             );
                             if (rows.length === 0) {
                               return (
@@ -928,7 +945,7 @@ export default function GeoKnightClient({
                                     <tr className="border-b border-[var(--glass-border)]/60">
                                       <th className="text-left py-1.5">Model</th>
                                       <th className="text-left py-1.5">Company</th>
-                                      <th className="text-right py-1.5">Rank</th>
+                                      <th className="text-right py-1.5">Best rank</th>
                                     </tr>
                                   </thead>
                                   <tbody>
