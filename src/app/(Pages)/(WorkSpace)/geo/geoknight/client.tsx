@@ -70,6 +70,18 @@ function sortPromptsForDisplay(prompts: PromptView[], mode: PromptSortMode): Pro
   return copy;
 }
 
+function namesMatchNeedle(name: string, needle: string) {
+  return name.trim().toLowerCase() === needle.trim().toLowerCase();
+}
+
+function filterCompanyNamesToRivals(names: string[], rivalCompanyNames: string[]): string[] {
+  if (!rivalCompanyNames || rivalCompanyNames.length === 0) return [];
+  const rivalNeedles = new Set(
+    rivalCompanyNames.map((n) => n.trim().toLowerCase()).filter(Boolean)
+  );
+  return names.filter((n) => rivalNeedles.has(n.trim().toLowerCase()));
+}
+
 function uniqueCompanyNamesForPrompt(prompt: PromptView): string[] {
   const names = new Set<string>();
   for (const c of prompt.consensus ?? []) {
@@ -111,14 +123,17 @@ function isCompanyRankedSomewhereForPrompt(prompt: PromptView, companyNeedle: st
 export default function GeoKnightClient({
   topics,
   companyName,
+  rivalCompanyNames,
 }: {
   topics: TopicView[];
   companyName: string | null;
+  rivalCompanyNames: string[];
 }) {
   const [q, setQ] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("mostPrompts");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("ALL");
   const [onlyCompanyRanked, setOnlyCompanyRanked] = useState(false);
+  const [onlyMyRivals, setOnlyMyRivals] = useState(false);
   const [showAllTopicCompanies, setShowAllTopicCompanies] = useState<
     Record<string, boolean>
   >({});
@@ -192,6 +207,20 @@ export default function GeoKnightClient({
         .filter((t): t is TopicView => t != null);
     }
 
+    if (onlyMyRivals) {
+      rows = rows
+        .map((t) => {
+          const prompts = t.prompts.filter((p) => {
+            const companies = uniqueCompanyNamesForPrompt(p);
+            const onlyRivals = filterCompanyNamesToRivals(companies, rivalCompanyNames);
+            return onlyRivals.length > 0;
+          });
+          if (prompts.length === 0) return null;
+          return { ...t, prompts };
+        })
+        .filter((t): t is TopicView => t != null);
+    }
+
     const clone = [...rows];
     if (sortMode === "recentTopics") {
       clone.sort(
@@ -205,7 +234,16 @@ export default function GeoKnightClient({
       clone.sort((a, b) => b.prompts.length - a.prompts.length);
     }
     return clone;
-  }, [topics, companyName, q, sortMode, difficulty, onlyCompanyRanked]);
+  }, [
+    topics,
+    companyName,
+    rivalCompanyNames,
+    q,
+    sortMode,
+    difficulty,
+    onlyCompanyRanked,
+    onlyMyRivals,
+  ]);
 
   const promptCount = filteredTopics.reduce((s, t) => s + t.prompts.length, 0);
 
@@ -232,7 +270,7 @@ export default function GeoKnightClient({
         </div>
       </section>
 
-      <section className="glass-card rounded-xl p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+      <section className="glass-card rounded-xl p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -272,6 +310,19 @@ export default function GeoKnightClient({
             Only show fronts where your company ranks
           </span>
         </label>
+
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={onlyMyRivals}
+            disabled={!rivalCompanyNames || rivalCompanyNames.length === 0}
+            onChange={(e) => setOnlyMyRivals(e.target.checked)}
+            className="h-4 w-4 rounded border border-[var(--glass-border)] bg-[var(--glass)]/70 accent-[var(--sibling-primary)] disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <span className="whitespace-nowrap">
+            Only show prompts where your rivals appear
+          </span>
+        </label>
       </section>
 
       {filteredTopics.length === 0 ? (
@@ -300,11 +351,14 @@ export default function GeoKnightClient({
                   </div>
                   {(() => {
                     const topicCompanies = uniqueCompanyNamesForTopic(topic);
-                    if (topicCompanies.length === 0) return null;
+                    const finalTopicCompanies = onlyMyRivals
+                      ? filterCompanyNamesToRivals(topicCompanies, rivalCompanyNames)
+                      : topicCompanies;
+                    if (finalTopicCompanies.length === 0) return null;
                     const showAll = showAllTopicCompanies[topic.id] ?? false;
                     const visibleCompanies = showAll
-                      ? topicCompanies
-                      : topicCompanies.slice(0, 18);
+                      ? finalTopicCompanies
+                      : finalTopicCompanies.slice(0, 18);
                     return (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {visibleCompanies.map((name) => (
@@ -316,7 +370,7 @@ export default function GeoKnightClient({
                             {name}
                           </span>
                         ))}
-                        {topicCompanies.length > 18 ? (
+                        {finalTopicCompanies.length > 18 ? (
                           <button
                             type="button"
                             onClick={() =>
@@ -468,76 +522,100 @@ export default function GeoKnightClient({
                           <p className="text-xs font-semibold text-foreground">
                             Rival Consensus Board
                           </p>
-                          {prompt.consensus.length === 0 ? (
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              No consensus rivals available.
-                            </p>
-                          ) : (
-                            <div className="mt-2 overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="border-b border-[var(--glass-border)]/60">
-                                    <th className="text-left py-1.5">Company</th>
-                                    <th className="text-right py-1.5">Avg rank</th>
-                                    <th className="text-right py-1.5">Mentions</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {prompt.consensus.map((c, idx) => (
-                                    <tr
-                                      key={`${c.companyName}-${idx}`}
-                                      className="border-b border-[var(--glass-border)]/30"
-                                    >
-                                      <td className="py-1.5">{c.companyName}</td>
-                                      <td className="py-1.5 text-right tabular-nums">
-                                        {rankText(c.avgRank)}
-                                      </td>
-                                      <td className="py-1.5 text-right tabular-nums">
-                                        {c.mentions}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
+                            {(() => {
+                              const rows = onlyMyRivals
+                                ? (prompt.consensus ?? []).filter((c) =>
+                                    rivalCompanyNames.some((r) =>
+                                      namesMatchNeedle(r, c.companyName)
+                                    )
+                                  )
+                                : prompt.consensus ?? [];
+                              if (rows.length === 0) {
+                                return (
+                                  <p className="mt-2 text-xs text-muted-foreground">
+                                    No consensus rivals available.
+                                  </p>
+                                );
+                              }
+                              return (
+                                <div className="mt-2 overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-[var(--glass-border)]/60">
+                                        <th className="text-left py-1.5">Company</th>
+                                        <th className="text-right py-1.5">Avg rank</th>
+                                        <th className="text-right py-1.5">Mentions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {rows.map((c, idx) => (
+                                        <tr
+                                          key={`${c.companyName}-${idx}`}
+                                          className="border-b border-[var(--glass-border)]/30"
+                                        >
+                                          <td className="py-1.5">{c.companyName}</td>
+                                          <td className="py-1.5 text-right tabular-nums">
+                                            {rankText(c.avgRank)}
+                                          </td>
+                                          <td className="py-1.5 text-right tabular-nums">
+                                            {c.mentions}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              );
+                            })()}
                         </div>
 
                         <div className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/45 p-3">
                           <p className="text-xs font-semibold text-foreground">
                             Model Duel Board
                           </p>
-                          {prompt.byModel.length === 0 ? (
-                            <p className="mt-2 text-xs text-muted-foreground">
-                              No model-specific rivals available.
-                            </p>
-                          ) : (
-                            <div className="mt-2 overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="border-b border-[var(--glass-border)]/60">
-                                    <th className="text-left py-1.5">Model</th>
-                                    <th className="text-left py-1.5">Company</th>
-                                    <th className="text-right py-1.5">Rank</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {prompt.byModel.map((c, idx) => (
-                                    <tr
-                                      key={`${c.model}-${c.companyName}-${idx}`}
-                                      className="border-b border-[var(--glass-border)]/30"
-                                    >
-                                      <td className="py-1.5">{c.model}</td>
-                                      <td className="py-1.5">{c.companyName}</td>
-                                      <td className="py-1.5 text-right tabular-nums">
-                                        {rankText(c.rank)}
-                                      </td>
+                          {(() => {
+                            const rows = onlyMyRivals
+                              ? (prompt.byModel ?? []).filter((c) =>
+                                  rivalCompanyNames.some((r) =>
+                                    namesMatchNeedle(r, c.companyName)
+                                  )
+                                )
+                              : prompt.byModel ?? [];
+                            if (rows.length === 0) {
+                              return (
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                  No model-specific rivals available.
+                                </p>
+                              );
+                            }
+                            return (
+                              <div className="mt-2 overflow-x-auto">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="border-b border-[var(--glass-border)]/60">
+                                      <th className="text-left py-1.5">Model</th>
+                                      <th className="text-left py-1.5">Company</th>
+                                      <th className="text-right py-1.5">Rank</th>
                                     </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
+                                  </thead>
+                                  <tbody>
+                                    {rows.map((c, idx) => (
+                                      <tr
+                                        key={`${c.model}-${c.companyName}-${idx}`}
+                                        className="border-b border-[var(--glass-border)]/30"
+                                      >
+                                        <td className="py-1.5">{c.model}</td>
+                                        <td className="py-1.5">{c.companyName}</td>
+                                        <td className="py-1.5 text-right tabular-nums">
+                                          {rankText(c.rank)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

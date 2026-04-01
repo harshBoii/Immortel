@@ -34,6 +34,16 @@ export default async function GeoKnightPage() {
     select: { name: true },
   });
 
+  const rivals = await prisma.companyRival.findMany({
+    where: { companyId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      rivalCompany: {
+        select: { id: true, name: true, domain: true, website: true },
+      },
+    },
+  });
+
   const topics = await prisma.llmTopic.findMany({
     where: { companyId },
     orderBy: [{ createdAt: "desc" }],
@@ -140,6 +150,16 @@ export default async function GeoKnightPage() {
     })),
   }));
 
-  return <GeoKnightClient topics={topicViews} companyName={company?.name ?? null} />;
+  const rivalNames = rivals
+    .map((r) => r.rivalCompany.name?.trim())
+    .filter((n): n is string => Boolean(n));
+
+  return (
+    <GeoKnightClient
+      topics={topicViews}
+      companyName={company?.name ?? null}
+      rivalCompanyNames={rivalNames}
+    />
+  );
 }
 

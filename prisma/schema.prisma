@@ -13,9 +13,13 @@ model Company {
   description           String?
   logoUrl               String?                 @db.VarChar(1000)
   website               String?                 @db.VarChar(500)
-  email                 String                  @unique @db.VarChar(255)
-  userName              String                  @unique @db.VarChar(255)
-  password              String                  @db.VarChar(255)
+  /// Canonical domain (no scheme/path). Used for rival lookup / dedupe.
+  domain                String?                 @db.VarChar(255)
+  /// Auth fields are nullable to support “external” companies (e.g. rivals) that are not login accounts.
+  email                 String?                 @unique @db.VarChar(255)
+  userName              String?                 @unique @db.VarChar(255)
+  password              String?                 @db.VarChar(255)
+  isExternal            Boolean                 @default(false)
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
   aeoGenerationProfiles AeoGenerationProfile[]
@@ -39,9 +43,38 @@ model Company {
   radarAssumption       RadarAssumption?
   llmPromptMetrics      LlmPromptMetric[]
   wordpressIntegration  WordPressIntegration?
+  plan                  CompanyPlan?
+  rivals                CompanyRival[]          @relation("CompanyRivals")
+  rivaledBy             CompanyRival[]          @relation("CompanyRivalTargets")
 
   @@index([slug])
   @@map("companies")
+}
+
+model CompanyPlan {
+  id               String   @id @default(cuid())
+  companyId         String   @unique
+  maxRivalsAllowed  Int      @default(10)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("company_plans")
+}
+
+model CompanyRival {
+  id             String   @id @default(cuid())
+  companyId       String
+  rivalCompanyId  String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  company         Company  @relation("CompanyRivals", fields: [companyId], references: [id], onDelete: Cascade)
+  rivalCompany    Company  @relation("CompanyRivalTargets", fields: [rivalCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, rivalCompanyId])
+  @@index([companyId])
+  @@index([rivalCompanyId])
+  @@map("company_rivals")
 }
 
 model CompanyIntegrationCms {

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       where: { email: email.trim().toLowerCase() },
     });
 
-    if (!company) {
+    if (!company || !company.password) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }

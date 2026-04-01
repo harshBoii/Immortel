@@ -61,7 +61,7 @@ export async function POST() {
 
   const companyId = session.companyId;
 
-  const [company, brandEntity, geoDataSources, llmTopics, shopifyProducts] = await Promise.all([
+  const [company, brandEntity, geoDataSources, llmTopics, shopifyProducts, rivals] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: { id: true, name: true, website: true, description: true },
@@ -101,6 +101,15 @@ export async function POST() {
         onlineStoreUrl: true,
       },
     }),
+    prisma.companyRival.findMany({
+      where: { companyId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        rivalCompany: {
+          select: { name: true },
+        },
+      },
+    }),
   ]);
 
   if (!company) {
@@ -120,7 +129,21 @@ export async function POST() {
 
   const primaryOffering =
     brandEntity?.offerings.find((o) => o.isPrimary) ?? brandEntity?.offerings[0];
-  const competitors = primaryOffering?.competitors ?? [];
+  const competitorsFromOffering = primaryOffering?.competitors ?? [];
+  const competitorsFromRivals = rivals.map((r) => r.rivalCompany.name).filter(Boolean);
+  const competitors = (() => {
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const name of [...competitorsFromRivals, ...competitorsFromOffering]) {
+      const n = (name ?? "").trim();
+      if (!n) continue;
+      const key = n.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(n);
+    }
+    return out;
+  })();
   const topics = brandEntity?.topics ?? [];
   const keywords = brandEntity?.keywords ?? [];
   const category = brandEntity?.category ?? "";
