@@ -190,7 +190,7 @@ export default function RegisterPage() {
 
   return (
     <LazyMotion features={domAnimation} strict>
-      <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 px-6 py-10">
+      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 px-6 py-10 lg:py-0">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.6]"
           style={{

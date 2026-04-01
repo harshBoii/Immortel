@@ -51,7 +51,8 @@ export function middleware(request: NextRequest) {
     isShopifyWebhookApi ||
     isPrivacyPolicyApi ||
     isWidgetApi ||
-    isPublicBountyHuntArticle;
+    isPublicBountyHuntArticle||
+    isRegisterPage;
 
   if (isPublic) {
     if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {

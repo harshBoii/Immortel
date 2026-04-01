@@ -550,7 +550,11 @@ export default function AuthPage() {
             {mode === 'login' ? (
               <>
                 Don&apos;t have an account?{' '}
-                <button type="button" onClick={toggleMode} className="text-primary font-semibold hover:underline focus:outline-none transition-colors">
+                <button
+                  type="button"
+                  onClick={() => router.push('/register')}
+                  className="text-primary font-semibold hover:underline focus:outline-none transition-colors"
+                >
                   Sign Up
                 </button>
               </>
