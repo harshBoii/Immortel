@@ -33,6 +33,27 @@ type GeoDataSource = {
   } | null;
 };
 
+type RivalCompany = {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  description: string | null;
+  isExternal: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RivalLink = {
+  id: string;
+  companyId: string;
+  rivalCompanyId: string;
+  createdAt: string;
+  rivalCompany: RivalCompany;
+};
+
 type Props = {
   initialSources: GeoDataSource[];
   initialCompany: {
@@ -820,6 +841,12 @@ export default function DataMinePageClient({
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFillMessage, setAutoFillMessage] = useState<string | null>(null);
 
+  const [rivals, setRivals] = useState<RivalLink[]>([]);
+  const [rivalsLoading, setRivalsLoading] = useState(false);
+  const [rivalsMessage, setRivalsMessage] = useState<string | null>(null);
+  const [rivalDomain, setRivalDomain] = useState("");
+  const [isAddingRival, setIsAddingRival] = useState(false);
+
   const [textContent, setTextContent] = useState("");
   const [urlValue, setUrlValue] = useState("");
   const [selectedSourceLabel, setSelectedSourceLabel] = useState<SourceLabelPreset>("Product deck");
@@ -848,6 +875,32 @@ export default function DataMinePageClient({
       setActiveTab("url");
     }
   }, [selectedSourceLabel]);
+
+  const loadRivals = useCallback(async () => {
+    setRivalsLoading(true);
+    setRivalsMessage(null);
+    try {
+      const res = await fetch("/api/company/rivals", {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setRivalsMessage(data?.error ?? "Failed to load rivals.");
+        return;
+      }
+      setRivals(Array.isArray(data.rivals) ? (data.rivals as RivalLink[]) : []);
+    } catch (err) {
+      console.error("Load rivals error", err);
+      setRivalsMessage("Something went wrong while loading rivals.");
+    } finally {
+      setRivalsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRivals();
+  }, [loadRivals]);
 
   const handleAutoFillFromGeo = useCallback(async () => {
     setIsAutoFilling(true);
@@ -882,6 +935,55 @@ export default function DataMinePageClient({
       setIsAutoFilling(false);
     }
   }, []);
+
+  const handleAddRival = useCallback(async () => {
+    const domain = rivalDomain.trim();
+    if (!domain) return;
+    setIsAddingRival(true);
+    setRivalsMessage(null);
+    try {
+      const res = await fetch("/api/company/rivals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ domain }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setRivalsMessage(data?.error ?? "Failed to add rival.");
+        return;
+      }
+      setRivalDomain("");
+      await loadRivals();
+      setRivalsMessage(data?.created ? "Rival added." : "Rival already exists.");
+    } catch (err) {
+      console.error("Add rival error", err);
+      setRivalsMessage("Something went wrong while adding rival.");
+    } finally {
+      setIsAddingRival(false);
+    }
+  }, [rivalDomain, loadRivals]);
+
+  const handleRemoveRival = useCallback(async (rivalCompanyId: string) => {
+    if (!rivalCompanyId) return;
+    setRivalsMessage(null);
+    try {
+      const res = await fetch(`/api/company/rivals/${encodeURIComponent(rivalCompanyId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setRivalsMessage(data?.error ?? "Failed to remove rival.");
+        return;
+      }
+      await loadRivals();
+      setRivalsMessage("Rival removed.");
+    } catch (err) {
+      console.error("Remove rival error", err);
+      setRivalsMessage("Something went wrong while removing rival.");
+    }
+  }, [loadRivals]);
 
   const handleFileUpload = useCallback(
     async (files: File[]) => {
@@ -1403,6 +1505,82 @@ export default function DataMinePageClient({
                   Add your website URL in the Company profile tab before running auto-fill.
                 </p>
               )}
+            </section>
+
+            <section className="glass-card card-anime-float rounded-xl p-5" aria-labelledby="rivals-heading">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="rivals-heading" className="text-sm font-semibold text-foreground">
+                    Rival companies
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Add competitors by domain (we’ll enrich them in the background).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadRivals}
+                  disabled={rivalsLoading}
+                  className="shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  className={inputClass}
+                  value={rivalDomain}
+                  onChange={(e) => setRivalDomain(e.target.value)}
+                  placeholder="example.com or https://example.com"
+                  aria-label="Rival company domain"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddRival}
+                  disabled={isAddingRival || !rivalDomain.trim()}
+                  className="rounded-lg border border-[var(--glass-border)] bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 disabled:opacity-50"
+                >
+                  {isAddingRival ? "Adding…" : "Add"}
+                </button>
+              </div>
+
+              {rivalsMessage ? (
+                <p className="mt-2 text-[11px] text-muted-foreground">{rivalsMessage}</p>
+              ) : null}
+
+              <div className="mt-3 space-y-2">
+                {rivalsLoading ? (
+                  <p className="text-[11px] text-muted-foreground">Loading rivals…</p>
+                ) : rivals.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    No rivals yet. Add one to power Radar + GeoKnight competitor views.
+                  </p>
+                ) : (
+                  rivals.slice(0, 12).map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/50 px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {r.rivalCompany?.name ?? r.rivalCompanyId}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {r.rivalCompany?.domain ?? r.rivalCompany?.website ?? "—"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRival(r.rivalCompanyId)}
+                        className="shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </section>
           </div>
         </div>
