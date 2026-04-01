@@ -7,6 +7,7 @@ import { memo, useEffect, useRef } from 'react';
 import {
   HiCheckCircle,
   HiCreditCard,
+  HiCalendarDays,
   HiMagnifyingGlass,
   HiSignal,
   HiShoppingBag,
@@ -472,9 +473,15 @@ export default function ImmortelLanding() {
               <Link href="/register" className="btn-hero-main">
                 Get Started
               </Link>
-              <Link href="#framework" className="btn-hero-link">
-                See the platform
-              </Link>
+              <a
+                href={calendlyHref}
+                className="btn-hero-demo"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                <HiCalendarDays aria-hidden />
+                <span>Book. A. Demo With us</span>
+              </a>
             </m.div>
           </m.div>
 

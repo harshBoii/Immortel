@@ -423,6 +423,39 @@ html {
   font-size: 16px;
 }
 
+.landing-page .btn-hero-demo {
+  font-family: var(--cond);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--yellow);
+  color: var(--black);
+  padding: 16px 22px;
+  border: 1px solid rgba(10, 10, 10, 0.18);
+  cursor: crosshair;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 100%, 12px 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.15s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.landing-page .btn-hero-demo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.landing-page .btn-hero-demo:hover {
+  background: var(--electric);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
+}
+
 .landing-page .hero-ticker {
   position: absolute;
   bottom: 0;
