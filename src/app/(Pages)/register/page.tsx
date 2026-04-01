@@ -160,8 +160,9 @@ export default function RegisterPage() {
       }
 
       setSuccess('Setup started. Your workspace is loading…');
-      router.push('/');
-      router.refresh();
+      // Hard navigation so the browser commits the Set-Cookie header before
+      // the next request fires — avoids the middleware seeing a missing cookie.
+      window.location.href = '/';
     } catch (e) {
       console.error(e);
       setError('Something went sideways. Try again.');

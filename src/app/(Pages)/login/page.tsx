@@ -70,8 +70,9 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      router.push(data.redirect ?? '/');
-      router.refresh();
+      // Hard navigation so the browser commits the Set-Cookie header before
+      // the next request fires — avoids the middleware seeing a missing cookie.
+      window.location.href = data.redirect ?? '/';
     } catch (err) {
       console.error(err);
       setError('Something went wrong, please try again.');
