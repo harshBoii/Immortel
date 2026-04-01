@@ -14,6 +14,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isLoginPage = pathname === '/login';
+  const isRegisterPage = pathname === '/register';
   const isDevLoginPage = pathname === '/dev/login';
   const isLandingPage = pathname === '/landing';
   const isAuthApi = pathname.startsWith('/api/auth');
