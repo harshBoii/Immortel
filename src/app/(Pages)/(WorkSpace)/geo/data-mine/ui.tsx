@@ -41,7 +41,7 @@ type Props = {
     description: string | null;
     logoUrl: string | null;
     website: string | null;
-    email: string;
+    email: string | null;
   } | null;
   initialBrandEntity: {
     id: string;

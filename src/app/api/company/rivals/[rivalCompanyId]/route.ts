@@ -4,14 +4,14 @@ import { getSession } from "@/lib/auth";
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { rivalCompanyId: string } }
+  { params }: { params: Promise<{ rivalCompanyId: string }> }
 ) {
   const session = await getSession();
   if (!session?.companyId) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
-  const { rivalCompanyId } = params;
+  const { rivalCompanyId } = await params;
   if (!rivalCompanyId) {
     return NextResponse.json(
       { success: false, error: "rivalCompanyId is required" },
