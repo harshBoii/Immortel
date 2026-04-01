@@ -190,7 +190,7 @@ export default function RegisterPage() {
 
   return (
     <LazyMotion features={domAnimation} strict>
-      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 px-6 py-10 lg:py-0">
+      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5 px-6 py-10 text-foreground lg:py-0">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.6]"
           style={{
@@ -206,7 +206,7 @@ export default function RegisterPage() {
             initial={{ opacity: 0, x: -22, filter: 'blur(10px)' }}
             animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
             transition={{ duration: 0.75, ease: easeMist }}
-            className="relative hidden lg:block"
+            className="relative hidden text-foreground lg:block"
           >
             <div className="absolute -left-8 top-10 h-64 w-64 rounded-full bg-[var(--alien-glow-green)]/10 blur-3xl" />
             <div className="absolute left-32 top-52 h-56 w-56 rounded-full bg-[var(--sibling-primary)]/10 blur-3xl" />
@@ -253,7 +253,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="mt-8 flex items-center gap-3 text-sm">
-                <Link href="/landing" className="text-muted-foreground hover:underline">
+                <Link href="/landing" className="text-muted-foreground hover:text-foreground hover:underline">
                   ← Back to landing
                 </Link>
                 <span className="text-muted-foreground/50">·</span>
