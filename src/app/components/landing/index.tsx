@@ -392,6 +392,7 @@ export default function ImmortelLanding() {
   const marqueeDup = [...MARQUEE_PHRASES, ...MARQUEE_PHRASES, ...MARQUEE_PHRASES, ...MARQUEE_PHRASES];
 
   const fontClass = `${barlow.variable} ${barlowCondensed.variable} ${spaceMono.variable}`;
+  const calendlyHref = "https://calendly.com/clipfoxcredentials/30min";
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -468,8 +469,8 @@ export default function ImmortelLanding() {
               recommendations into instant transactions for your brand.
             </m.p>
             <m.div className="hero-actions" {...heroChild}>
-              <Link href="#cta" className="btn-hero-main">
-                Get Early Access
+              <Link href="/register" className="btn-hero-main">
+                Get Started
               </Link>
               <Link href="#framework" className="btn-hero-link">
                 See the platform
@@ -921,7 +922,7 @@ export default function ImmortelLanding() {
                 'No checkout / no protocol access',
               ]}
               cta="Get Started Free"
-              href="#cta"
+              href="/register"
             />
             <PricingCard
               featured
@@ -980,12 +981,32 @@ export default function ImmortelLanding() {
             inside AI answers today. That&apos;s Immortell.
           </p>
           <div className="cta-actions">
-            <Link href="/login" className="btn-cta-main">
+            <Link href="/register" className="btn-cta-main">
               Start for Free
             </Link>
-            <Link href="#pricing" className="btn-cta-ghost">
+            <a
+              href={calendlyHref}
+              className="btn-cta-ghost"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
               Book a Demo
-            </Link>
+            </a>
+          </div>
+
+          <div className="demo-block">
+            <div className="demo-kicker">Want the 10-minute tour?</div>
+            <div className="demo-title">Book a demo. We’ll show you the “oh wow” parts.</div>
+            <div className="demo-actions">
+              <a
+                href={calendlyHref}
+                className="demo-link"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                Open Calendly →
+              </a>
+            </div>
           </div>
         </m.section>
 

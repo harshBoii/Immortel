@@ -15,6 +15,10 @@ model Company {
   website               String?                 @db.VarChar(500)
   /// Canonical domain (no scheme/path). Used for rival lookup / dedupe.
   domain                String?                 @db.VarChar(255)
+  /// Requested CMS integrations collected at onboarding (e.g. ["Webflow","Other: Custom"])
+  requestedCmsIntegrations String[]             @default([])
+  /// Captured during onboarding when WordPress is selected; later reconciled into `WordPressIntegration`.
+  wordpressRequestedSiteUrl String?             @db.VarChar(1000)
   /// Auth fields are nullable to support “external” companies (e.g. rivals) that are not login accounts.
   email                 String?                 @unique @db.VarChar(255)
   userName              String?                 @unique @db.VarChar(255)
@@ -22,6 +26,7 @@ model Company {
   isExternal            Boolean                 @default(false)
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
+
   aeoGenerationProfiles AeoGenerationProfile[]
   aeoPages              AeoPage[]
   assetIntelligence     AssetIntelligence[]
