@@ -163,12 +163,20 @@ const IconConnection = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconHelp = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
 const MAIN_SECTIONS = [
-  { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
-  { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
+  // { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
+  // { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
   { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
   { id: 'connection', label: 'Connection', icon: IconConnection, hasSecondary: true },
@@ -278,12 +286,12 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       return (
         <>
           <SectionLabel label="GEO" />
-          <SecondaryNavItem icon={IconDatabase} label="Data Mine" href="/geo/data-mine" />
-          <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" />
           <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
           <SecondaryNavItem icon={IconKnight} label="GeoKnight" href="/geo/geoknight" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
           <SecondaryNavItem icon={IconFileText} label="Generated Bounty Pages" href="/geo/bounty-pages" />
+          <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" />
+          <SecondaryNavItem icon={IconDatabase} label="Data Mine" href="/geo/data-mine" />
         </>
       );
     case 'shop':
@@ -420,6 +428,16 @@ export default function AppSidebar() {
           >
             {theme === 'dark' ? 'Dark' : 'Light'}
           </span>
+          
+          <Link
+              href="/help"
+              title="Quick Help"
+              className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-black dark:hover:text-[var(--alien-glow-green)] transition-colors"
+            >
+              <IconHelp className="w-5 h-5" />
+            </Link>
+          <span className="text-[10px] leading-none text-center text-muted-foreground">Help</span>
+
           <button
             type="button"
             onClick={handleLogout}
@@ -529,6 +547,7 @@ export default function AppSidebar() {
                 </div>
               </div>
             )}
+            
             <button
               type="button"
               onClick={handleLogout}

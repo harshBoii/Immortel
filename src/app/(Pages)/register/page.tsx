@@ -472,7 +472,7 @@ export default function RegisterPage() {
                     Back
                   </button>
 
-                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-30">
                     {step !== 'launch' ? (
                       <m.button
                         type="button"

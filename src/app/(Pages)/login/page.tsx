@@ -132,7 +132,7 @@ export default function AuthPage() {
         });
         const loginData = await loginRes.json();
         if (loginRes.ok) {
-          router.push(loginData.redirect ?? '/');
+          router.push('/geo/radar');
           router.refresh();
         } else {
           setMode('login');

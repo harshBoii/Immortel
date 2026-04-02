@@ -2,8 +2,14 @@ import { Suspense } from "react";
 import RadarContent from "./server";
 import RadarRefreshButton from "./refresh-button";
 import LoadingAnimation from "@/app/components/animations/loading";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function RadarPage() {
+
+export default async function RadarPage() {
+  const session = await getSession();
+  if (!session?.companyId) redirect("/login");
+
   return (
     <div className="max-w-5xl mx-auto min-h-[60vh] px-6 pb-6 pt-2">
       <div className="flex items-start justify-between gap-4">
