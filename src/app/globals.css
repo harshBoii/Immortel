@@ -129,9 +129,9 @@
   --sibling-surface-hover: oklch(0.95 0.012 85);   /* Parchment hover      */
 
   /* ── Alien greens ── */
-  --alien-glow-green:   #19F5A8; /* primary glow      */
-  --alien-core-green:   #12D98E; /* core solid        */
-  --alien-accent-green: #0B8F63; /* darker accent     */
+  --alien-glow-green:   #19f5a812; /* primary glow      */
+  --alien-core-green:   #12d98d00; /* core solid        */
+  --alien-accent-green: #0b8f6300; /* darker accent     */
 
   /* ── Semantic ── */
   --success:            oklch(0.52 0.18 145);
@@ -176,7 +176,7 @@
 
   /* ── Sidebar Glass ── */
   --sidebar-glass-bg:               rgba(248, 246, 238, 0.30);
-  --sidebar-glass-border:           rgba(21, 29, 53, 0.09);
+  --sidebar-glass-border:           rgba(234, 236, 243, 0.09);
   --sidebar-secondary-glass-bg:     rgba(232, 230, 226, 0.92); /* neutral grey body */
   --sidebar-secondary-glass-border: rgba(21, 29, 53, 0.12);
   --sidebar-secondary-header-border: oklch(0.55 0.18 35 / 0.2);
@@ -477,7 +477,7 @@
   /* Stacked bevel + inner occlusion + right-edge rim (inset only — avoids covering scrollbar) */
   box-shadow:
     inset 4px 0 4px 0.1px rgba(48, 87, 0, 0.526),
-    inset -2px 0 4px 0.2px rgba(162, 233, 63, 0.38),
+    inset -2px 0 4px 0.2px rgba(162, 233, 63, 0.107),
     inset -4px 0 18px rgba(253, 255, 255, 0.255),
     20px 0 52px -14px rgba(150, 150, 150, 0),
     5px 0 14px -4px rgba(255, 255, 255, 0.1),
