@@ -175,7 +175,7 @@ const IconHelp = ({ className }: { className?: string }) => (
    SECTIONS CONFIG
 ============================================ */
 const MAIN_SECTIONS = [
-  // { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
+  { id: 'home', label: 'Home', icon: IconHome, hasSecondary: false },
   // { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
   { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
@@ -286,11 +286,11 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       return (
         <>
           <SectionLabel label="GEO" />
-          <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" />
+          {/* <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" /> */}
           <SecondaryNavItem icon={IconKnight} label="GeoKnight" href="/geo/geoknight" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
           <SecondaryNavItem icon={IconFileText} label="Generated Bounty Pages" href="/geo/bounty-pages" />
-          <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" />
+          {/* <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" /> */}
           <SecondaryNavItem icon={IconDatabase} label="Data Mine" href="/geo/data-mine" />
         </>
       );
@@ -341,7 +341,7 @@ export default function AppSidebar() {
       case 'ingestion':
         return '/ingestion';
       case 'geo':
-        return '/geo/data-mine';
+        return '/geo/geoknight';
       case 'shop':
         return '/shop/products';
       case 'connection':

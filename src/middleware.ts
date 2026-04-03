@@ -67,9 +67,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(landingUrl);
   }
   
-  if (pathname === '/') {
-    return NextResponse.redirect(new URL('/geo/radar', request.url));
-  }
+  // if (pathname === '/') {
+  //   return NextResponse.redirect(new URL('/geo/radar', request.url));
+  // }
 
   return NextResponse.next();
 }
