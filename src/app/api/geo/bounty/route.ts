@@ -149,7 +149,7 @@ export async function POST() {
       keywords,
     },
     competitors,
-    models: ["gpt-4o"],
+    models: ["gpt-5.4-nano", "claude-haiku-4-5-20251001", "gemini-3.1-flash-lite-preview"],
     session_id: `bounty-${companyId}-${Date.now()}`,
   };
 

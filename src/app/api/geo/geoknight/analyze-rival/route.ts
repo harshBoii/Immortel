@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
       ...(brandEntity.offerings && brandEntity.offerings.length > 0 ? { offerings: brandEntity.offerings } : {}),
     },
     competitors,
-    models: ["gpt-4o", "claude-3.5", "gemini-1.5"],
+    models: ["gpt-5.4-nano", "claude-haiku-4-5-20251001", "gemini-3.1-flash-lite-preview"],
   };
 
   // STEP 2: radar
