@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { GeoKnightWorkspaceData } from "@/lib/geo/geoknight/loadGeoKnightTopicViews";
-import type { CitationContextRow } from "@/lib/geo/radar/aggregateCitationContext";
 import { RadarCompareCharts } from "../radar/sov-charts";
 import { MiniSpark } from "./metric-sparklines";
 import type { HighlightPrompt } from "./pick-highlight-prompts";
@@ -57,14 +56,14 @@ export default function IntelligenceReport({
   geoKnight,
   rivalsForCharts,
   sparkSeries,
-  contextRows,
+  bountyPages,
   highlightPrompts,
 }: {
   payload: RadarPayload;
   geoKnight: GeoKnightWorkspaceData;
   rivalsForCharts: Array<{ id: string; name: string }>;
   sparkSeries: { sov: number[]; top3: number[]; coverage: number[]; rank: number[] };
-  contextRows: CitationContextRow[];
+  bountyPages: Array<{ bountyId: string; query: string; pageTitle: string; pageId: string }>;
   highlightPrompts: HighlightPrompt[];
 }) {
   const [search, setSearch] = useState("");
@@ -81,7 +80,9 @@ export default function IntelligenceReport({
   const hasRadarMetrics = payload.metrics.length > 0;
   const hasIntel = payload.citationIntelligence.length > 0;
   const hasBounties = payload.bountyPriority.open.length > 0;
-  const hasRadarContent = hasRadarMetrics || hasIntel || hasBounties;
+  const hasGeneratedBountyPages = bountyPages.length > 0;
+  const hasRadarContent =
+    hasRadarMetrics || hasIntel || hasBounties || hasGeneratedBountyPages;
   const hasGeoKnightTopics = geoKnight.topicViews.length > 0;
 
   /** Regex built from the authenticated company name — used to detect company presence in rival rows. */
@@ -96,13 +97,12 @@ export default function IntelligenceReport({
     [highlightPrompts, companyRegex]
   );
 
-  /** Citation intel: top 10 with win% > 0 whose query matches the search regex. */
-  const filteredCitationIntel = useMemo(() => {
-    return payload.citationIntelligence
-      .filter((row) => row.winRate > 0 && matchesSearch(search, row.query))
-      .sort((a, b) => b.winRate - a.winRate)
-      .slice(0, 10);
-  }, [payload.citationIntelligence, search]);
+  /** Generated bounty pages: filter by search regex on title + bounty query. */
+  const filteredBountyPages = useMemo(() => {
+    return bountyPages.filter((row) =>
+      matchesSearch(search, row.pageTitle, row.query)
+    );
+  }, [bountyPages, search]);
 
   return (
     <div
@@ -434,40 +434,36 @@ export default function IntelligenceReport({
         </section>
       )}
 
-      {/* Citation intelligence */}
-      {hasIntel && (
+      {/* Generated bounty pages (AEO pages linked from hunted bounties) */}
+      {hasGeneratedBountyPages && (
         <section className="mt-8 glass-card card-anime-float rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-foreground font-heading">Citation intelligence</h2>
-          <p className="text-xs text-muted-foreground mt-1">Top 10 prompts by win rate (win % &gt; 0)</p>
+          <h2 className="text-sm font-semibold text-foreground font-heading">Generated bounty pages</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Page title and the bounty query each page was generated from.
+          </p>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-xs min-w-[560px]">
+            <table className="w-full text-xs min-w-[480px]">
               <thead>
                 <tr className="border-b border-[var(--glass-border)]">
-                  <th className="text-left py-2 font-medium text-muted-foreground">Prompt</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Runs</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Win %</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">WRS</th>
-                  <th className="text-right py-2 font-medium text-muted-foreground">Models</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Page title</th>
+                  <th className="text-left py-2 font-medium text-muted-foreground">Bounty query</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCitationIntel.length === 0 ? (
+                {filteredBountyPages.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                    <td colSpan={2} className="py-6 text-center text-muted-foreground">
                       No rows match this search.
                     </td>
                   </tr>
                 ) : (
-                  filteredCitationIntel.map((row) => (
-                    <tr key={row.promptId} className="border-b border-[var(--glass-border)]/50">
-                      <td className="py-2 max-w-[260px] truncate" title={row.query}>
-                        {row.query}
+                  filteredBountyPages.map((row) => (
+                    <tr key={row.bountyId} className="border-b border-[var(--glass-border)]/50">
+                      <td className="py-2.5 max-w-[280px] font-medium text-foreground" title={row.pageTitle}>
+                        {row.pageTitle}
                       </td>
-                      <td className="text-right py-2 tabular-nums">{row.executionCount}</td>
-                      <td className="text-right py-2 tabular-nums">{row.winRate}%</td>
-                      <td className="text-right py-2 tabular-nums">{row.wrs}</td>
-                      <td className="text-right py-2 tabular-nums">
-                        {row.modelsCitingCount}/{row.distinctModelTotal}
+                      <td className="py-2.5 text-muted-foreground" title={row.query}>
+                        {row.query}
                       </td>
                     </tr>
                   ))
@@ -475,22 +471,13 @@ export default function IntelligenceReport({
               </tbody>
             </table>
           </div>
-          <div className="mt-4">
-            <h3 className="text-xs font-semibold text-foreground">Citation context mix</h3>
-            {contextRows.length === 0 || (contextRows.length === 1 && contextRows[0]!.label === "unknown") ? (
-              <p className="text-xs text-muted-foreground mt-1">Insufficient context labels — enrich citations upstream.</p>
-            ) : (
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {contextRows.map((c) => (
-                  <li
-                    key={c.label}
-                    className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/65 px-2 py-1 text-[11px]"
-                  >
-                    {c.label}: {c.pct}%
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="mt-4 print:hidden">
+            <Link
+              href="/geo/bounty-pages"
+              className="text-xs font-semibold text-[var(--sibling-primary)] hover:underline"
+            >
+              View all in Generated Bounty Pages →
+            </Link>
           </div>
         </section>
       )}

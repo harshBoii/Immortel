@@ -85,6 +85,16 @@ export default function HomeDashboard({
     return m;
   }, [geoKnight.topicViews]);
 
+  /** Maps topicId → count of prompts with `ishunted` (AEO page created via Get Cited). */
+  const huntedPromptsByTopic = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of geoKnight.topicViews) {
+      const n = t.prompts.filter((p) => p.ishunted).length;
+      m.set(t.id, n);
+    }
+    return m;
+  }, [geoKnight.topicViews]);
+
   /**
    * Tiered authority multiplier based on how many active prompts the topic has.
    * More prompts = higher ceiling, because a well-covered topic should score higher.
@@ -98,21 +108,24 @@ export default function HomeDashboard({
     return 100;
   }
 
-  function topicAuthorityScore(totalPrompts: number, citedPrompts: number): number {
-    const completion = totalPrompts > 0 ? citedPrompts / totalPrompts : 0;
+  function topicAuthorityScore(totalPrompts: number, completedPrompts: number): number {
+    const completion = totalPrompts > 0 ? completedPrompts / totalPrompts : 0;
     return Math.max(10, Math.min(100, Math.round(topicTierMultiplier(totalPrompts) * completion)));
   }
 
-  const topicAuthorityRows = useMemo(() =>
-    payload.topicAuthorityMap.map((t) => {
-      const total = totalPromptsByTopic.get(t.topicId) ?? t.promptCount;
-      const cited = Math.min(t.promptCount, total);
-      const completionPct = total > 0 ? Math.round((cited / total) * 100) : 0;
-      const score = topicAuthorityScore(total, cited);
-      return { ...t, total, cited, completionPct, score };
-    }).sort((a, b) => b.score - a.score),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [payload.topicAuthorityMap, totalPromptsByTopic]);
+  const topicAuthorityRows = useMemo(
+    () =>
+      payload.topicAuthorityMap
+        .map((t) => {
+          const total = totalPromptsByTopic.get(t.topicId) ?? t.promptCount;
+          const hunted = Math.min(huntedPromptsByTopic.get(t.topicId) ?? 0, total);
+          const completionPct = total > 0 ? Math.round((hunted / total) * 100) : 0;
+          const score = topicAuthorityScore(total, hunted);
+          return { ...t, total, hunted, completionPct, score };
+        })
+        .sort((a, b) => b.score - a.score),
+    [payload.topicAuthorityMap, totalPromptsByTopic, huntedPromptsByTopic]
+  );
 
   const filteredCitationIntel = useMemo(
     () => payload.citationIntelligence.filter((row) => matchesSearch(search, row.query)),
@@ -255,7 +268,7 @@ export default function HomeDashboard({
                 Topic Authority
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Prompts cited vs tracked · score 10–100
+                Prompts hunted (AEO) vs tracked · score 10–100
               </p>
               <div className="mt-4 space-y-3 max-h-72 overflow-y-auto glass-scrollbar pr-1">
                 {topicAuthorityRows.map((t) => (
@@ -268,7 +281,7 @@ export default function HomeDashboard({
                       <div className="min-w-0">
                         <p className="font-medium text-foreground truncate">{t.topicName}</p>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
-                          {t.cited}/{t.total} prompts cited
+                          {t.hunted}/{t.total} prompts hunted
                           <span className="mx-1 opacity-40">·</span>
                           {t.difficulty} difficulty
                         </p>

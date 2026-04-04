@@ -52,6 +52,7 @@ export async function loadGeoKnightTopicViews(companyId: string): Promise<GeoKni
           query: true,
           reason: true,
           createdAt: true,
+          ishunted: true,
           revenue: {
             select: {
               monthlyPromptReach: true,
@@ -127,6 +128,7 @@ export async function loadGeoKnightTopicViews(companyId: string): Promise<GeoKni
       query: prompt.query,
       reason: prompt.reason ?? null,
       createdAt: prompt.createdAt.toISOString(),
+      ishunted: prompt.ishunted,
       revenue: (() => {
         const rev = prompt.revenue;
         if (!rev) return null;

@@ -33,6 +33,8 @@ export type PromptView = {
   reason: string | null;
   /** ISO timestamp for client-side sort (recent prompts first, etc.) */
   createdAt: string;
+  /** True after a bounty AEO page was created via Get Cited for this prompt. */
+  ishunted: boolean;
   revenue: PromptRevenueView;
   consensus: RivalConsensus[];
   byModel: RivalByModel[];

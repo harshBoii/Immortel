@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Not authenticated" }, { status: 401 });
   }
 
-  let body: { query?: string };
+  let body: { query?: string; promptId?: string };
   try {
     body = await request.json();
   } catch {
@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
   if (!query) {
     return NextResponse.json({ success: false, error: "query is required" }, { status: 400 });
   }
+
+  const promptId =
+    typeof body?.promptId === "string" && body.promptId.trim() ? body.promptId.trim() : null;
 
   const companyId = session.companyId;
 
@@ -85,6 +88,22 @@ export async function POST(request: NextRequest) {
         },
         { status: huntRes.status >= 400 ? huntRes.status : 502 }
       );
+    }
+
+    if (promptId) {
+      const ownedPrompt = await prisma.prompt.findFirst({
+        where: {
+          id: promptId,
+          llmTopic: { companyId },
+        },
+        select: { id: true },
+      });
+      if (ownedPrompt) {
+        await prisma.prompt.update({
+          where: { id: promptId },
+          data: { ishunted: true },
+        });
+      }
     }
 
     return NextResponse.json({

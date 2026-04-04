@@ -104,7 +104,7 @@ function GetCitedRow({ prompt }: { prompt: BountyNichePrompt }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, promptId: prompt.id }),
       });
       const data = await res.json();
 
