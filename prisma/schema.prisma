@@ -50,6 +50,7 @@ model Company {
   wordpressIntegration  WordPressIntegration?
   woocommerceStores     WooCommerceStore[]
   woocommerceOAuthPending WooCommerceOAuthPending[]
+  woocommerceProducts   WooCommerceProduct[]
   plan                  CompanyPlan?
   rivals                CompanyRival[]          @relation("CompanyRivals")
   rivaledBy             CompanyRival[]          @relation("CompanyRivalTargets")
@@ -879,10 +880,45 @@ model WooCommerceStore {
   createdAt         DateTime @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @db.Timestamptz(3)
   company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  products          WooCommerceProduct[]
 
   @@unique([companyId, storeUrl])
   @@index([companyId])
   @@map("woocommerce_stores")
+}
+
+/// Cached WooCommerce REST catalog row for Shop Intel + Elasticsearch (MCP search).
+model WooCommerceProduct {
+  id                   String   @id @default(cuid())
+  wooCommerceStoreId   String
+  companyId            String
+  wcProductId          Int
+  title                String   @db.VarChar(500)
+  /// Normalized for UI parity with Shopify: ACTIVE | DRAFT | ARCHIVED
+  status               String   @db.VarChar(50)
+  wcStatusRaw          String?  @db.VarChar(50)
+  handle               String   @db.VarChar(255)
+  totalInventory       Int      @default(0)
+  onlineStoreUrl       String?  @db.VarChar(1000)
+  priceMinAmount       String?  @db.VarChar(64)
+  priceMaxAmount       String?  @db.VarChar(64)
+  currencyCode         String?  @db.VarChar(10)
+  wcCreatedAt          DateTime @db.Timestamptz(3)
+  wcUpdatedAt          DateTime @db.Timestamptz(3)
+  featuredImageAltText String?  @db.VarChar(500)
+  featuredImageHeight  Int?
+  featuredImageUrl     String?  @db.VarChar(2000)
+  featuredImageWidth   Int?
+  description          String?
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+  store                WooCommerceStore @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
+  company              Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([wooCommerceStoreId, wcProductId])
+  @@index([companyId])
+  @@index([wooCommerceStoreId])
+  @@map("woocommerce_products")
 }
 
 /// Opaque state for WooCommerce authorize flow (callback has no session cookies).

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { bulkIndexProducts } from "@/lib/productsIndex";
+import { bulkIndexProducts, bulkIndexWooCommerceProducts } from "@/lib/productsIndex";
 import { resolveCompany } from "@/lib/mcpCompanyResolver";
 
 export async function POST(request: Request) {
@@ -42,15 +42,27 @@ export async function POST(request: Request) {
     );
   }
 
-  const products = await (prisma as any).shopifyProduct.findMany({
-    where: { companyId: company.id },
-  });
+  const [shopifyProducts, wooProducts] = await Promise.all([
+    prisma.shopifyProduct.findMany({
+      where: { companyId: company.id },
+    }),
+    prisma.wooCommerceProduct.findMany({
+      where: { companyId: company.id },
+    }),
+  ]);
 
-  await bulkIndexProducts(products);
+  await Promise.all([
+    bulkIndexProducts(shopifyProducts),
+    bulkIndexWooCommerceProducts(wooProducts),
+  ]);
 
   return NextResponse.json({
     success: true,
     company: { id: company.id, name: company.name, slug: company.slug },
-    indexed: products.length,
+    indexed: {
+      shopify: shopifyProducts.length,
+      woocommerce: wooProducts.length,
+      total: shopifyProducts.length + wooProducts.length,
+    },
   });
 }
