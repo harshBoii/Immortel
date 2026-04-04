@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ShopifyAdminError, shopifyGraphql } from "@/lib/shopify/admin";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
+import { minimalMarkdownToHtml } from "@/lib/geo/bounty/markdownToHtmlForPublish";
 
 const BLOG_CHANNEL_HANDLE = "quick-reads";
 
@@ -33,59 +34,6 @@ function jsonStringifyAndValidate(
     return { ok: false, error: "Value must be valid JSON" };
   }
   return { ok: true, value: str };
-}
-
-function minimalMarkdownToHtml(markdown: string): string {
-  if (!markdown) return "";
-
-  const lines = markdown.split("\n");
-  const htmlLines: string[] = [];
-  let inList = false;
-
-  for (const raw of lines) {
-    const line = raw
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-
-    // Headings
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (heading) {
-      if (inList) { htmlLines.push("</ul>"); inList = false; }
-      const level = Math.min(6, heading[1].length);
-      htmlLines.push(`<h${level}>${applyInline(heading[2].trim())}</h${level}>`);
-      continue;
-    }
-
-    // Unordered list items
-    const listItem = /^[-*]\s+(.*)$/.exec(line);
-    if (listItem) {
-      if (!inList) { htmlLines.push("<ul>"); inList = true; }
-      htmlLines.push(`<li>${applyInline(listItem[1])}</li>`);
-      continue;
-    }
-
-    // Close list on blank line
-    if (!line.trim()) {
-      if (inList) { htmlLines.push("</ul>"); inList = false; }
-      continue;
-    }
-
-    // Regular paragraph
-    if (inList) { htmlLines.push("</ul>"); inList = false; }
-    htmlLines.push(`<p>${applyInline(line)}</p>`);
-  }
-
-  if (inList) htmlLines.push("</ul>");
-  return htmlLines.join("\n");
-}
-
-// Handles inline: **bold**, *italic*, `code`
-function applyInline(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`(.+?)`/g, "<code>$1</code>");
 }
 
 // ─── Metafield Definition ─────────────────────────────────────────────────────
