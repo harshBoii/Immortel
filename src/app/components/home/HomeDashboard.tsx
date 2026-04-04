@@ -10,6 +10,7 @@ import type { HighlightPrompt } from "@/app/(Pages)/(WorkSpace)/geo/report/pick-
 import { CitationsTable } from "@/app/(Pages)/(WorkSpace)/geo/radar/citations-table";
 import type { CitationRow } from "@/app/(Pages)/(WorkSpace)/geo/radar/citations-table";
 import RadarRefreshButton from "@/app/(Pages)/(WorkSpace)/geo/radar/refresh-button";
+import { RevenueChip } from "@/app/components/geo/revenue-chip";
 import {
   Radar,
   RadarChart,
@@ -74,6 +75,24 @@ export default function HomeDashboard({
   const hasRadarMetrics = payload.metrics.length > 0;
   const hasIntel = payload.citationIntelligence.length > 0;
   const hasBounties = payload.bountyPriority.open.length > 0;
+
+  /** Top bounties for this card: highest estimated revenue first (tie-break: reach). */
+  const bountyPriorityTopByRevenue = useMemo(() => {
+    const copy = [...payload.bountyPriority.open];
+    copy.sort((a, b) => {
+      const ar = a.estimatedRevenue ?? -Infinity;
+      const br = b.estimatedRevenue ?? -Infinity;
+      if (br !== ar) return br - ar;
+      return (b.estimatedReach ?? 0) - (a.estimatedReach ?? 0);
+    });
+    return copy.slice(0, 3);
+  }, [payload.bountyPriority.open]);
+
+  const bountyTop3Combined = useMemo(() => {
+    const reach = bountyPriorityTopByRevenue.reduce((s, b) => s + (b.estimatedReach ?? 0), 0);
+    const revenue = bountyPriorityTopByRevenue.reduce((s, b) => s + (b.estimatedRevenue ?? 0), 0);
+    return { reach, revenue };
+  }, [bountyPriorityTopByRevenue]);
   const hasActionQueue = payload.actionQueue.length > 0;
   const hasTopicAuthority = payload.topicAuthorityMap.length > 0;
   const hasAnyData = hasRadarMetrics || hasIntel || hasBounties;
@@ -337,35 +356,54 @@ export default function HomeDashboard({
           )}
 
           {hasBounties && (
-            <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--sibling-surface,hsl(224,24%,12%))] p-5 text-[var(--sibling-surface-fg,hsl(220,20%,88%))]">
+            <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--sibling-surface,hsl(224,24%,12%))] p-5 text-[hsl(220,22%,94%)]">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--sibling-accent)]">
                 Bounty Priorities
               </p>
-              <p className="mt-1 text-xs opacity-60">
-                Top reach: {payload.bountyPriority.top5CombinedReach.toLocaleString()} · est.{" "}
-                {formatUsd(payload.bountyPriority.top5CombinedEstimatedRevenue)}
+              <p className="mt-1 text-xs text-[hsl(220,16%,78%)]">
+                Ranked by est. revenue (top 3). Combined reach{" "}
+                {bountyTop3Combined.reach.toLocaleString()} · combined est.{" "}
+                {formatUsd(bountyTop3Combined.revenue)}
               </p>
               <div className="mt-4 space-y-3">
-                {payload.bountyPriority.open.slice(0, 3).map((b) => (
+                {bountyPriorityTopByRevenue.map((b) => (
                   <div
                     key={b.id}
-                    className="rounded-lg border border-white/10 bg-white/5 p-3"
+                    className="rounded-lg border border-white/12 bg-[hsl(226,22%,16%)]/90 p-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-semibold leading-snug line-clamp-2">{b.query}</p>
+                      <p className="text-xs font-semibold leading-snug line-clamp-2 text-[hsl(220,24%,96%)]">
+                        {b.query}
+                      </p>
                       {b.suggestedCluster && (
-                        <span className="shrink-0 rounded-full border border-[var(--sibling-accent)]/40 bg-[var(--sibling-accent)]/20 px-2 py-0.5 text-[10px] font-medium text-[var(--sibling-accent)]">
+                        <span className="shrink-0 rounded-full border border-[var(--sibling-accent)]/50 bg-[var(--sibling-accent)]/18 px-2 py-0.5 text-[10px] font-medium text-[hsl(160,55%,72%)]">
                           {b.suggestedCluster}
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 flex gap-3 text-[10px] opacity-60">
-                      <span>Score {Math.round(b.priorityScore)}</span>
-                      {b.estimatedReach != null && (
-                        <span>Reach {b.estimatedReach}</span>
-                      )}
-                      {b.estimatedRevenue != null && (
-                        <span>{formatUsd(b.estimatedRevenue)}</span>
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[hsl(220,14%,72%)]">
+                        <span>
+                          Score <span className="tabular-nums text-[hsl(220,20%,88%)]">{Math.round(b.priorityScore)}</span>
+                        </span>
+                        {b.estimatedReach != null && (
+                          <span>
+                            Reach{" "}
+                            <span className="tabular-nums text-[hsl(220,20%,88%)]">
+                              {b.estimatedReach.toLocaleString()}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                      {b.estimatedRevenue != null && Number.isFinite(b.estimatedRevenue) ? (
+                        <RevenueChip
+                          amount={b.estimatedRevenue}
+                          tooltipTitle="Estimated bounty revenue"
+                          size="sm"
+                          className="shrink-0"
+                        />
+                      ) : (
+                        <span className="text-[10px] text-[hsl(220,12%,58%)]">Est. revenue —</span>
                       )}
                     </div>
                   </div>
@@ -373,7 +411,7 @@ export default function HomeDashboard({
               </div>
               <Link
                 href="/geo/bounty"
-                className="mt-4 inline-flex text-xs font-semibold text-[var(--sibling-accent)] hover:underline"
+                className="mt-4 inline-flex text-xs font-semibold text-[hsl(160,50%,58%)] hover:text-[hsl(160,48%,68%)] hover:underline"
               >
                 View all bounties →
               </Link>
