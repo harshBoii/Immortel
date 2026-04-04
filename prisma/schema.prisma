@@ -48,6 +48,8 @@ model Company {
   radarAssumption       RadarAssumption?
   llmPromptMetrics      LlmPromptMetric[]
   wordpressIntegration  WordPressIntegration?
+  woocommerceStores     WooCommerceStore[]
+  woocommerceOAuthPending WooCommerceOAuthPending[]
   plan                  CompanyPlan?
   rivals                CompanyRival[]          @relation("CompanyRivals")
   rivaledBy             CompanyRival[]          @relation("CompanyRivalTargets")
@@ -861,6 +863,42 @@ model WordPressIntegration {
   @@map("wordpress_integrations")
 }
 
+/// WooCommerce REST API keys after wc-auth/v1/authorize (or manual dev entry).
+model WooCommerceStore {
+  id                String   @id @default(cuid())
+  companyId         String
+  storeUrl          String   @db.VarChar(1000)
+  consumerKeyEnc    String   @db.Text
+  consumerSecretEnc String   @db.Text
+  wcKeyId           Int?
+  keyPermissions    String?  @db.VarChar(50)
+  status            String   @default("installed") @db.VarChar(50)
+  /// Encrypted secret used to verify X-WC-Webhook-Signature when webhooks are registered for this store.
+  webhookSecretEnc  String?  @db.Text
+  installedAt       DateTime @default(now()) @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, storeUrl])
+  @@index([companyId])
+  @@map("woocommerce_stores")
+}
+
+/// Opaque state for WooCommerce authorize flow (callback has no session cookies).
+model WooCommerceOAuthPending {
+  state     String   @id @db.VarChar(128)
+  companyId String
+  storeUrl  String   @db.VarChar(1000)
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([expiresAt])
+  @@map("woocommerce_oauth_pending")
+}
+
 enum AssetType {
   VIDEO
   IMAGE
@@ -969,4 +1007,5 @@ enum Difficulty {
 
 enum IntegrationProvider {
   Shopify
+  WooCommerce
 }

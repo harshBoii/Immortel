@@ -30,6 +30,12 @@ export function middleware(request: NextRequest) {
   const isImageProxyApi = pathname.startsWith('/api/image-proxy');
   const isWidgetApi = pathname.startsWith('/widget/');
   const isShopifyWebhookApi = pathname.startsWith('/api/shopify/webhooks');
+  // Public: key callback (server-to-server) and per-store webhook delivery only — not /webhooks/register.
+  const isWooCommerceCallback = pathname === '/api/woocommerce/callback';
+  const isWooCommerceWebhookDelivery =
+    /^\/api\/woocommerce\/webhooks\/(?!register$)[^/]+$/.test(pathname);
+  const isWooCommercePublicApi = isWooCommerceCallback || isWooCommerceWebhookDelivery;
+  const isWooCommerceReturn = pathname === '/woocommerce/return';
   const isPrivacyPolicyApi = pathname.startsWith('/privacy-policy');
   const isPublicBountyHuntArticle =
     pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
@@ -49,6 +55,8 @@ export function middleware(request: NextRequest) {
     isPayPage ||
     isImageProxyApi ||
     isShopifyWebhookApi ||
+    isWooCommercePublicApi ||
+    isWooCommerceReturn ||
     isPrivacyPolicyApi ||
     isWidgetApi ||
     isPublicBountyHuntArticle||

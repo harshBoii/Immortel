@@ -15,6 +15,7 @@ export async function GET() {
         shopifyConnectUrl: null,
         expectedShopDomain: null,
         wordpressIntegration: null,
+        woocommerce: null,
       },
       { status: 401 }
     );
@@ -22,7 +23,7 @@ export async function GET() {
 
   const companyId = session.companyId;
 
-  const [company, shop, cms, wp] = await Promise.all([
+  const [company, shop, cms, wp, wc] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: { id: true, name: true, email: true },
@@ -53,6 +54,11 @@ export async function GET() {
         connectedAt: true,
       },
     }),
+    prisma.wooCommerceStore.findFirst({
+      where: { companyId, status: "installed" },
+      orderBy: { installedAt: "desc" },
+      select: { id: true, storeUrl: true, status: true, keyPermissions: true, installedAt: true },
+    }),
   ]);
 
   if (!company) {
@@ -65,6 +71,7 @@ export async function GET() {
         shopifyConnectUrl: null,
         expectedShopDomain: null,
         wordpressIntegration: null,
+        woocommerce: null,
       },
       { status: 404 }
     );
@@ -82,6 +89,7 @@ export async function GET() {
     shopifyConnectUrl,
     expectedShopDomain,
     wordpressIntegration: wp,
+    woocommerce: wc,
   });
 }
 
