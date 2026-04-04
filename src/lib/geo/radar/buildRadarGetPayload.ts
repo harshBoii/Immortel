@@ -12,6 +12,13 @@ import {
   effectiveBountyConversionRate,
 } from "./bountyRevenue";
 import { medianCompanyAovFromProducts } from "./shopifyAov";
+import {
+  maxPromptRevenueByQuery,
+  mergeBountyEstimatesByNormalizedQuery,
+  normalizePromptQuery,
+  resolveBountyRevenueUsd,
+  revenueBreakdownForBountyQuery,
+} from "@/lib/geo/promptRevenueResolve";
 
 function normalizePercentMetric(value: number | null | undefined) {
   if (value == null || Number.isNaN(value)) return null;
@@ -33,6 +40,7 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
     topicPrompts,
     llmTopics,
     promptMetrics,
+    allBountiesForRevenue,
   ] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
@@ -88,7 +96,41 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
       orderBy: { calculatedAt: "desc" },
       take: 200,
     }),
+    prisma.citationBounty.findMany({
+      where: { companyId },
+      select: { query: true, estimatedRevenue: true },
+    }),
   ]);
+
+  const topicPromptIds = topicPrompts.map((p) => p.id);
+  const promptsWithRevenueForBounty = await prisma.prompt.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        ...(topicPromptIds.length > 0 ? [{ id: { in: topicPromptIds } }] : []),
+        { llmTopic: { companyId } },
+      ],
+    },
+    select: {
+      id: true,
+      query: true,
+      revenue: {
+        select: {
+          estimatedRevenue: true,
+          monthlyPromptReach: true,
+          visibilityWeight: true,
+          ctr: true,
+          cvr: true,
+          aov: true,
+        },
+      },
+    },
+  });
+
+  const promptRevenueByQuery = maxPromptRevenueByQuery(
+    promptsWithRevenueForBounty.map((p) => ({ query: p.query, revenue: p.revenue }))
+  );
+  const bountyEstByNorm = mergeBountyEstimatesByNormalizedQuery(allBountiesForRevenue);
 
   const huntedForTiming = await prisma.citationBounty.findMany({
     where: { companyId, status: "HUNTED", huntedAt: { not: null } },
@@ -176,13 +218,28 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
       });
       const conv = effectiveBountyConversionRate(b.conversionRate);
       const aov = b.avgOrderValue ?? catalogAov;
+      const funnelFallback = computeBountyEstimatedRevenue({
+        estimatedReach: b.estimatedReach,
+        conversionRate: conv,
+        avgOrderValue: aov,
+      });
+      const resolved = resolveBountyRevenueUsd({
+        query: b.query,
+        bountyEstimatedRevenue:
+          bountyEstByNorm.get(normalizePromptQuery(b.query)) ?? null,
+        promptRevenueByQuery,
+      });
       const estRev =
-        b.estimatedRevenue ??
-        computeBountyEstimatedRevenue({
-          estimatedReach: b.estimatedReach,
-          conversionRate: conv,
-          avgOrderValue: aov,
-        });
+        resolved > 0
+          ? resolved
+          : funnelFallback ??
+            (b.estimatedRevenue != null && Number.isFinite(b.estimatedRevenue)
+              ? b.estimatedRevenue
+              : null);
+      const revenueBreakdown = revenueBreakdownForBountyQuery(
+        promptsWithRevenueForBounty,
+        b.query
+      );
       return {
         id: b.id,
         query: b.query,
@@ -193,6 +250,7 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
         suggestedCluster: b.suggestedCluster,
         priorityScore,
         estimatedRevenue: estRev,
+        revenueBreakdown,
         conversionRate: b.conversionRate ?? conv,
         avgOrderValue: aov,
       };

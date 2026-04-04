@@ -398,7 +398,11 @@ export default function HomeDashboard({
                       {b.estimatedRevenue != null && Number.isFinite(b.estimatedRevenue) ? (
                         <RevenueChip
                           amount={b.estimatedRevenue}
-                          tooltipTitle="Estimated bounty revenue"
+                          tooltipTitle="Bounty revenue estimate"
+                          tooltipLines={[
+                            "Same resolution as Bounty / GeoKnight: PromptRevenue (or funnel) per query wins over citation bounty estimate; else reach × conversion × AOV.",
+                          ]}
+                          breakdown={b.revenueBreakdown ?? undefined}
                           size="sm"
                           className="shrink-0"
                         />

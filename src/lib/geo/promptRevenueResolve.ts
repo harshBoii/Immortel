@@ -84,3 +84,57 @@ export function resolveBountyRevenueUsd(input: {
   }
   return 0;
 }
+
+/**
+ * Merge citation bounty rows that share the same normalized query (keep max stored estimate).
+ * Same logic as `/geo/bounty` when building per-query fallback for `resolveBountyRevenueUsd`.
+ */
+export function mergeBountyEstimatesByNormalizedQuery(
+  bounties: ReadonlyArray<{ query: string; estimatedRevenue: number | null }>
+): Map<string, number | null> {
+  const bountyEstByNorm = new Map<string, number | null>();
+  for (const b of bounties) {
+    const k = normalizePromptQuery(b.query);
+    const v = b.estimatedRevenue;
+    const prev = bountyEstByNorm.get(k);
+    if (prev === undefined) {
+      bountyEstByNorm.set(k, v);
+      continue;
+    }
+    if (v != null && Number.isFinite(v)) {
+      const p = prev ?? 0;
+      bountyEstByNorm.set(k, Math.max(p, v));
+    }
+  }
+  return bountyEstByNorm;
+}
+
+/** Funnel fields for RevenueChip tooltips — matches bounty / GeoKnight prompt rows. */
+export type PromptRevenueBreakdownFields = {
+  monthlyPromptReach?: number | null;
+  visibilityWeight?: number | null;
+  ctr?: number | null;
+  cvr?: number | null;
+  aov?: number | null;
+};
+
+/** First active prompt matching the bounty query (normalized) — for chip breakdown. */
+export function revenueBreakdownForBountyQuery(
+  prompts: ReadonlyArray<{ query: string; revenue: PromptRevenueBreakdownFields | null }>,
+  bountyQuery: string
+): PromptRevenueBreakdownFields | null {
+  const k = normalizePromptQuery(bountyQuery);
+  for (const p of prompts) {
+    if (normalizePromptQuery(p.query) !== k) continue;
+    const r = p.revenue;
+    if (!r) continue;
+    return {
+      monthlyPromptReach: r.monthlyPromptReach ?? null,
+      visibilityWeight: r.visibilityWeight ?? null,
+      ctr: r.ctr ?? null,
+      cvr: r.cvr ?? null,
+      aov: r.aov ?? null,
+    };
+  }
+  return null;
+}

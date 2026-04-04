@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { BountyView } from "@/app/components/geo/bounty";
 import {
   maxPromptRevenueByQuery,
+  mergeBountyEstimatesByNormalizedQuery,
   normalizePromptQuery,
   resolveBountyRevenueUsd,
   resolvePromptRevenueUsd,
@@ -86,20 +87,7 @@ export default async function BountyPage() {
     promptsWithRevenue.map((p) => ({ query: p.query, revenue: p.revenue }))
   );
 
-  const bountyEstByNorm = new Map<string, number | null>();
-  for (const b of bounties) {
-    const k = normalizePromptQuery(b.query);
-    const v = b.estimatedRevenue;
-    const prev = bountyEstByNorm.get(k);
-    if (prev === undefined) {
-      bountyEstByNorm.set(k, v);
-      continue;
-    }
-    if (v != null && Number.isFinite(v)) {
-      const p = prev ?? 0;
-      bountyEstByNorm.set(k, Math.max(p, v));
-    }
-  }
+  const bountyEstByNorm = mergeBountyEstimatesByNormalizedQuery(bounties);
 
   const promptRowById = new Map(
     promptsWithRevenue.map((p) => [p.id, p])
