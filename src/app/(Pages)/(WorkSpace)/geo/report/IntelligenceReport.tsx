@@ -21,10 +21,35 @@ function formatMetric(
   return `${prefix}${Number(value).toFixed(digits)}${suffix}`;
 }
 
+/** Compile the search input as a case-insensitive regex; fall back to literal includes on invalid patterns. */
+function buildSearchRegex(q: string): RegExp | null {
+  const t = q.trim();
+  if (!t) return null;
+  try {
+    return new RegExp(t, "i");
+  } catch {
+    return new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  }
+}
+
 function matchesSearch(q: string, ...parts: (string | null | undefined)[]) {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return true;
-  return parts.some((p) => (p ?? "").toLowerCase().includes(needle));
+  const re = buildSearchRegex(q);
+  if (!re) return true;
+  return parts.some((p) => re.test(p ?? ""));
+}
+
+/**
+ * Returns true when the company name appears in a prompt's consensus or byModel rows.
+ * Uses a regex built from the company name (escaped for safety) to tolerate minor casing / spacing differences.
+ */
+function companyInPrompt(
+  prompt: { consensus: { companyName: string }[]; byModel: { companyName: string }[] },
+  companyRegex: RegExp
+): boolean {
+  return (
+    prompt.consensus.some((c) => companyRegex.test(c.companyName)) ||
+    prompt.byModel.some((c) => companyRegex.test(c.companyName))
+  );
 }
 
 export default function IntelligenceReport({
@@ -59,6 +84,19 @@ export default function IntelligenceReport({
   const hasRadarContent = hasRadarMetrics || hasIntel || hasBounties;
   const hasGeoKnightTopics = geoKnight.topicViews.length > 0;
 
+  /** Regex built from the authenticated company name — used to detect company presence in rival rows. */
+  const companyRegex = useMemo(() => {
+    const escaped = ourName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(escaped, "i");
+  }, [ourName]);
+
+  /** Rival comparison: only prompts where ourName appears in consensus or per-model rows. */
+  const companyHighlightPrompts = useMemo(
+    () => highlightPrompts.filter((p) => companyInPrompt(p, companyRegex)),
+    [highlightPrompts, companyRegex]
+  );
+
+  /** Citation intel: top 10 with win% > 0 whose query matches the search regex. */
   const filteredCitationIntel = useMemo(() => {
     return payload.citationIntelligence
       .filter((row) => row.winRate > 0 && matchesSearch(search, row.query))
@@ -301,19 +339,19 @@ export default function IntelligenceReport({
         </div>
       )}
 
-      {/* GeoKnight rival drill-down */}
-      {highlightPrompts.length > 0 && (
+      {/* GeoKnight rival drill-down — only prompts where our company is present (regex match) */}
+      {companyHighlightPrompts.length > 0 && (
         <section className="mt-8 space-y-4">
           <div>
             <h2 className="text-sm font-semibold text-foreground font-heading md:text-base">
               Rival comparison highlights
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Read-only snapshot from GeoKnight consensus and per-model rows. Open GeoKnight for simulations and
-              rival radar.
+              Showing prompts where <span className="font-semibold text-foreground">{ourName}</span> appears in
+              consensus or per-model rows. Open GeoKnight for full simulations.
             </p>
           </div>
-          {highlightPrompts.map((p) => (
+          {companyHighlightPrompts.map((p) => (
             <div
               key={p.id}
               className="overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 shadow-sm"
