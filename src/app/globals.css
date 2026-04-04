@@ -1049,3 +1049,11 @@
 .glass-scrollbar::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklch, var(--primary) 55%, transparent);
 }
+
+/* Intelligence Report: preserve glass tints when printing / Save as PDF */
+@media print {
+  [data-intelligence-report] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

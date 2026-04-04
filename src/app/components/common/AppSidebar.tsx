@@ -119,6 +119,14 @@ const IconTarget = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const IconChartBars = ({ className }: { className?: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+  </svg>
+);
+
 const IconShop = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 9l1-5h16l1 5" />
@@ -288,6 +296,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SectionLabel label="GEO" />
           {/* <SecondaryNavItem icon={IconRadar} label="Company Radar" href="/geo/radar" /> */}
           <SecondaryNavItem icon={IconKnight} label="GeoKnight" href="/geo/geoknight" />
+          <SecondaryNavItem icon={IconChartBars} label="Intelligence Report" href="/geo/report" />
           <SecondaryNavItem icon={IconTarget} label="Bounty" href="/geo/bounty" />
           <SecondaryNavItem icon={IconFileText} label="Generated Bounty Pages" href="/geo/bounty-pages" />
           {/* <SecondaryNavItem icon={IconGitBranch} label="Info Spread" href="/geo/info-spread" /> */}
