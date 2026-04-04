@@ -5,6 +5,13 @@ import { minimalMarkdownToHtml } from "@/lib/markdown/minimalMarkdownToHtml";
 import { RevenueChip } from "@/app/components/geo/revenue-chip";
 import { ViewMoreDropdown } from "@/app/components/common/UI/ViewMoreDropdown";
 import { focusRankingForPrompt } from "@/lib/geo/geoknight/buildRivalAnalyzeMicroPayload";
+import {
+  cleanCompanyNameForLabel,
+  cleanCompanyNameForMatch,
+  compileCompanyNameRegex,
+  escapeRegExpLiteral,
+  uniqueCompanyNamesForPrompt,
+} from "@/lib/geo/geoknight/companyNameMatch";
 
 type RivalConsensus = {
   companyName: string;
@@ -85,72 +92,6 @@ function namesMatchNeedle(name: string, needle: string) {
   return name.trim().toLowerCase() === needle.trim().toLowerCase();
 }
 
-function cleanCompanyNameForMatch(input: string): string {
-  const raw = (input ?? "").trim();
-  if (!raw) return "";
-
-  // If this looks like a URL, use hostname.
-  let s = raw;
-  try {
-    const url = raw.includes("://") ? new URL(raw) : null;
-    if (url?.hostname) s = url.hostname;
-  } catch {
-    // ignore
-  }
-
-  s = s.trim().toLowerCase();
-  if (s.startsWith("www.")) s = s.slice(4);
-
-  // If it's domain-like (no spaces) strip common TLDs (one pass).
-  const looksLikeDomain = !/\s/.test(s) && s.includes(".");
-  if (looksLikeDomain) {
-    // remove trailing dot(s)
-    s = s.replace(/\.+$/, "");
-    const parts = s.split(".");
-    if (parts.length >= 2) {
-      const tld = parts[parts.length - 1]!;
-      const commonTlds = new Set([
-        "com",
-        "io",
-        "ai",
-        "net",
-        "org",
-        "co",
-        "app",
-        "dev",
-        "xyz",
-      ]);
-      if (commonTlds.has(tld)) {
-        parts.pop();
-        s = parts.join(".");
-      }
-    }
-  }
-
-  // Keep a friendly title-ish string for labels (but regex matching uses this exact output).
-  return s.trim();
-}
-
-function cleanCompanyNameForLabel(input: string): string {
-  const c = cleanCompanyNameForMatch(input);
-  if (!c) return "";
-  // For labels, show in a nicer way (capitalize first char only).
-  return c.charAt(0).toUpperCase() + c.slice(1);
-}
-
-function uniqueCompanyNamesForPrompt(prompt: PromptView): string[] {
-  const names = new Set<string>();
-  for (const c of prompt.consensus ?? []) {
-    const n = c.companyName?.trim();
-    if (n) names.add(n);
-  }
-  for (const c of prompt.byModel ?? []) {
-    const n = c.companyName?.trim();
-    if (n) names.add(n);
-  }
-  return [...names.values()].sort((a, b) => a.localeCompare(b));
-}
-
 function uniqueCompanyNamesForTopic(topic: TopicView): string[] {
   const names = new Set<string>();
   for (const p of topic.prompts ?? []) {
@@ -195,20 +136,6 @@ function parseShowFocus(raw: string): ShowFocusValue {
   if (raw === "all" || raw === "self") return raw;
   if (raw.startsWith("rival:")) return raw as ShowFocusValue;
   return "all";
-}
-
-function compileCompanyNameRegex(pattern: string): RegExp | null {
-  const p = pattern.trim();
-  if (!p) return null;
-  try {
-    return new RegExp(p, "i");
-  } catch {
-    return null;
-  }
-}
-
-function escapeRegExpLiteral(text: string) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /** Topics + consensus for /api/geo/geoknight/rival-insight (server builds micro payload). */

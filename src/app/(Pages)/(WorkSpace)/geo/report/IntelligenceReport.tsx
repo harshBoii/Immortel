@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import type { PromptView } from "@/app/(Pages)/(WorkSpace)/geo/geoknight/client";
 import type { GeoKnightWorkspaceData } from "@/lib/geo/geoknight/loadGeoKnightTopicViews";
+import {
+  buildSelfFocusRegex,
+  cleanCompanyNameForMatch,
+  promptMatchesCompanyFocus,
+} from "@/lib/geo/geoknight/companyNameMatch";
 import { RadarCompareCharts } from "../radar/sov-charts";
 import { MiniSpark } from "./metric-sparklines";
 import type { HighlightPrompt } from "./pick-highlight-prompts";
@@ -37,18 +43,88 @@ function matchesSearch(q: string, ...parts: (string | null | undefined)[]) {
   return parts.some((p) => re.test(p ?? ""));
 }
 
-/**
- * Returns true when the company name appears in a prompt's consensus or byModel rows.
- * Uses a regex built from the company name (escaped for safety) to tolerate minor casing / spacing differences.
- */
-function companyInPrompt(
-  prompt: { consensus: { companyName: string }[]; byModel: { companyName: string }[] },
-  companyRegex: RegExp
-): boolean {
-  return (
-    prompt.consensus.some((c) => companyRegex.test(c.companyName)) ||
-    prompt.byModel.some((c) => companyRegex.test(c.companyName))
-  );
+function collectOtherBrandsWithRanks(prompt: PromptView, ourRegex: RegExp) {
+  const map = new Map<string, number | null>();
+  const isOurs = (name: string) => ourRegex.test(cleanCompanyNameForMatch(name));
+  const bump = (name: string, r: number | null) => {
+    const key = name.trim();
+    if (!key) return;
+    const prev = map.get(key);
+    if (r == null) {
+      if (!map.has(key)) map.set(key, null);
+      return;
+    }
+    const next = prev == null ? r : Math.min(prev, r);
+    map.set(key, next);
+  };
+  for (const c of prompt.consensus ?? []) {
+    if (isOurs(c.companyName)) continue;
+    bump(c.companyName, c.avgRank);
+  }
+  for (const c of prompt.byModel ?? []) {
+    if (isOurs(c.companyName)) continue;
+    bump(c.companyName, c.rank);
+  }
+  return [...map.entries()]
+    .map(([companyName, bestRank]) => ({ companyName, bestRank }))
+    .sort((a, b) => {
+      const ar = a.bestRank ?? 999;
+      const br = b.bestRank ?? 999;
+      if (ar !== br) return ar - br;
+      return a.companyName.localeCompare(b.companyName);
+    });
+}
+
+function ourBestRanks(prompt: PromptView, ourRegex: RegExp) {
+  let consensusBest: number | null = null;
+  for (const c of prompt.consensus ?? []) {
+    if (!ourRegex.test(cleanCompanyNameForMatch(c.companyName))) continue;
+    if (c.avgRank != null && !Number.isNaN(c.avgRank)) {
+      consensusBest =
+        consensusBest == null ? c.avgRank : Math.min(consensusBest, c.avgRank);
+    }
+  }
+  let modelBest: number | null = null;
+  for (const c of prompt.byModel ?? []) {
+    if (!ourRegex.test(cleanCompanyNameForMatch(c.companyName))) continue;
+    if (c.rank != null && !Number.isNaN(c.rank)) {
+      modelBest = modelBest == null ? c.rank : Math.min(modelBest, c.rank);
+    }
+  }
+  return { consensusBest, modelBest };
+}
+
+function rankChipPalette(rank: number | null): {
+  bg: string;
+  border: string;
+  fg: string;
+} {
+  if (rank == null) {
+    return {
+      bg: "oklch(0.55 0.02 250 / 0.12)",
+      border: "oklch(0.55 0.03 250 / 0.22)",
+      fg: "var(--muted-foreground)",
+    };
+  }
+  if (rank <= 3) {
+    return {
+      bg: "oklch(0.52 0.18 145 / 0.16)",
+      border: "oklch(0.52 0.18 145 / 0.38)",
+      fg: "oklch(0.36 0.15 145)",
+    };
+  }
+  if (rank <= 7) {
+    return {
+      bg: "oklch(0.78 0.14 72 / 0.18)",
+      border: "oklch(0.62 0.14 72 / 0.35)",
+      fg: "oklch(0.42 0.12 72)",
+    };
+  }
+  return {
+    bg: "oklch(0.55 0.06 25 / 0.12)",
+    border: "oklch(0.55 0.08 25 / 0.28)",
+    fg: "oklch(0.48 0.06 25)",
+  };
 }
 
 export default function IntelligenceReport({
@@ -85,17 +161,59 @@ export default function IntelligenceReport({
     hasRadarMetrics || hasIntel || hasBounties || hasGeneratedBountyPages;
   const hasGeoKnightTopics = geoKnight.topicViews.length > 0;
 
-  /** Regex built from the authenticated company name — used to detect company presence in rival rows. */
-  const companyRegex = useMemo(() => {
-    const escaped = ourName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(escaped, "i");
-  }, [ourName]);
-
-  /** Rival comparison: only prompts where ourName appears in consensus or per-model rows. */
-  const companyHighlightPrompts = useMemo(
-    () => highlightPrompts.filter((p) => companyInPrompt(p, companyRegex)),
-    [highlightPrompts, companyRegex]
+  /** Same semantics as GeoKnight “Show: Your company” — normalized names + escaped regex. */
+  const brandFocusRegex = useMemo(
+    () => buildSelfFocusRegex(geoKnight.companyName ?? ourName),
+    [geoKnight.companyName, ourName]
   );
+
+  /** Rival comparison highlights: subset of spotlight prompts where the brand appears (GeoKnight match). */
+  const companyHighlightPrompts = useMemo(
+    () =>
+      highlightPrompts.filter((p) =>
+        brandFocusRegex ? promptMatchesCompanyFocus(p, brandFocusRegex) : false
+      ),
+    [highlightPrompts, brandFocusRegex]
+  );
+
+  /** All active prompts where rival rows mention the brand (full list for Report). */
+  const brandMentionRows = useMemo(() => {
+    if (!brandFocusRegex) return [];
+    const out: Array<{
+      promptId: string;
+      query: string;
+      topicName: string;
+      topicDifficulty: "EASY" | "MEDIUM" | "HARD";
+      prompt: PromptView;
+      otherBrands: ReturnType<typeof collectOtherBrandsWithRanks>;
+      consensusBest: number | null;
+      modelBest: number | null;
+    }> = [];
+    for (const topic of geoKnight.topicViews) {
+      for (const prompt of topic.prompts) {
+        if (!promptMatchesCompanyFocus(prompt, brandFocusRegex)) continue;
+        const { consensusBest, modelBest } = ourBestRanks(prompt, brandFocusRegex);
+        out.push({
+          promptId: prompt.id,
+          query: prompt.query,
+          topicName: topic.name,
+          topicDifficulty: topic.difficulty,
+          prompt,
+          otherBrands: collectOtherBrandsWithRanks(prompt, brandFocusRegex),
+          consensusBest,
+          modelBest,
+        });
+      }
+    }
+    out.sort((a, b) => a.query.localeCompare(b.query));
+    return out;
+  }, [geoKnight.topicViews, brandFocusRegex]);
+
+  const filteredBrandMentions = useMemo(() => {
+    return brandMentionRows.filter((row) =>
+      matchesSearch(search, row.query, row.topicName, row.topicDifficulty)
+    );
+  }, [brandMentionRows, search]);
 
   /** Generated bounty pages: filter by search regex on title + bounty query. */
   const filteredBountyPages = useMemo(() => {
@@ -338,6 +456,144 @@ export default function IntelligenceReport({
           />
         </div>
       )}
+
+      {/* Every prompt where rival consensus / per-model rows mention the brand (GeoKnight-style regex) */}
+      {hasGeoKnightTopics && brandFocusRegex ? (
+        <section className="mt-8 glass-card card-anime-float rounded-xl border border-[var(--glass-border)] p-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-foreground font-heading md:text-base">
+                Brand mentions in prompts
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                All GeoKnight prompts where{" "}
+                <span className="font-semibold text-foreground">{ourName}</span> appears in consensus or per-model
+                rows (same normalized regex matching as GeoKnight filters). Other brands show best rank as chips;
+                colors reflect rank bands (top 3 · 4–7 · 8+).
+              </p>
+            </div>
+            <p className="text-[11px] tabular-nums text-muted-foreground shrink-0">
+              {filteredBrandMentions.length}
+              {brandMentionRows.length !== filteredBrandMentions.length
+                ? ` / ${brandMentionRows.length}`
+                : ""}{" "}
+              shown
+            </p>
+          </div>
+
+          {filteredBrandMentions.length === 0 ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {brandMentionRows.length === 0
+                ? "No prompts yet list your brand in simulated rival rows. Run GeoKnight simulations or refresh topic data."
+                : "No rows match the search box above."}
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3 max-h-[min(520px,70vh)] overflow-y-auto glass-scrollbar pr-1">
+              {filteredBrandMentions.map((row) => {
+                const palEasy =
+                  row.topicDifficulty === "EASY"
+                    ? "oklch(0.52 0.14 145 / 0.14)"
+                    : row.topicDifficulty === "MEDIUM"
+                      ? "oklch(0.72 0.14 72 / 0.14)"
+                      : "oklch(0.55 0.12 25 / 0.14)";
+                const palFg =
+                  row.topicDifficulty === "EASY"
+                    ? "oklch(0.38 0.12 145)"
+                    : row.topicDifficulty === "MEDIUM"
+                      ? "oklch(0.44 0.12 72)"
+                      : "oklch(0.45 0.1 25)";
+                return (
+                  <li
+                    key={row.promptId}
+                    className="rounded-lg border border-[var(--glass-border)]/80 bg-[var(--glass)]/50 px-3 py-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2 gap-y-1">
+                      <p className="text-sm font-medium text-foreground leading-snug min-w-0 flex-1">
+                        {row.query}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5 justify-end shrink-0">
+                        <span
+                          className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                          style={{
+                            background: palEasy,
+                            borderColor: `${palFg}33`,
+                            color: palFg,
+                          }}
+                        >
+                          {row.topicName}
+                        </span>
+                        <span
+                          className="rounded-full border border-[var(--glass-border)] bg-background/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                          title="Topic difficulty"
+                        >
+                          {row.topicDifficulty}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                      <span>
+                        <span className="font-medium text-foreground">{ourName}</span>
+                        {" · "}
+                        {row.consensusBest != null ? (
+                          <span className="tabular-nums">
+                            consensus #{Number(row.consensusBest).toFixed(1)}
+                          </span>
+                        ) : (
+                          <span>consensus —</span>
+                        )}
+                        {" · "}
+                        {row.modelBest != null ? (
+                          <span className="tabular-nums">best model #{Number(row.modelBest).toFixed(1)}</span>
+                        ) : (
+                          <span>best model —</span>
+                        )}
+                      </span>
+                    </div>
+                    {row.otherBrands.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {row.otherBrands.map((ob) => {
+                          const pal = rankChipPalette(ob.bestRank);
+                          return (
+                            <span
+                              key={ob.companyName}
+                              className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight"
+                              style={{
+                                background: pal.bg,
+                                borderColor: pal.border,
+                                color: pal.fg,
+                              }}
+                              title={
+                                ob.bestRank != null
+                                  ? `Best rank across consensus & models: #${Number(ob.bestRank).toFixed(1)}`
+                                  : "Listed but no numeric rank"
+                              }
+                            >
+                              <span className="truncate">{ob.companyName}</span>
+                              <span className="shrink-0 tabular-nums opacity-90">
+                                {ob.bestRank != null ? `#${Number(ob.bestRank).toFixed(1)}` : "—"}
+                              </span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-[10px] text-muted-foreground">No other brands in rival rows.</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <div className="mt-4 flex justify-end print:hidden">
+            <Link
+              href="/geo/geoknight"
+              className="text-xs font-semibold text-[var(--sibling-primary)] hover:underline"
+            >
+              Open GeoKnight →
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       {/* GeoKnight rival drill-down — only prompts where our company is present (regex match) */}
       {companyHighlightPrompts.length > 0 && (
