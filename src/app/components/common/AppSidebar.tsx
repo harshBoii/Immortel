@@ -298,8 +298,8 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       return (
         <>
           <SectionLabel label="Shop Intel" />
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Products" href="/shop/products" />
-          <SecondaryNavItem icon={ShoppingBag} label="WooCommerce products" href="/shop/woocommerce-products" />
+          <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify" href="/shop/products" />
+          <SecondaryNavItem icon={ShoppingBag} label="WooCommerce" href="/shop/woocommerce-products" />
         </>
       );
     case 'connection':
