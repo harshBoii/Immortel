@@ -60,9 +60,10 @@ export default function IntelligenceReport({
   const hasGeoKnightTopics = geoKnight.topicViews.length > 0;
 
   const filteredCitationIntel = useMemo(() => {
-    return payload.citationIntelligence.filter((row) =>
-      matchesSearch(search, row.query)
-    );
+    return payload.citationIntelligence
+      .filter((row) => row.winRate > 0 && matchesSearch(search, row.query))
+      .sort((a, b) => b.winRate - a.winRate)
+      .slice(0, 10);
   }, [payload.citationIntelligence, search]);
 
   return (
@@ -399,7 +400,7 @@ export default function IntelligenceReport({
       {hasIntel && (
         <section className="mt-8 glass-card card-anime-float rounded-xl p-5">
           <h2 className="text-sm font-semibold text-foreground font-heading">Citation intelligence</h2>
-          <p className="text-xs text-muted-foreground mt-1">Sorted by lowest win rate first</p>
+          <p className="text-xs text-muted-foreground mt-1">Top 10 prompts by win rate (win % &gt; 0)</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-xs min-w-[560px]">
               <thead>
@@ -419,7 +420,7 @@ export default function IntelligenceReport({
                     </td>
                   </tr>
                 ) : (
-                  filteredCitationIntel.slice(0, 40).map((row) => (
+                  filteredCitationIntel.map((row) => (
                     <tr key={row.promptId} className="border-b border-[var(--glass-border)]/50">
                       <td className="py-2 max-w-[260px] truncate" title={row.query}>
                         {row.query}
