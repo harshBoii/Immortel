@@ -468,7 +468,7 @@
   background: var(--sidebar-glass-bg);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border-right: 0.7px solid rgba(0, 0, 0, 0.468);
+  border-right: 0.1px solid rgba(0, 0, 0, 0.468);
   /* box-shadow:
     2px 0 20px rgba(48, 61, 101, 0.06),
     2px 0 0 0 color-mix(in srgb, var(--alien-glow-green) 34%, transparent); */
@@ -501,7 +501,7 @@
   border-right: 1px solid color-mix(in srgb, var(--sidebar-secondary-glass-border) 85%, rgba(21, 29, 53, 0.14));
   /* Stacked bevel + inner occlusion + right-edge rim (inset only — avoids covering scrollbar) */
   box-shadow:
-    inset 4px 0 4px 0.1px rgba(60, 58, 58, 0.526),
+    inset 4px 0 4px 0.1px rgba(180, 180, 180, 0.301),
     inset -2px 0 4px 0.2px rgba(85, 116, 11, 0.134),
     inset -4px 0 18px rgba(253, 255, 255, 0.255),
     20px 0 52px -14px rgba(150, 150, 150, 0),
