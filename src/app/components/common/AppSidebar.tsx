@@ -183,7 +183,7 @@ const IconHelp = ({ className }: { className?: string }) => (
    SECTIONS CONFIG
 ============================================ */
 const MAIN_SECTIONS = [
-  { id: 'home', label: 'Home', icon: IconHome, hasSecondary: false },
+  { id: 'home', label: 'Home', icon: IconHome, hasSecondary: true },
   // { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
   { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
@@ -277,10 +277,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
   switch (activeSection) {
     case 'home':
       return (
-        <>
-          <SectionLabel label="Dashboard" />
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Overview" href="/" />
-        </>
+        <SecondaryNavItem icon={IconLayoutDashboard} label="Dashboard" href="/" />
       );
     case 'ingestion':
       return (
@@ -343,7 +340,28 @@ export default function AppSidebar() {
   const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { company, shopify } = useCurrentContext();
+  const {
+    company,
+    shopify,
+    hqEligible,
+    organizationName,
+    organizationCompanies,
+    refetch,
+  } = useCurrentContext();
+
+  const switchTenant = async (targetId: string) => {
+    if (!company || targetId === company.id) return;
+    const res = await fetch('/api/auth/switch-company', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ companyId: targetId }),
+    });
+    if (!res.ok) return;
+    refetch();
+    router.push('/');
+    router.refresh();
+  };
 
   const getFirstRoute = (sectionId: string) => {
     switch (sectionId) {
@@ -379,7 +397,7 @@ export default function AppSidebar() {
   };
 
   useEffect(() => {
-    if (pathname === '/') setActiveSection('home');
+    if (pathname === '/' || pathname?.startsWith('/hq')) setActiveSection('home');
     else if (pathname?.startsWith('/ingestion')) setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo')) setActiveSection('geo');
     else if (pathname?.startsWith('/shop')) setActiveSection('shop');
@@ -396,6 +414,53 @@ export default function AppSidebar() {
     damping: 38,
     mass: 0.85,
   };
+
+  const organizationSecondaryNav =
+    hqEligible && organizationCompanies && organizationCompanies.length > 0 ? (
+      <div className="mb-3 border-b border-[var(--sidebar-secondary-glass-border)] pb-3">
+        <SectionLabel label={organizationName ?? 'Organization'} />
+        <Link
+          href="/hq"
+          className={`
+                    mb-1 flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-body transition-all duration-200
+                    ${
+                      pathname === '/hq'
+                        ? 'glass-button font-medium text-[var(--sibling-primary)]'
+                        : 'text-muted-foreground hover:bg-[var(--glass-hover)] hover:text-[var(--sibling-primary)]'
+                    }
+                  `}
+        >
+          <IconLayoutDashboard
+            className={`h-4 w-4 flex-shrink-0 ${pathname === '/hq' ? 'text-[var(--sibling-primary)]' : ''}`}
+          />
+          <span className="flex-1 truncate">Headquarters</span>
+        </Link>
+        {organizationCompanies.map((c) => {
+          const active = company?.id === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => void switchTenant(c.id)}
+              className={`
+                        mb-0.5 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-body transition-all duration-200
+                        ${
+                          active
+                            ? 'glass-button font-medium text-[var(--sibling-primary)]'
+                            : 'text-muted-foreground hover:bg-[var(--glass-hover)] hover:text-[var(--sibling-primary)]'
+                        }
+                      `}
+            >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
+              <span className="flex-1 truncate">
+                {c.name}
+                {c.isOrg ? ' · HQ' : ''}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    ) : null;
 
   return (
     <div className="flex h-screen sticky top-0 overflow-x-hidden">
@@ -511,7 +576,19 @@ export default function AppSidebar() {
           </div>
 
           <nav className="flex-1 overflow-y-auto px-2 py-2 glass-scrollbar">
-            <SecondarySidebarContent activeSection={activeSection} />
+            {activeSection === 'home' ? (
+              <>
+                <div className="mb-3 border-b border-[var(--sidebar-secondary-glass-border)] pb-3">
+                  <SecondarySidebarContent activeSection={activeSection} />
+                </div>
+                {organizationSecondaryNav}
+              </>
+            ) : (
+              <>
+                {organizationSecondaryNav}
+                <SecondarySidebarContent activeSection={activeSection} />
+              </>
+            )}
           </nav>
 
             <div className="space-y-3 border-t border-[var(--sidebar-secondary-glass-border)] bg-[var(--glass-hover)]/40 p-3">

@@ -12,6 +12,8 @@ export type CitationRow = {
   rank: number | null;
   type: string;
   companies: CitationCompany[];
+  /** Tenant company this citation row belongs to (HQ aggregate). */
+  companyName?: string | null;
 };
 
 export function CitationsTable({
@@ -56,6 +58,11 @@ export function CitationsTable({
                   {selected.prompt}
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  {selected.companyName ? (
+                    <span className="inline-flex items-center rounded-full border border-[var(--sibling-primary)]/35 bg-[color-mix(in_srgb,var(--sibling-primary)_14%,transparent)] px-2 py-0.5 font-semibold text-[var(--sibling-primary)]">
+                      {selected.companyName}
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary">
                     {selected.model}
                   </span>
@@ -142,9 +149,16 @@ export function CitationsTable({
               onClick={() => setSelected(item)}
               className="grid grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)_auto] gap-2 px-3 py-1.5 text-xs w-full text-left hover:bg-[var(--glass-hover)]/60 transition-colors cursor-pointer"
             >
-              <p className="font-medium text-foreground truncate" title={item.prompt}>
-                {item.prompt}
-              </p>
+              <div className="min-w-0 text-left">
+                <p className="font-medium text-foreground truncate" title={item.prompt}>
+                  {item.prompt}
+                </p>
+                {item.companyName ? (
+                  <span className="mt-0.5 inline-block rounded-full border border-[var(--sibling-primary)]/30 bg-[color-mix(in_srgb,var(--sibling-primary)_10%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sibling-primary)]">
+                    {item.companyName}
+                  </span>
+                ) : null}
+              </div>
               <p className="text-[11px] text-muted-foreground truncate">{item.model}</p>
               <p className="text-right text-[11px] tabular-nums">
                 {item.rank != null ? `#${item.rank}` : '—'}

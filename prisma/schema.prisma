@@ -6,6 +6,19 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Parent tenant for multi-company (HQ) accounts. Optional on [`Company`] for standalone or external rivals.
+model Organization {
+  id        String    @id @default(cuid())
+  name      String    @db.VarChar(255)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
+  username  String    @unique 
+  password  String   
+  companies Company[]
+
+  @@map("organizations")
+}
+
 model Company {
   id                    String                  @id @default(cuid())
   name                  String                  @db.VarChar(255)
@@ -24,6 +37,10 @@ model Company {
   userName              String?                 @unique @db.VarChar(255)
   password              String?                 @db.VarChar(255)
   isExternal            Boolean                 @default(false)
+  /// When true, this company row is the HQ login for [`organizationId`] (org-wide dashboard + tenant switch).
+  isOrg                 Boolean                 @default(false) @map("is_org")
+  organizationId        String?                 @map("organization_id")
+  organization          Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
 
@@ -56,6 +73,7 @@ model Company {
   rivaledBy             CompanyRival[]          @relation("CompanyRivalTargets")
 
   @@index([slug])
+  @@index([organizationId])
   @@map("companies")
 }
 

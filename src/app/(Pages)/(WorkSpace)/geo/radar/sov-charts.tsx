@@ -57,10 +57,13 @@ export function SovTrendChart({
   series,
   compare,
   rivalColor,
+  primaryName = "You",
 }: {
   series: SovPoint[];
   compare?: { label: string; series: SovPoint[] } | null;
   rivalColor?: string;
+  /** Legend / tooltip label for the primary series (default "You"). */
+  primaryName?: string;
 }) {
   const ourByDay = collapseByDay(series ?? []);
   const compareByDay = compare ? collapseByDay(compare.series ?? []) : new Map<number, number>();
@@ -90,8 +93,9 @@ export function SovTrendChart({
   const showRivalDots = compareByDay.size <= 2;
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <div className="h-[220px] w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--glass-border)]" />
         <XAxis dataKey="dayKey" tick={{ fontSize: 10 }} tickFormatter={(_, i) => data[i]?.label ?? ""} />
         <YAxis tick={{ fontSize: 10 }} />
@@ -99,7 +103,10 @@ export function SovTrendChart({
           labelFormatter={(_, payload) => payload?.[0]?.payload?.fullLabel ?? ""}
           formatter={(value: number | string | undefined, name) => {
             const n = typeof value === "number" ? value : Number(value ?? 0);
-            const label = name === "rivalSov" ? (compare ? `${compare.label} SoV` : "Rival SoV") : "Your SoV";
+            const label =
+              name === "rivalSov"
+                ? (compare ? `${compare.label} SoV` : "Rival SoV")
+                : `${primaryName} SoV`;
             return [`${n.toFixed(1)}`, label];
           }}
           contentStyle={{
@@ -113,7 +120,7 @@ export function SovTrendChart({
         <Line
           type="monotone"
           dataKey="sov"
-          name="You"
+          name={primaryName}
           stroke="var(--primary)"
           dot={showOurDots}
           strokeWidth={2}
@@ -130,8 +137,9 @@ export function SovTrendChart({
             connectNulls
           />
         ) : null}
-      </LineChart>
-    </ResponsiveContainer>
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -146,10 +154,12 @@ export function ModelBreakdownChart({
   rows,
   compare,
   rivalColor,
+  primaryName = "You",
 }: {
   rows: ModelBreakRow[];
   compare?: { label: string; rows: ModelBreakRow[] } | null;
   rivalColor?: string;
+  primaryName?: string;
 }) {
   const compareByModel = new Map<string, number>();
   for (const r of compare?.rows ?? []) {
@@ -168,8 +178,9 @@ export function ModelBreakdownChart({
     );
   }
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <div className="h-[220px] w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--glass-border)]" />
         <XAxis dataKey="label" tick={{ fontSize: 10 }} />
         <YAxis tick={{ fontSize: 10 }} unit="%" />
@@ -182,7 +193,7 @@ export function ModelBreakdownChart({
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="sov" name="You" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="sov" name={primaryName} fill="var(--primary)" radius={[4, 4, 0, 0]} />
         {compare ? (
           <Bar
             dataKey="rivalSov"
@@ -191,8 +202,9 @@ export function ModelBreakdownChart({
             radius={[4, 4, 0, 0]}
           />
         ) : null}
-      </BarChart>
-    </ResponsiveContainer>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -300,7 +312,7 @@ export function RadarCompareCharts({
   const rivalLatest = comparePayload?.latest ?? null;
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">
@@ -363,11 +375,11 @@ export function RadarCompareCharts({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="glass-card card-anime-float rounded-xl p-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="glass-card card-anime-float min-w-0 rounded-xl p-4">
           <h3 className="text-sm font-semibold text-foreground">Share of voice trend</h3>
           <p className="text-xs text-muted-foreground mt-1">Recent radar runs</p>
-          <div className="mt-2 h-[240px]">
+          <div className="mt-2 min-h-[220px] w-full min-w-0">
             <SovTrendChart
               series={base.sovSeries}
               compare={compare ? { label: compare.label, series: compare.sovSeries } : null}
@@ -375,10 +387,10 @@ export function RadarCompareCharts({
             />
           </div>
         </div>
-        <div className="glass-card card-anime-float rounded-xl p-4">
+        <div className="glass-card card-anime-float min-w-0 rounded-xl p-4">
           <h3 className="text-sm font-semibold text-foreground">Model breakdown</h3>
           <p className="text-xs text-muted-foreground mt-1">Average SoV by model</p>
-          <div className="mt-2 h-[240px]">
+          <div className="mt-2 min-h-[220px] w-full min-w-0">
             <ModelBreakdownChart
               rows={base.modelBreakdown}
               compare={compare ? { label: compare.label, rows: compare.modelBreakdown } : null}

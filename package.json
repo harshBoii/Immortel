@@ -10,7 +10,8 @@
     "test:radar": "tsx src/lib/geo/radar/__checks__/formulas.check.ts",
     "build:widgets": "esbuild src/widget/product-list-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/product-list.js && esbuild src/widget/checkout-entry.tsx --bundle --format=iife --platform=browser --outfile=public/widget/checkout.js",
     "seed": "prisma db seed",
-    "seed:products": "tsx prisma/seed-products.ts"
+    "seed:products": "tsx prisma/seed-products.ts",
+    "seed:organization": "tsx prisma/seed-organization.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

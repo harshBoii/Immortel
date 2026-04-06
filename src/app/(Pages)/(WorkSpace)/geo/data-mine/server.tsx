@@ -1,12 +1,63 @@
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+"use client";
+
+import type { ComponentProps } from "react";
+import { useEffect, useState } from "react";
 import DataMinePageClient from "./ui";
+import LoadingAnimation from "@/app/components/animations/loading";
 
-export default async function DataMineContent() {
-  const session = await getSession();
-  const companyId = session?.companyId ?? null;
+type DmProps = ComponentProps<typeof DataMinePageClient>;
 
-  if (!companyId) {
+type ApiOk = {
+  success: true;
+  sources: DmProps["initialSources"];
+  company: DmProps["initialCompany"];
+  brandEntity: DmProps["initialBrandEntity"];
+  offerings: DmProps["initialOfferings"];
+  branding: DmProps["initialBranding"];
+};
+
+export default function DataMineContent() {
+  const [loading, setLoading] = useState(true);
+  const [unauthenticated, setUnauthenticated] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [data, setData] = useState<ApiOk | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/geo/data-mine", { credentials: "include" });
+        const json = (await res.json()) as
+          | ApiOk
+          | { success: false; error?: string };
+        if (cancelled) return;
+        if (res.status === 401) {
+          setUnauthenticated(true);
+          return;
+        }
+        if (!res.ok || !("success" in json) || !json.success) {
+          setLoadError("error" in json && json.error ? json.error : "Failed to load data mine");
+          return;
+        }
+        setData(json);
+      } catch {
+        if (!cancelled) setLoadError("Failed to load data mine");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <LoadingAnimation text={`Pheww ! That's Heavy... Gimme some waterrrr !...`} />
+    );
+  }
+
+  if (unauthenticated) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--glass-border)] bg-[var(--glass)] p-6 text-sm text-muted-foreground">
         You&apos;re not associated with a company yet. Sign in as a company user to manage GEO data.
@@ -14,79 +65,21 @@ export default async function DataMineContent() {
     );
   }
 
-  const [sources, company, brandEntity, offerings, branding] = await Promise.all([
-    prisma.geoDataSource.findMany({
-      where: { companyId },
-      orderBy: { createdAt: "desc" },
-      include: {
-        asset: {
-          select: {
-            id: true,
-            assetType: true,
-            title: true,
-            filename: true,
-            status: true,
-            thumbnailUrl: true,
-            playbackUrl: true,
-            duration: true,
-            resolution: true,
-            createdAt: true,
-          },
-        },
-      },
-    }),
-    prisma.company.findUnique({
-      where: { id: companyId },
-      select: { id: true, name: true, description: true, logoUrl: true, website: true, email: true },
-    }),
-    prisma.brandEntity.findUnique({ where: { companyId } }),
-    prisma.brandEntity.findUnique({ where: { companyId }, select: { id: true } }).then((e) =>
-      e ? prisma.entityOffering.findMany({ where: { entityId: e.id }, orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }] }) : []
-    ),
-    prisma.companyBranding.findUnique({ where: { companyId } }),
-  ]);
-
-  const serializedSources = sources.map((s) => ({
-    ...s,
-    createdAt: s.createdAt.toISOString(),
-    updatedAt: s.updatedAt.toISOString(),
-    asset: s.asset
-      ? { ...s.asset, createdAt: s.asset.createdAt.toISOString() }
-      : null,
-  }));
-
-  const serializedBrandEntity = brandEntity
-    ? {
-        ...brandEntity,
-        createdAt: brandEntity.createdAt.toISOString(),
-        updatedAt: brandEntity.updatedAt.toISOString(),
-        lastCrawledAt: brandEntity.lastCrawledAt?.toISOString() ?? null,
-        lastEnrichedAt: brandEntity.lastEnrichedAt?.toISOString() ?? null,
-      }
-    : null;
-
-  const serializedOfferings = offerings.map((o) => ({
-    ...o,
-    createdAt: o.createdAt.toISOString(),
-    updatedAt: o.updatedAt.toISOString(),
-  }));
-
-  const serializedBranding = branding
-    ? {
-        ...branding,
-        createdAt: branding.createdAt.toISOString(),
-        updatedAt: branding.updatedAt.toISOString(),
-      }
-    : null;
+  if (loadError || !data) {
+    return (
+      <div className="rounded-lg border border-dashed border-[var(--glass-border)] bg-[var(--glass)] p-6 text-sm text-muted-foreground">
+        {loadError ?? "Something went wrong."}
+      </div>
+    );
+  }
 
   return (
     <DataMinePageClient
-      initialSources={serializedSources}
-      initialCompany={company ?? null}
-      initialBrandEntity={serializedBrandEntity}
-      initialOfferings={serializedOfferings}
-      initialBranding={serializedBranding}
+      initialSources={data.sources}
+      initialCompany={data.company}
+      initialBrandEntity={data.brandEntity}
+      initialOfferings={data.offerings}
+      initialBranding={data.branding}
     />
   );
 }
-

@@ -117,6 +117,13 @@
      makes burnt orange feel vivid as a CTA
    ====================================================== */
 :root {
+
+    /* Mesh gradient — 3 anchored soft blobs in your brand palette:
+     Burnt orange (top-left) · Navy (bottom-right) · Golden warmth (center)
+     All kept ≤8% so they read as warm parchment, not a colored page */
+/* In :root — replaces your current --page-mesh */
+
+
   --radius: 0.75rem;
 
   /* ── Brand tokens ── */
@@ -129,11 +136,17 @@
   --sibling-surface-hover: oklch(0.95 0.012 85);   /* Parchment hover      */
 
   /* ── Alien greens ── */
-  --alien-glow-green:   #19f5a812; /* primary glow      */
-  --alien-core-green:   #12d98d00; /* core solid        */
-  --alien-accent-green: #0b8f6300; /* darker accent     */
+  /* Neutral navy option — elegant, no color clash */
+/* In :root — replace alien green tokens */
 
-  /* ── Semantic ── */
+/* --alien-glow-green:   oklch(0.72 0.16 65 / 0.22);
+--alien-core-green:   oklch(0.58 0.18 65 / 0.36);
+--alien-accent-green: oklch(0.44 0.16 65 / 0.44); */
+
+  --alien-glow-green:   oklch(0.72 0.16 65 / 0.22);
+  --alien-core-green:   oklch(0.58 0.18 65 / 0.36);
+  --alien-accent-green: oklch(0.44 0.16 65 / 0.44);
+  
   --success:            oklch(0.52 0.18 145);
   --success-foreground: oklch(0.98 0.004 85);
   --warning:            oklch(0.68 0.18 72);
@@ -363,17 +376,32 @@
 
 @layer base {
   html { height: 100%; }
-
-  /* Light: warm parchment canvas (no bokeh on page bg) */
+  html {
+    background: linear-gradient(170deg,
+      oklch(0.94 0.010 70) 0%,   /* warm greige top */
+      oklch(0.96 0.008 80) 100%  /* softer parchment bottom */
+    ) fixed;
+  }  /* Light: warm parchment canvas (no bokeh on page bg) */
   body {
+    /* Base parchment — unchanged so your text contrast stays calibrated */
     background-color: oklch(0.98 0.010 85);
+
+    /* Mesh sits on top of the flat colour, locked to viewport */
+    background-image: var(--page-mesh);
     background-attachment: fixed;
+    background-size: 100% 100%;
+
     min-height: 100dvh;
     color: var(--foreground);
   }
 
-  /* Dark: true black + gold leaf */
-  .dark body { background-color: oklch(0.08 0.005 60); }
+  /* Dark: near-black base + gold/green mesh */
+  .dark body {
+    background-color: oklch(0.08 0.005 60);
+    background-image: var(--page-mesh);
+    background-attachment: fixed;
+    background-size: 100% 100%;
+  }
 
   /* All layout shells transparent in light so body parchment shows; dark uses --background */
   html { background-color: transparent; }
@@ -618,44 +646,190 @@
 
 
 /* ── Anime float: navy cel-shadow on parchment; visible alien tint on rims + black/navy base ── */
-.card-anime-float {
-  position: relative;
-  overflow: hidden;
-  background: rgba(250, 248, 242, 0.20);
-  backdrop-filter: blur(18px) saturate(1.4);
-  -webkit-backdrop-filter: blur(18px) saturate(1.4);
-  border: 1.5px solid rgba(21, 29, 53, 0.11);
-  border-top-color: rgba(255, 255, 255, 0.88);
-  border-left-color: color-mix(in srgb, var(--alien-glow-green) 28%, rgba(21, 29, 53, 0.11));
-  border-right-color: color-mix(in srgb, var(--alien-core-green) 32%, rgba(21, 29, 53, 0.22));
-  border-bottom-color: color-mix(in srgb, var(--alien-accent-green) 30%, rgba(21, 29, 53, 0.26));
-  box-shadow:
-    3px 3px 0 0 color-mix(in srgb, var(--alien-accent-green) 22%, rgba(10, 13, 25, 0.28)),
-    1.5px 1.5px 0 0 rgba(21, 29, 53, 0.08);
-  transition: box-shadow 0.22s ease, transform 0.22s ease, background 0.22s ease;
-}
-.card-anime-float:hover {
-  background: rgba(250, 248, 242, 0.30);
-  box-shadow:
-    4px 5px 0 0 color-mix(in srgb, var(--alien-core-green) 20%, rgba(21, 29, 53, 0.17)),
-    2px 2.5px 0 0 rgba(21, 29, 53, 0.09);
-  transform: translate(-1px, -1px);
-}
-.card-anime-float::before, .card-anime-float::after {
-  content: ""; position: absolute; border-radius: 50%;
-  pointer-events: none; z-index: 0; filter: blur(40px); opacity: 0.65;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   CARD-ANIME-FLOAT — Liquid glassmorphic + anime-pop
+   Changes vs original:
+   1. Background → multi-layer gradient + SVG noise grain (frosted)
+   2. backdrop-filter → higher blur + brightness lift
+   3. box-shadow → inset highlights create real glass depth
+   4. ::before → replaced bokeh with diagonal glass-sheen SWEEP
+   5. ::after → bokeh softened + larger spread for liquid ambient
+   ═══════════════════════════════════════════════════════════════════ */
+
+   .card-anime-float {
+    position: relative;
+    overflow: hidden;
+  
+    /* ── Frosted glass base ───────────────────────────────────────────
+       Layer 1: SVG noise grain → frosted/etched texture
+       Layer 2: Angled gradient → creates the top-bright "glass tilt" look
+       Layer 3: Solid base alpha
+    ──────────────────────────────────────────────────────────────── */
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23n)' opacity='0.042'/%3E%3C/svg%3E"),
+      linear-gradient(
+        138deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(250, 248, 242, 0.10) 48%,
+        color-mix(in srgb, var(--alien-glow-green) 8%, rgba(240, 255, 246, 0.14)) 100%
+      );
+  
+    /* High blur + brightness lift = glass catching light */
+    backdrop-filter: blur(28px) saturate(1.7) brightness(1.06);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7) brightness(1.06);
+  
+    /* ── Iridescent border ─────────────────────────────────────────── */
+    border: 1.5px solid;
+    border-color:
+      rgba(255, 255, 255, 0.88)                                                  /* top  – bright specular */
+      color-mix(in srgb, var(--alien-core-green) 32%, rgba(21, 29, 53, 0.22))    /* right */
+      color-mix(in srgb, var(--alien-accent-green) 36%, rgba(21, 29, 53, 0.30))  /* bottom */
+      color-mix(in srgb, var(--alien-glow-green) 28%, rgba(21, 29, 53, 0.16));   /* left */
+  
+    /* ── Multi-layer shadow — 3D pop + glass depth ─────────────────── */
+    box-shadow:
+      /* anime 3D offset */
+      4px 5px 0 0   color-mix(in srgb, var(--alien-accent-green) 22%, rgba(10, 13, 25, 0.32)),
+      1.5px 2px 0 0 rgba(21, 29, 53, 0.10),
+      /* soft depth shadow */
+      0 10px 32px -4px rgba(10, 13, 25, 0.16),
+      0 4px 12px -4px rgba(10, 13, 25, 0.10),
+      /* ↓ THESE inset layers are what make it read as GLASS, not a box */
+      /* inner top-edge specular — the bright "ridge" of the glass */
+      inset 0 1.5px 0 0 rgba(255, 255, 255, 0.82),
+      /* inner left-edge specular */
+      inset 1px 0 0 0 rgba(255, 255, 255, 0.32),
+      /* inner bottom-right green ambient — liquid glow pooling in the corner */
+      inset 0 -2px 48px -10px color-mix(in srgb, var(--alien-glow-green) 45%, transparent),
+      inset -2px 0 28px -8px color-mix(in srgb, var(--alien-core-green) 30%, transparent);
+  
+    transition:
+      box-shadow 0.26s ease,
+      transform 0.26s ease,
+      border-color 0.26s ease,
+      backdrop-filter 0.26s ease;
+  }
+  
+  .card-anime-float:hover {
+    backdrop-filter: blur(32px) saturate(1.8) brightness(1.08);
+    -webkit-backdrop-filter: blur(32px) saturate(1.8) brightness(1.08);
+  
+    border-color:
+      rgba(255, 255, 255, 0.96)
+      color-mix(in srgb, var(--alien-core-green) 44%, rgba(21, 29, 53, 0.18))
+      color-mix(in srgb, var(--alien-accent-green) 48%, rgba(21, 29, 53, 0.24))
+      color-mix(in srgb, var(--alien-glow-green) 38%, rgba(21, 29, 53, 0.14));
+  
+    box-shadow:
+      5px 7px 0 0   color-mix(in srgb, var(--alien-core-green) 24%, rgba(10, 13, 25, 0.24)),
+      2px 2.5px 0 0 rgba(21, 29, 53, 0.10),
+      0 14px 40px -4px rgba(10, 13, 25, 0.20),
+      0 6px 16px -4px rgba(10, 13, 25, 0.12),
+      inset 0 1.5px 0 0 rgba(255, 255, 255, 0.92),
+      inset 1px 0 0 0 rgba(255, 255, 255, 0.42),
+      inset 0 -2px 60px -8px color-mix(in srgb, var(--alien-glow-green) 55%, transparent),
+      inset -2px 0 36px -6px color-mix(in srgb, var(--alien-core-green) 38%, transparent);
+  
+    transform: translate(-1.5px, -2px);
+
+  }
+  
+  /* ── ::before — Diagonal glass-sheen SWEEP ──────────────────────────
+     This is the signature liquid-glass effect: a sharp angled band of
+     light that slides across the card like a reflection moving across
+     a pane of glass. Replaces the top-left bokeh orb (the inset
+     box-shadow now handles that ambient glow more precisely).
+  ─────────────────────────────────────────────────────────────────── */
+/* ── ::before — static by default, sweeps on hover ── */
 .card-anime-float::before {
-  width: 120px; height: 120px; top: -30px; left: -20px;
-  background: radial-gradient(circle, var(--bokeh-primary) 0%, transparent 70%);
-  animation: bokeh-drift-c 23s ease-in-out infinite;
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: -40%;
+  width: 38%;
+  height: 140%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.00) 20%,
+    rgba(255, 255, 255, 0.14) 42%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.14) 58%,
+    rgba(255, 255, 255, 0.00) 80%,
+    transparent 100%
+  );
+  transform: skewX(-12deg);
+  pointer-events: none;
+  z-index: 1;
+  filter: none;
+  border-radius: 0;
+
+  /* ── Resting state: parked off-screen left, invisible ── */
+  opacity: 0;
+  animation: none; /* ← remove the auto-loop */
 }
-.card-anime-float::after {
-  width: 100px; height: 100px; bottom: -25px; right: -15px;
-  background: radial-gradient(circle, var(--bokeh-accent) 0%, transparent 70%);
-  animation: bokeh-drift-a 19s ease-in-out infinite;
+
+/* ── Trigger sweep on hover ── */
+.card-anime-float:hover::before {
+  animation: glass-sheen-sweep-hover 0.65s ease-out forwards;
 }
-.card-anime-float > * { position: relative; z-index: 1; }
+
+@keyframes glass-sheen-sweep-hover {
+  0%   { left: -40%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { left: 130%; opacity: 1; }
+  100% { left: 130%; opacity: 0; }
+}
+
+/* Remove the nth-child stagger delays — no longer needed */
+.card-anime-float:nth-child(2)::before,
+.card-anime-float:nth-child(3)::before,
+.card-anime-float:nth-child(4)::before,
+.card-anime-float:nth-child(5)::before {
+  animation-delay: 0s;
+}  
+  /* ── ::after — Soft bokeh ambient orb ───────────────────────────────
+     Larger, softer, more spread — creates the liquid light-pool
+     that makes the bottom-right corner feel warm and luminous.
+  ─────────────────────────────────────────────────────────────────── */
+  .card-anime-float::after {
+    content: "";
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    bottom: -40px;
+    right: -30px;
+    background: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--bokeh-accent, var(--alien-glow-green)) 60%, transparent) 0%,
+      color-mix(in srgb, var(--bokeh-primary, var(--alien-core-green)) 30%, transparent) 40%,
+      transparent 70%
+    );
+    filter: blur(30px);
+    opacity: 0.55;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 50%;
+    animation: bokeh-drift-a 19s ease-in-out infinite;
+  }
+  
+  /* ── Keyframes ───────────────────────────────────────────────────── */
+  
+  @keyframes glass-sheen-sweep {
+    /* Sits hidden for most of the cycle, then sweeps once */
+    0%   { left: -40%;  opacity: 0; }
+    8%   { opacity: 0; }
+    12%  { opacity: 1; }
+    38%  { left: 130%;  opacity: 1; }
+    42%  { left: 130%;  opacity: 0; }
+    100% { left: 130%;  opacity: 0; }
+  }
+  
+  /* Stagger the sweep per card position so they don't all sweep at once */
+  .card-anime-float:nth-child(2)::before { animation-delay: -1.8s; }
+  .card-anime-float:nth-child(3)::before { animation-delay: -3.4s; }
+  .card-anime-float:nth-child(4)::before { animation-delay: -5.1s; }
+  .card-anime-float:nth-child(5)::before { animation-delay: -0.9s; }.card-anime-float > * { position: relative; z-index: 1; }
 .glass-card.card-anime-float       { background: rgba(250, 248, 242, 0.20); }
 .glass-card.card-anime-float:hover { background: rgba(250, 248, 242, 0.30); }
 
@@ -1057,3 +1231,4 @@
     -webkit-print-color-adjust: exact;
   }
 }
+

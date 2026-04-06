@@ -17,6 +17,11 @@ export async function POST(request: Request) {
 
     const company = await prisma.company.findUnique({
       where: { email: email.trim().toLowerCase() },
+      include: {
+        organization: {
+          select: { _count: { select: { companies: true } } },
+        },
+      },
     });
 
     if (!company) {
@@ -25,9 +30,13 @@ export async function POST(request: Request) {
 
     await setAuthCookie(company.id);
 
+    const goHq =
+      company.organizationId != null &&
+      (company.organization?._count.companies ?? 0) >= 1;
+
     return NextResponse.json({
       success: true,
-      redirect: '/',
+      redirect: goHq ? '/hq' : '/',
     });
   } catch (err) {
     console.error('Dev login error:', err);

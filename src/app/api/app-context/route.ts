@@ -16,6 +16,9 @@ export async function GET() {
         expectedShopDomain: null,
         wordpressIntegration: null,
         woocommerce: null,
+        hqEligible: false,
+        organizationName: null,
+        organizationCompanies: null,
       },
       { status: 401 }
     );
@@ -26,7 +29,20 @@ export async function GET() {
   const [company, shop, cms, wp, wc] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
-      select: { id: true, name: true, email: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isOrg: true,
+        organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            _count: { select: { companies: true } },
+          },
+        },
+      },
     }),
     prisma.shopifyShop.findFirst({
       where: { companyId, status: "installed" },
@@ -72,6 +88,9 @@ export async function GET() {
         expectedShopDomain: null,
         wordpressIntegration: null,
         woocommerce: null,
+        hqEligible: false,
+        organizationName: null,
+        organizationCompanies: null,
       },
       { status: 404 }
     );
@@ -82,6 +101,20 @@ export async function GET() {
 
   const expectedShopDomain = cms?.expectedShopDomain?.trim() ?? "";
 
+  const org = company.organization;
+  const hqEligible = Boolean(
+    company.organizationId && org && org._count.companies >= 1
+  );
+
+  let organizationCompanies: Array<{ id: string; name: string; isOrg: boolean }> | null = null;
+  if (company.organizationId && hqEligible) {
+    organizationCompanies = await prisma.company.findMany({
+      where: { organizationId: company.organizationId },
+      select: { id: true, name: true, isOrg: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
   return NextResponse.json({
     success: true,
     company,
@@ -90,6 +123,9 @@ export async function GET() {
     expectedShopDomain,
     wordpressIntegration: wp,
     woocommerce: wc,
+    hqEligible,
+    organizationName: org?.name ?? null,
+    organizationCompanies,
   });
 }
 

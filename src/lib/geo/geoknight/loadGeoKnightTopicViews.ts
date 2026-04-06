@@ -163,3 +163,34 @@ export async function loadGeoKnightTopicViews(companyId: string): Promise<GeoKni
     })),
   };
 }
+
+/**
+ * Merges GeoKnight workspace data across multiple tenant companies (HQ aggregate).
+ */
+export async function loadGeoKnightTopicViewsForCompanies(
+  companyIds: string[],
+  displayName: string | null
+): Promise<GeoKnightWorkspaceData> {
+  if (companyIds.length === 0) {
+    return { companyName: displayName, topicViews: [], rivals: [] };
+  }
+  if (companyIds.length === 1) {
+    const one = await loadGeoKnightTopicViews(companyIds[0]!);
+    return {
+      ...one,
+      companyName: displayName ?? one.companyName,
+    };
+  }
+  const parts = await Promise.all(companyIds.map((id) => loadGeoKnightTopicViews(id)));
+  const rivalMap = new Map<string, RivalCompanyView>();
+  for (const part of parts) {
+    for (const r of part.rivals) {
+      rivalMap.set(r.id, r);
+    }
+  }
+  return {
+    companyName: displayName,
+    topicViews: parts.flatMap((p) => p.topicViews),
+    rivals: [...rivalMap.values()],
+  };
+}

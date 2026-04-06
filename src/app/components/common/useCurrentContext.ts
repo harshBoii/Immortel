@@ -6,7 +6,11 @@ type CompanySummary = {
   id: string;
   name: string;
   email: string;
+  isOrg?: boolean;
+  organizationId?: string | null;
 };
+
+type OrgCompanyRow = { id: string; name: string; isOrg: boolean };
 
 type ShopifySummary = {
   id: string;
@@ -42,6 +46,9 @@ type AppContextState = {
   expectedShopDomain: string | null;
   wordpressIntegration: WordPressIntegrationSummary | null;
   woocommerce: WooCommerceSummary | null;
+  hqEligible: boolean;
+  organizationName: string | null;
+  organizationCompanies: OrgCompanyRow[] | null;
   refetch: () => void;
 };
 
@@ -55,6 +62,9 @@ export function useCurrentContext(): AppContextState {
     expectedShopDomain: null,
     wordpressIntegration: null,
     woocommerce: null,
+    hqEligible: false,
+    organizationName: null,
+    organizationCompanies: null,
   });
   const [fetchKey, setFetchKey] = useState(0);
 
@@ -86,6 +96,9 @@ export function useCurrentContext(): AppContextState {
             expectedShopDomain: data.expectedShopDomain ?? null,
             wordpressIntegration: data.wordpressIntegration ?? null,
             woocommerce: data.woocommerce ?? null,
+            hqEligible: Boolean(data.hqEligible),
+            organizationName: data.organizationName ?? null,
+            organizationCompanies: data.organizationCompanies ?? null,
           });
         }
       } catch (err) {

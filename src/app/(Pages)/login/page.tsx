@@ -41,6 +41,10 @@ export default function AuthPage() {
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [orgUsername, setOrgUsername] = useState('');
+  const [orgPassword, setOrgPassword] = useState('');
+  /** Login tab: company email vs organization (HQ) credentials — same card UI, different fields. */
+  const [loginVariant, setLoginVariant] = useState<'company' | 'organization'>('company');
 
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
@@ -73,6 +77,33 @@ export default function AuthPage() {
       // Hard navigation so the browser commits the Set-Cookie header before
       // the next request fires — avoids the middleware seeing a missing cookie.
       window.location.href = data.redirect ?? '/';
+    } catch (err) {
+      console.error(err);
+      setError('Something went wrong, please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOrgLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login-organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: orgUsername, password: orgPassword }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? 'Organization login failed');
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.redirect ?? '/hq';
     } catch (err) {
       console.error(err);
       setError('Something went wrong, please try again.');
@@ -150,6 +181,15 @@ export default function AuthPage() {
 
   const toggleMode = () => {
     setMode(mode === 'login' ? 'signup' : 'login');
+    setError('');
+    setSuccess('');
+  };
+
+  const loginInputClassName =
+    'w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all';
+
+  const setLoginVariantTab = (v: 'company' | 'organization') => {
+    setLoginVariant(v);
     setError('');
     setSuccess('');
   };
@@ -370,47 +410,121 @@ export default function AuthPage() {
 
           <AnimatePresence mode="wait">
             {mode === 'login' ? (
-              <motion.form
+              <motion.div
                 key="login"
-                onSubmit={handleLogin}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
                 transition={{ duration: 0.3 }}
                 className="space-y-2"
               >
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Password</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
-                  />
-                </div>
-                <motion.button
-                  type="submit"
-                  disabled={loading}
-                  whileHover={{ scale: 1.02, y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={AUTH_SUBMIT_GLASS_CLASS}
+                <div
+                  className="mb-4 flex rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-1"
+                  role="tablist"
+                  aria-label="Sign-in type"
                 >
-                  {loading ? 'Signing In...' : 'Sign In'}
-                </motion.button>
-              </motion.form>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={loginVariant === 'company'}
+                    onClick={() => setLoginVariantTab('company')}
+                    className={`relative flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors ${
+                      loginVariant === 'company'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Company
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={loginVariant === 'organization'}
+                    onClick={() => setLoginVariantTab('organization')}
+                    className={`relative flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors ${
+                      loginVariant === 'organization'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Organization
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={loginVariant === 'company' ? handleLogin : handleOrgLogin}
+                  className="space-y-2"
+                >
+                  {loginVariant === 'company' ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          placeholder="you@example.com"
+                          required
+                          autoComplete="email"
+                          className={loginInputClassName}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Password</label>
+                        <input
+                          type="password"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          autoComplete="current-password"
+                          className={loginInputClassName}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                          Organization username
+                        </label>
+                        <input
+                          type="text"
+                          value={orgUsername}
+                          onChange={(e) => setOrgUsername(e.target.value)}
+                          placeholder="your org username"
+                          required
+                          autoComplete="username"
+                          className={loginInputClassName}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Password</label>
+                        <input
+                          type="password"
+                          value={orgPassword}
+                          onChange={(e) => setOrgPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          autoComplete="current-password"
+                          className={loginInputClassName}
+                        />
+                      </div>
+                    </>
+                  )}
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={AUTH_SUBMIT_GLASS_CLASS}
+                  >
+                    {loading ? 'Signing In...' : 'Sign In'}
+                  </motion.button>
+                </form>
+              </motion.div>
             ) : (
               <motion.form
                 key="signup"

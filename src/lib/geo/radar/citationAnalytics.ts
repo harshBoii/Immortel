@@ -39,8 +39,12 @@ export function aggregatePromptStats(
   topicName: string | null,
   topicDifficulty: Difficulty | null,
   executions: ExecutionLite[],
-  companyId: string
+  companyId: string | readonly string[]
 ): PromptCitationStats {
+  const ownSet =
+    typeof companyId === "string"
+      ? new Set([companyId])
+      : new Set(companyId);
   const distinctModels = new Set(executions.map((e) => e.model));
   let wins = 0;
   let wrsSum = 0;
@@ -48,7 +52,7 @@ export function aggregatePromptStats(
   const contextBuckets = new Map<string, number>();
 
   for (const ex of executions) {
-    const ours = ex.citations.filter((c) => c.companyId === companyId);
+    const ours = ex.citations.filter((c) => c.companyId != null && ownSet.has(c.companyId));
     if (ours.length > 0) {
       wins++;
       modelsWithUs.add(ex.model);
@@ -99,6 +103,8 @@ export type TopicAuthorityRow = {
   promptCount: number;
   avgWinRate: number;
   quadrant: "defend" | "attack_first" | "long_bet" | "maintain";
+  /** Set when aggregating multiple tenant companies (HQ). */
+  companyName?: string | null;
 };
 
 export function topicAuthorityFromRollup(

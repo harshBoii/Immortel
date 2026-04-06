@@ -25,11 +25,35 @@ function normalizePercentMetric(value: number | null | undefined) {
   return value <= 1 ? value * 100 : value;
 }
 
-export async function buildRadarGetPayload(prisma: PrismaClient, companyId: string) {
+/** Prisma where for one or many tenant companies (HQ aggregate). */
+function companyScopeWhere(ids: readonly string[]) {
+  if (ids.length === 0) throw new Error("buildRadarGetPayload: at least one company id required");
+  if (ids.length === 1) return { companyId: ids[0]! };
+  return { companyId: { in: [...ids] } };
+}
+
+export async function buildRadarGetPayload(
+  prisma: PrismaClient,
+  companyIdOrIds: string | readonly string[]
+) {
+  const rawIds =
+    typeof companyIdOrIds === "string" ? [companyIdOrIds] : [...companyIdOrIds];
+  const ids = [...new Set(rawIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) {
+    throw new Error("buildRadarGetPayload: at least one company id required");
+  }
+  const cw = companyScopeWhere(ids);
+  /** HQ aggregates multiple tenants — scale caps so one company does not fill every `take` slot. */
+  const scale = Math.min(8, Math.max(1, ids.length));
+  const takeRadarMetrics = Math.min(480, 60 * scale);
+  const takeOpenBounties = Math.min(400, 100 * scale);
+  const takeLlmTopics = Math.min(400, 50 * scale);
+  const takePromptMetrics = Math.min(800, 200 * scale);
+  const takeHuntedTiming = Math.min(160, 40 * scale);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
   const [
-    company,
+    companyRows,
     assumption,
     products,
     metricsRaw,
@@ -42,65 +66,79 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
     promptMetrics,
     allBountiesForRevenue,
   ] = await Promise.all([
-    prisma.company.findUnique({
-      where: { id: companyId },
+    prisma.company.findMany({
+      where: { id: { in: ids } },
       select: { id: true, name: true },
     }),
-    prisma.radarAssumption.findUnique({ where: { companyId } }),
+    prisma.radarAssumption.findFirst({ where: cw }),
     prisma.shopifyProduct.findMany({
-      where: { companyId },
+      where: cw,
       select: { priceMinAmount: true, priceMaxAmount: true },
     }),
     prisma.llmRadarMetric.findMany({
-      where: { companyId },
+      where: cw,
       orderBy: { calculatedAt: "desc" },
-      take: 60,
+      take: takeRadarMetrics,
     }),
     prisma.citationBounty.findMany({
-      where: { companyId, status: "OPEN" },
+      where: { ...cw, status: "OPEN" },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: takeOpenBounties,
     }),
     prisma.citationBounty.findMany({
       where: {
-        companyId,
+        ...cw,
         status: "HUNTED",
         publishedAt: { gte: thirtyDaysAgo },
       },
       select: { estimatedRevenue: true },
     }),
     prisma.citation.findMany({
-      where: { companyId },
+      where: cw,
       select: { execution: { select: { promptId: true } } },
     }),
     prisma.promptRivalConsensus.findMany({
-      where: { prompt: { llmTopic: { companyId } } },
+      where: { prompt: { llmTopic: cw } },
       select: { promptId: true },
       distinct: ["promptId"],
     }),
     prisma.prompt.findMany({
-      where: { llmTopic: { companyId } },
+      where: { llmTopic: cw },
       select: { id: true },
     }),
     prisma.llmTopic.findMany({
-      where: { companyId },
+      where: cw,
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: takeLlmTopics,
     }),
     prisma.llmPromptMetric.findMany({
-      where: { companyId },
+      where: cw,
       include: {
         prompt: { select: { id: true, query: true } },
         llmTopic: { select: { name: true } },
       },
       orderBy: { calculatedAt: "desc" },
-      take: 200,
+      take: takePromptMetrics,
     }),
     prisma.citationBounty.findMany({
-      where: { companyId },
+      where: cw,
       select: { query: true, estimatedRevenue: true },
     }),
   ]);
+
+  const nameById = new Map(companyRows.map((c) => [c.id, c.name]));
+  const company =
+    companyRows.length === 0
+      ? null
+      : companyRows.length === 1
+        ? companyRows[0]!
+        : {
+            id: ids[0]!,
+            name: ids
+              .map((id) => nameById.get(id))
+              .filter((n): n is string => Boolean(n?.trim()))
+              .join(" · "),
+          };
 
   const topicPromptIds = topicPrompts.map((p) => p.id);
   const promptsWithRevenueForBounty = await prisma.prompt.findMany({
@@ -108,7 +146,7 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
       isActive: true,
       OR: [
         ...(topicPromptIds.length > 0 ? [{ id: { in: topicPromptIds } }] : []),
-        { llmTopic: { companyId } },
+        { llmTopic: cw },
       ],
     },
     select: {
@@ -133,8 +171,8 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
   const bountyEstByNorm = mergeBountyEstimatesByNormalizedQuery(allBountiesForRevenue);
 
   const huntedForTiming = await prisma.citationBounty.findMany({
-    where: { companyId, status: "HUNTED", huntedAt: { not: null } },
-    take: 40,
+    where: { ...cw, status: "HUNTED", huntedAt: { not: null } },
+    take: takeHuntedTiming,
     select: { huntedAt: true, publishedAt: true },
   });
   const timingSamples = huntedForTiming.filter((b) => b.publishedAt && b.huntedAt);
@@ -191,6 +229,7 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
       include: { llmTopic: { select: { id: true, name: true, difficulty: true } } },
     });
 
+    const ownScope: string | readonly string[] = ids.length === 1 ? ids[0]! : ids;
     for (const p of promptsMeta) {
       const rows = byPrompt.get(p.id) ?? [];
       citationIntel.push(
@@ -201,7 +240,7 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
           p.llmTopic?.name ?? null,
           p.llmTopic?.difficulty ?? null,
           rows,
-          companyId
+          ownScope
         )
       );
     }
@@ -253,6 +292,9 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
         revenueBreakdown,
         conversionRate: b.conversionRate ?? conv,
         avgOrderValue: aov,
+        ...(ids.length > 1
+          ? { companyName: nameById.get(b.companyId) ?? null }
+          : {}),
       };
     })
     .sort((a, b) => b.priorityScore - a.priorityScore);
@@ -354,9 +396,14 @@ export async function buildRadarGetPayload(prisma: PrismaClient, companyId: stri
     };
   });
 
-  const topicAuthorityMap = llmTopics.map((t) =>
-    topicAuthorityFromRollup(t.id, t.name, t.difficulty, citationIntel)
-  );
+  const topicAuthorityMap = llmTopics.map((t) => {
+    const base = topicAuthorityFromRollup(t.id, t.name, t.difficulty, citationIntel);
+    if (ids.length <= 1) return base;
+    return {
+      ...base,
+      companyName: nameById.get(t.companyId) ?? null,
+    };
+  });
 
   const publishedImpact30d = huntedRecent.reduce(
     (s, h) => s + (h.estimatedRevenue ?? 0),

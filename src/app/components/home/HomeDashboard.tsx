@@ -53,6 +53,8 @@ export default function HomeDashboard({
   contextRows,
   highlightPrompts: _highlightPrompts,
   recentCitations,
+  /** When true, SoV / model charts are rendered by the parent (HQ org comparison). */
+  useOrgRadarCharts = false,
 }: {
   payload: RadarPayload;
   geoKnight: GeoKnightWorkspaceData;
@@ -61,6 +63,7 @@ export default function HomeDashboard({
   contextRows: CitationContextRow[];
   highlightPrompts: HighlightPrompt[];
   recentCitations: CitationRow[];
+  useOrgRadarCharts?: boolean;
 }) {
   const [search, setSearch] = useState("");
 
@@ -180,7 +183,7 @@ export default function HomeDashboard({
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto min-h-[60vh] px-4 pb-10 pt-2 md:px-6 print:max-w-none print:px-6">
+    <div className="mx-auto min-h-[60vh] min-w-0 max-w-6xl px-4 pb-10 pt-2 md:px-6 print:max-w-none print:px-6">
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:hidden">
         <div>
@@ -252,7 +255,7 @@ export default function HomeDashboard({
           ].map((card) => (
             <div
               key={card.label}
-              className="glass-card card-anime-float flex flex-col rounded-xl border border-[var(--glass-border)] p-4"
+              className="glass-card card-anime-float flex min-w-0 flex-col rounded-xl border border-[var(--glass-border)] p-4"
             >
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
                 {card.label}
@@ -269,8 +272,8 @@ export default function HomeDashboard({
 
 
       {/* ── SoV Trend + Model Breakdown ───────────────────────────── */}
-      {hasRadarMetrics && (
-        <section className="mt-6">
+      {hasRadarMetrics && !useOrgRadarCharts && (
+        <section className="mt-6 min-w-0">
           <RadarCompareCharts
             base={{ sovSeries: payload.sovSeries, modelBreakdown: payload.modelBreakdown }}
             rivals={rivalsForCharts}
@@ -298,7 +301,14 @@ export default function HomeDashboard({
                     {/* top row: name + score badge */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-medium text-foreground truncate">{t.topicName}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                          <p className="font-medium text-foreground truncate">{t.topicName}</p>
+                          {t.companyName ? (
+                            <span className="shrink-0 rounded-full border border-[var(--sibling-primary)]/35 bg-[color-mix(in_srgb,var(--sibling-primary)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold text-[var(--sibling-primary)]">
+                              {t.companyName}
+                            </span>
+                          ) : null}
+                        </div>
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
                           {t.hunted}/{t.total} prompts hunted
                           <span className="mx-1 opacity-40">·</span>
@@ -372,9 +382,16 @@ export default function HomeDashboard({
                     className="rounded-lg border border-white/12 bg-[hsl(226,22%,16%)]/90 p-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-semibold leading-snug line-clamp-2 text-[hsl(220,24%,96%)]">
-                        {b.query}
-                      </p>
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-xs font-semibold leading-snug line-clamp-2 text-[hsl(220,24%,96%)]">
+                          {b.query}
+                        </p>
+                        {b.companyName ? (
+                          <span className="inline-block rounded-full border border-[hsl(160,45%,45%)]/45 bg-[hsl(160,35%,22%)]/90 px-2 py-0.5 text-[10px] font-semibold text-[hsl(160,55%,72%)]">
+                            {b.companyName}
+                          </span>
+                        ) : null}
+                      </div>
                       {b.suggestedCluster && (
                         <span className="shrink-0 rounded-full border border-[var(--sibling-accent)]/50 bg-[var(--sibling-accent)]/18 px-2 py-0.5 text-[10px] font-medium text-[hsl(160,55%,72%)]">
                           {b.suggestedCluster}
@@ -439,13 +456,13 @@ export default function HomeDashboard({
         )}
 
         {hasRadarMetrics && radarChartData.length > 0 && (
-          <div className="glass-card card-anime-float rounded-xl p-5">
+          <div className="glass-card card-anime-float min-w-0 rounded-xl p-5">
             <h2 className="text-sm font-semibold text-foreground font-heading">
               Historical Radar Metrics
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">Latest radar run snapshot</p>
-            <div className="mt-4 h-52">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="mt-4 h-52 w-full min-w-0">
+              <ResponsiveContainer width="100%" height={208} minWidth={0}>
                 <RadarChart data={radarChartData}>
                   <PolarGrid stroke="var(--glass-border)" />
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
