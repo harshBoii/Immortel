@@ -10,7 +10,7 @@ const dodo = new DodoPayments({
   environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
     | "test_mode"
     | "live_mode",
-  webhookKey: process.env.DODO_WEBHOOK_KEY!,
+  webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
 });
 
 // Map every Dodo subscription event type → your Prisma enum value.
