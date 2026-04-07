@@ -311,13 +311,13 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
     case 'connection':
       return (
         <>
-          <SectionLabel label="Connection" />
-          <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
-          <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
+          <SectionLabel label="Integration" />
+          <SecondaryNavItem icon={Store} label="Connectors" href="/connection" />
+          {/* <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
           <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
           <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
           <SecondaryNavItem icon={ShoppingBag} label="WooCommerce" href="/connection/woocommerce" />
-          <SecondaryNavItem icon={Globe} label="WordPress" href="/connection/wordpress" />
+          <SecondaryNavItem icon={Globe} label="WordPress" href="/connection/wordpress" /> */}
 
         </>
       );
@@ -374,7 +374,7 @@ export default function AppSidebar() {
       case 'shop':
         return '/shop/products';
       case 'connection':
-        return '/connection/mcp';
+        return '/connection';
       default:
         return '/';
     }
