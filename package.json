@@ -30,6 +30,7 @@
     "@woocommerce/woocommerce-rest-api": "^1.0.2",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.6.2",
+    "dodopayments": "^2.26.0",
     "dotenv": "^17.3.1",
     "framer-motion": "^12.34.3",
     "hls.js": "^1.6.15",

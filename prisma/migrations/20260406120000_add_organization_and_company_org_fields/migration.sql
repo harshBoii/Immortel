@@ -1,12 +1,12 @@
 -- CreateTable
-CREATE TABLE "organizations" (
-    "id" TEXT NOT NULL,
-    "name" VARCHAR(255) NOT NULL,
-    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+-- CREATE TABLE "organizations" (
+--     "id" TEXT NOT NULL,
+--     "name" VARCHAR(255) NOT NULL,
+--     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
-    CONSTRAINT "organizations_pkey" PRIMARY KEY ("id")
-);
+--     CONSTRAINT "organizations_pkey" PRIMARY KEY ("id")
+-- );
 
 -- AlterTable
 ALTER TABLE "companies" ADD COLUMN "is_org" BOOLEAN NOT NULL DEFAULT false;

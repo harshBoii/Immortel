@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { setAuthCookie } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import DodoPayments from 'dodopayments'
 
 type CmsChoice = "Shopify" | "WordPress" | "Other";
 
@@ -38,6 +39,13 @@ function normalizeShopDomain(input: string): string {
 
 export async function POST(request: Request) {
   try {
+
+    const dodo = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
+      environment: "test_mode",
+    });
+    console.log(dodo);
+
     const body = await request.json();
     const {
       email,
@@ -168,8 +176,10 @@ export async function POST(request: Request) {
         password: hashedPassword,
         requestedCmsIntegrations,
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
+        subscriptionStatus: "PENDING", 
+        
       },
-      select: { id: true },
+      select: { id: true , name: true, email: true },
     });
 
     if (cms === "Shopify" && shopDomainNormalized) {
@@ -192,9 +202,29 @@ export async function POST(request: Request) {
       },
     });
 
-    await setAuthCookie(company.id);
+    // await setAuthCookie(company.id);
 
-    return NextResponse.json({ success: true });
+    const session = await dodo.checkoutSessions.create({
+      product_cart: [
+        {
+          product_id: process.env.DODO_SUBSCRIPTION_PRODUCT_ID!,
+          quantity: 1,
+        },
+      ],
+      customer: {
+        email: emailNormalized,
+        name: companyName.trim(),
+      },
+      metadata: {
+        companyId: company.id, // ← webhook uses this to find the company
+      },
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup/success`,
+    });
+
+
+    // return NextResponse.json({ success: true });
+    return NextResponse.json({ checkoutUrl: session.checkout_url });
+  
   } catch (err) {
     console.error("Register error:", err);
     return NextResponse.json(

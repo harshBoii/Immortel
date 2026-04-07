@@ -7,7 +7,7 @@ import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 type CmsChoice = 'Shopify' | 'WordPress' | 'Other';
 
-type StepId = 'account' | 'company' | 'cms' | 'site' | 'launch';
+type StepId = 'account' | 'company' | 'cms' | 'site' | 'launch' | 'payment';
 
 const easeMist = [0.17, 0.99, 0.28, 1] as const;
 const AUTH_SUBMIT_GLASS_CLASS =
@@ -35,34 +35,48 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Stored after successful registration — used by payment step
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  // payment step is the last real step but we don't include it in the
+  // progress bar denominator — it's a "done, now pay" confirmation screen.
   const stepOrder: StepId[] = useMemo(
-    () => ['account', 'company', 'cms', 'site', 'launch'],
+    () => ['account', 'company', 'cms', 'site', 'launch', 'payment'],
     []
   );
   const stepIndex = stepOrder.indexOf(step);
-  const progress = Math.max(0, stepIndex) / (stepOrder.length - 1);
+
+  // Progress only counts the first 5 steps (account → launch).
+  // The payment step shows 100% progress.
+  const PROGRESS_STEPS = 5;
+  const progressIndex = Math.min(stepIndex, PROGRESS_STEPS - 1);
+  const progress = progressIndex / (PROGRESS_STEPS - 1);
 
   const stepMeta = useMemo(() => {
     const meta: Record<StepId, { title: string; subtitle: string }> = {
       account: {
-        title: 'Let’s spin up your HQ',
+        title: "Let's spin up your HQ",
         subtitle: 'Two inputs. Zero drama. We move.',
       },
       company: {
-        title: 'Tell me who we’re building for',
-        subtitle: 'Name + domain = your brand’s home base.',
+        title: "Tell me who we're building for",
+        subtitle: "Name + domain = your brand's home base.",
       },
       cms: {
         title: 'What stack are we vibing with?',
-        subtitle: 'Pick your CMS. If it’s “other”, just type it in.',
+        subtitle: "Pick your CMS. If it's 'other', just type it in.",
       },
       site: {
         title: 'Connect the dots',
-        subtitle: 'Drop your website. If you’re using a store/CMS, add the domain too.',
+        subtitle: "Drop your website. If you're using a store/CMS, add the domain too.",
       },
       launch: {
         title: 'Ready to start the setup?',
-        subtitle: 'I’ll auto-build your company profile from your website.',
+        subtitle: "I'll auto-build your company profile from your website.",
+      },
+      payment: {
+        title: 'One last step — subscription',
+        subtitle: 'Your account is ready. Activate it with a subscription.',
       },
     };
     return meta[step];
@@ -78,6 +92,8 @@ export default function RegisterPage() {
   function goBack() {
     setError(null);
     setSuccess(null);
+    // Disallow going back from payment step — account already created
+    if (step === 'payment') return;
     const prev = stepOrder[stepIndex - 1];
     if (prev) setStep(prev);
   }
@@ -112,6 +128,8 @@ export default function RegisterPage() {
     goNext();
   }
 
+  // Called at the 'launch' review step.
+  // Creates the company (status: PENDING) and gets back a Dodo checkoutUrl.
   async function handleStartSetup() {
     setError(null);
     setSuccess(null);
@@ -135,40 +153,28 @@ export default function RegisterPage() {
       });
 
       const registerData = await registerRes.json().catch(() => ({}));
-      if (!registerRes.ok || !registerData?.success) {
+
+      if (!registerRes.ok || !registerData?.checkoutUrl) {
         setError(registerData?.error ?? 'Signup failed. Please try again.');
         setLoading(false);
         return;
       }
 
-      // Final step: same API as GEO auto-fill uses.
-      const res = await fetch('/api/geo/auto-seed', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data?.success) {
-        const msg: string =
-          data?.error ??
-          (data?.missing
-            ? 'Website URL is required before auto-filling.'
-            : 'Failed to auto-fill company data.');
-        setError(msg);
-        setLoading(false);
-        return;
-      }
-
-      setSuccess('Setup started. Your workspace is loading…');
-      // Hard navigation so the browser commits the Set-Cookie header before
-      // the next request fires — avoids the middleware seeing a missing cookie.
-      window.location.href = '/';
+      // Store the Dodo checkout URL and advance to the payment step
+      setCheckoutUrl(registerData.checkoutUrl);
+      goNext(); // → 'payment'
     } catch (e) {
       console.error(e);
       setError('Something went sideways. Try again.');
     } finally {
       setLoading(false);
     }
+  }
+
+  // Called at the 'payment' step — sends user to Dodo's hosted checkout.
+  function handleGoToPayment() {
+    if (!checkoutUrl) return;
+    window.location.href = checkoutUrl;
   }
 
   const review = useMemo(() => {
@@ -223,7 +229,7 @@ export default function RegisterPage() {
                   <span className="text-[var(--sibling-primary)]">AI‑native</span>.
                 </div>
                 <p className="mt-3 max-w-md text-muted-foreground">
-                  We’ll pull your website into a clean company profile, then spin up GEO setup so you
+                  We'll pull your website into a clean company profile, then spin up GEO setup so you
                   can start shipping.
                 </p>
               </div>
@@ -291,12 +297,14 @@ export default function RegisterPage() {
               <div className="glass-card login-card-alien p-6 md:p-8">
                 <div className="flex items-center justify-between gap-4">
                   <div className="text-xs font-mono tracking-widest text-muted-foreground uppercase">
-                    Step {stepIndex + 1} / {stepOrder.length}
+                    {step === 'payment'
+                      ? 'Account created ✓'
+                      : `Step ${stepIndex + 1} / ${PROGRESS_STEPS}`}
                   </div>
                   <div className="h-2 w-44 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-[var(--sibling-primary)] via-violet-500 to-blue-500 transition-all"
-                      style={{ width: `${Math.round(progress * 100)}%` }}
+                      className="h-full rounded-full bg-gradient-to-r from-[var(--sibling-primary)] via-violet-500 to-blue-500 transition-all duration-500"
+                      style={{ width: step === 'payment' ? '100%' : `${Math.round(progress * 100)}%` }}
                     />
                   </div>
                 </div>
@@ -427,7 +435,7 @@ export default function RegisterPage() {
                       ) : null}
                       {cmsChoice === 'Other' ? (
                         <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground flex items-center md:col-span-1">
-                          You’re requesting:{' '}
+                          You're requesting:{' '}
                           <span className="ml-2 font-semibold text-foreground">
                             {requestedCmsName.trim() || '—'}
                           </span>
@@ -455,8 +463,56 @@ export default function RegisterPage() {
                         </div>
                       </div>
                       <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4 text-sm text-muted-foreground">
-                        When you hit <span className="font-semibold text-foreground">Start setup</span>, we’ll create your workspace,
-                        save your website, and auto-fill your company profile from GEO.
+                        When you hit{' '}
+                        <span className="font-semibold text-foreground">Start setup</span>, we'll
+                        create your workspace and take you to the payment step to activate your
+                        subscription.
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {step === 'payment' ? (
+                    <div className="grid gap-4">
+                      {/* Success banner */}
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-3">
+                        <svg
+                          className="h-5 w-5 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          aria-hidden
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>
+                          Account created for{' '}
+                          <span className="font-semibold">{email.trim()}</span>. One step left.
+                        </span>
+                      </div>
+
+                      {/* What's included */}
+                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
+                        <div className="text-sm font-semibold mb-3">What you're activating</div>
+                        <ul className="grid gap-2 text-sm text-muted-foreground">
+                          {[
+                            'Full GEO workspace for ' + (companyName.trim() || 'your company'),
+                            'Auto-seed from your website',
+                            'CMS integration (' + (cmsChoice === 'Other' ? requestedCmsName.trim() || 'Custom' : cmsChoice) + ')',
+                            'Recurring billing — cancel anytime',
+                          ].map((item) => (
+                            <li key={item} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--sibling-primary)] shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Info note */}
+                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground">
+                        You'll be redirected to our secure payment page. Once payment is confirmed,
+                        you can log in and your workspace will be ready.
                       </div>
                     </div>
                   ) : null}
@@ -466,14 +522,15 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={goBack}
-                    disabled={stepIndex === 0 || loading}
+                    // Disable back on payment step — account already exists
+                    disabled={stepIndex === 0 || loading || step === 'payment'}
                     className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm font-semibold text-foreground disabled:opacity-40"
                   >
                     Back
                   </button>
 
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-30">
-                    {step !== 'launch' ? (
+                    {step === 'account' || step === 'company' || step === 'cms' || step === 'site' ? (
                       <m.button
                         type="button"
                         onClick={handleContinue}
@@ -485,7 +542,7 @@ export default function RegisterPage() {
                       >
                         Next →
                       </m.button>
-                    ) : (
+                    ) : step === 'launch' ? (
                       <m.button
                         type="button"
                         onClick={handleStartSetup}
@@ -495,10 +552,26 @@ export default function RegisterPage() {
                         transition={{ duration: 0.15 }}
                         className={AUTH_SUBMIT_GLASS_CLASS}
                       >
-                        {loading ? 'Starting setup…' : 'Start setup'}
+                        {loading ? 'Creating workspace…' : 'Start setup →'}
+                      </m.button>
+                    ) : (
+                      // payment step
+                      <m.button
+                        type="button"
+                        onClick={handleGoToPayment}
+                        disabled={!checkoutUrl}
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                        transition={{ duration: 0.15 }}
+                        className={AUTH_SUBMIT_GLASS_CLASS}
+                      >
+                        Proceed to payment →
                       </m.button>
                     )}
-                    <Link href="/landing" className="text-center text-sm text-muted-foreground hover:underline lg:hidden">
+                    <Link
+                      href="/landing"
+                      className="text-center text-sm text-muted-foreground hover:underline lg:hidden"
+                    >
                       Back to landing
                     </Link>
                   </div>
@@ -506,7 +579,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="mt-6 text-center text-xs text-muted-foreground">
-                By continuing, you agree to the Terms & Privacy Policy (we’ll keep it chill).
+                By continuing, you agree to the Terms & Privacy Policy (we'll keep it chill).
               </div>
             </div>
           </m.div>
@@ -570,4 +643,3 @@ function AestheticCard({
     </m.div>
   );
 }
-

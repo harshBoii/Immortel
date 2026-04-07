@@ -13,7 +13,7 @@ model Organization {
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @db.Timestamptz(3)
   username  String    @unique 
-  password  String   
+  password  String    
   companies Company[]
 
   @@map("organizations")
@@ -43,6 +43,12 @@ model Company {
   organization          Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
+
+  // Subscription fields
+  subscriptionId        String?                 @map("subscription_id")
+  subscriptionStatus    SubscriptionStatus      @map("subscription_status") @default(PENDING)
+  subscriptionCreatedAt DateTime?               @map("subscription_created_at")
+  subscriptionUpdatedAt DateTime?               @map("subscription_updated_at")
 
   aeoGenerationProfiles AeoGenerationProfile[]
   aeoPages              AeoPage[]
@@ -1063,4 +1069,13 @@ enum Difficulty {
 enum IntegrationProvider {
   Shopify
   WooCommerce
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+  FAILED
+  ON_HOLD
 }
