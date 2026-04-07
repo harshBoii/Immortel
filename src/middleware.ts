@@ -39,6 +39,7 @@ export function middleware(request: NextRequest) {
   const isPrivacyPolicyApi = pathname.startsWith('/privacy-policy');
   const isPublicBountyHuntArticle =
     pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
+  const isDodoWebhook = pathname.startsWith('/api/dodo/webhook');
 
   const isPublic =
     isLoginPage ||
@@ -60,7 +61,8 @@ export function middleware(request: NextRequest) {
     isPrivacyPolicyApi ||
     isWidgetApi ||
     isPublicBountyHuntArticle||
-    isRegisterPage;
+    isRegisterPage||
+    isDodoWebhook;
 
   if (isPublic) {
     if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {
