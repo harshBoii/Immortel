@@ -33,6 +33,14 @@ export async function scheduleAt(companyId: string, runAt: Date) {
   return res // { messageId: string }
 }
 
+export async function publishJob(path: string, body: object) {
+    return client.publishJSON({
+      url:     `${appUrl}${path}`,
+      body,
+      retries: 3,
+    })
+  }
+  
 // ─── Cancel a pending message ────────────────────────────────────────────────
 export async function cancelMessage(messageId: string) {
   return client.messages.cancel(messageId)
