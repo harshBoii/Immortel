@@ -40,6 +40,7 @@ export function middleware(request: NextRequest) {
   const isPublicBountyHuntArticle =
     pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
   const isDodoWebhook = pathname.startsWith('/api/dodo/webhook');
+  const isQstashCallback = pathname.startsWith('/api/qstash/callback');
 
   const isPublic =
     isLoginPage ||
@@ -62,7 +63,8 @@ export function middleware(request: NextRequest) {
     isWidgetApi ||
     isPublicBountyHuntArticle||
     isRegisterPage||
-    isDodoWebhook;
+    isDodoWebhook||
+    isQstashCallback;
 
   if (isPublic) {
     if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {
