@@ -10,6 +10,7 @@ import { SiGoogle,SiOpenai } from 'react-icons/si';
 import { DayNightLottieToggle } from '../animations/dayNight/DayNightLottieToggle';
 import { useTheme } from './ThemeProvider';
 import { useCurrentContext } from './useCurrentContext';
+import { Clock , Settings } from 'lucide-react';
 
 /* ============================================
    ICONS (inline SVG to avoid extra deps)
@@ -187,7 +188,7 @@ const MAIN_SECTIONS = [
   // { id: 'ingestion', label: 'Ingestion', icon: IconIngestion, hasSecondary: true },
   { id: 'geo', label: 'GEO', icon: IconGlobe, hasSecondary: true },
   { id: 'shop', label: "Shop Intel", icon: IconShop, hasSecondary: true },
-  { id: 'connection', label: 'Connection', icon: IconConnection, hasSecondary: true },
+  { id: 'Settings', label: 'Settings', icon: Settings, hasSecondary: true },
 ];
 
 /* ============================================
@@ -308,13 +309,15 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={ShoppingBag} label="WooCommerce" href="/shop/woocommerce-products" />
         </>
       );
-    case 'connection':
+    case 'Settings':
       return (
         <>
           <SectionLabel label="Connection" />
           <SecondaryNavItem icon={Globe} label="Connectors" href="/connection" />
           <SectionLabel label="Integration Tutorials" />
           <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
+          <SectionLabel label="Enrichment Services" />
+          <SecondaryNavItem icon={Clock} label="Job Timing" href="/jobs/time" />
           {/* <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
           <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
           <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
@@ -375,7 +378,7 @@ export default function AppSidebar() {
         return '/geo/geoknight';
       case 'shop':
         return '/shop/products';
-      case 'connection':
+      case 'Settings':
         return '/connection';
       default:
         return '/';
@@ -403,7 +406,8 @@ export default function AppSidebar() {
     else if (pathname?.startsWith('/ingestion')) setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo')) setActiveSection('geo');
     else if (pathname?.startsWith('/shop')) setActiveSection('shop');
-    else if (pathname?.startsWith('/connection')) setActiveSection('connection');
+    else if (pathname?.startsWith('/connection')) setActiveSection('Settings');
+    else if (pathname?.startsWith('/jobs')) setActiveSection('Settings');
     else setActiveSection('home');
   }, [pathname]);
 
