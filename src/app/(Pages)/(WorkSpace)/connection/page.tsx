@@ -3,70 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Globe, ShoppingBag, Store, ExternalLink, Check, AlertCircle } from 'lucide-react';
-import { SiOpenai, SiPerplexity, SiAnthropic } from 'react-icons/si';
+import { Globe, ShoppingBag, Store, ExternalLink, Copy, Check } from 'lucide-react';
+import { SiOpenai, SiPerplexity, SiAnthropic,SiGooglegemini } from 'react-icons/si';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 import LoadingAnimation from '@/app/components/animations/loading';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const MCP_LINK = 'https://immortel.vercel.app/api/mcpServer';
+const MCP_SERVER_URL = 'https://immortell.shop/api/mcpServer';
 
-type Platform = 'chatgpt' | 'perplexity' | 'claude';
-type ModalTarget = 'shopify' | 'woocommerce' | 'wordpress' | null;
+type ModalTarget = 'mcp' | 'shopify' | 'woocommerce' | 'wordpress' | null;
 
-const PLATFORMS: { key: Platform; label: string; Icon: React.ElementType }[] = [
-  { key: 'chatgpt',    label: 'ChatGPT',    Icon: SiOpenai },
-  { key: 'perplexity', label: 'Perplexity', Icon: SiPerplexity },
-  { key: 'claude',     label: 'Claude',     Icon: SiAnthropic },
-];
-
-const INSTRUCTIONS: Record<Platform, { title: string; steps: string[] }> = {
-  chatgpt: {
-    title: 'Connect with ChatGPT',
-    steps: [
-      'Go to App store',
-      'Search The App',
-      'Open and Connect To The App',
-      'Tag The app and type the prompt',
-      'See In Action',
-    ],
-  },
-  perplexity: {
-    title: 'Connect with Perplexity',
-    steps: [
-      'Go To Settings → Connector',
-      'Tap On Custom Connector',
-      `Enter the link "${MCP_LINK}" in MCP Server URL, any name, and set Auth to None`,
-      'Connect by tapping the plus icon, search the connector and tick it',
-      'Type your query and see it in action',
-    ],
-  },
-  claude: {
-    title: 'Connect with Claude',
-    steps: [
-      'Tap on "Connect Your Tool to Claude"',
-      'Tap on Manage Connectors',
-      'Tap the Plus Icon → Add Custom Connector',
-      `Enter any name and paste: ${MCP_LINK}`,
-      'Type your query and see it in action',
-    ],
-  },
-};
-
-// ── Step image ─────────────────────────────────────────────────────────────────
-
-function StepImage({ platform, stepNum }: { platform: Platform; stepNum: number }) {
-  const folder = platform === 'chatgpt' ? 'ChatGpt' : platform === 'perplexity' ? 'Perplexity' : 'Claude';
-  return (
-    <img
-      src={`/MCP_Tutorial/${folder}/Step-${stepNum}.png`}
-      alt={`Step ${stepNum}`}
-      className="w-full rounded-lg object-contain bg-[var(--glass-hover)]"
-      style={{ maxHeight: '28vh' }}   
-    />
-  );
-}
 // ── Integration status dot ─────────────────────────────────────────────────────
 
 function StatusDot({ connected }: { connected: boolean }) {
@@ -82,11 +29,13 @@ function StatusDot({ connected }: { connected: boolean }) {
 
 // ── Modal wrapper ──────────────────────────────────────────────────────────────
 
-function Modal({ title, icon: Icon, onClose, children }: {
+function Modal({ title, icon: Icon, onClose, headerAction, children }: {
   title: string;
   icon: React.ElementType;
   onClose: () => void;
+  headerAction?: React.ReactNode;  // ← add this
   children: React.ReactNode;
+
 }) {
   return (
     <div
@@ -97,7 +46,6 @@ function Modal({ title, icon: Icon, onClose, children }: {
         className="w-full max-w-xl glass-card rounded-2xl overflow-hidden flex flex-col border border-[var(--glass-border)] shadow-2xl max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--glass-border)] bg-[var(--glass)]/60">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -105,19 +53,81 @@ function Modal({ title, icon: Icon, onClose, children }: {
             </div>
             <span className="text-sm font-semibold text-foreground">{title}</span>
           </div>
+
+          <div className="flex items-center gap-2">
+              {headerAction}
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground transition-colors"
+                aria-label="Close"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        <div className="overflow-auto flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── MCP modal content ──────────────────────────────────────────────────────────
+
+function MCPContent() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(MCP_SERVER_URL);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const platforms = [
+    { label: 'ChatGPT',    Icon: SiOpenai,    hint: 'Use as a custom GPT action or App Store connector.' },
+    { label: 'Perplexity', Icon: SiPerplexity, hint: 'Settings → Connectors → Custom Connector → paste URL.' },
+    { label: 'Claude',     Icon: SiAnthropic,  hint: 'Manage Connectors → Add Custom Connector → paste URL.' },
+  ];
+
+  return (
+    <div className="px-5 py-5 space-y-5">
+      {/* URL block */}
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">MCP Server URL</p>
+        <div className="flex items-center gap-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-3 py-2.5">
+          <code className="flex-1 text-xs font-mono text-foreground break-all select-all">
+            {MCP_SERVER_URL}
+          </code>
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground transition-colors"
-            aria-label="Close"
+            onClick={handleCopy}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+              copied
+                ? 'bg-emerald-500/15 text-emerald-500'
+                : 'bg-primary/10 text-primary hover:bg-primary/20'
+            }`}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-        {/* Modal body */}
-        <div className="overflow-auto flex-1">
-          {children}
+      </div>
+
+      {/* Per-platform quick instructions */}
+      <div className="space-y-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Where to paste it</p>
+        <div className="divide-y divide-[var(--glass-border)] rounded-xl border border-[var(--glass-border)] overflow-hidden">
+          {platforms.map(({ label, Icon, hint }) => (
+            <div key={label} className="flex items-start gap-3 px-4 py-3 bg-[var(--glass)]/40">
+              <div className="flex-shrink-0 mt-0.5 h-6 w-6 flex items-center justify-center rounded-md bg-[var(--glass-hover)] text-foreground">
+                <Icon className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground">{label}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">{hint}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -430,236 +440,199 @@ function WordPressContent() {
   );
 }
 
+// ── MCP icon ───────────────────────────────────────────────────────────────────
+
+function MCPIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+      <path d="M2 17l10 5 10-5"/>
+      <path d="M2 12l10 5 10-5"/>
+    </svg>
+  );
+}
+
 // ── Main unified page ──────────────────────────────────────────────────────────
 
 export default function ConnectionPageClient() {
-  const [platform, setPlatform] = useState<Platform>('chatgpt');
-  const [stepIndex, setStepIndex] = useState(0);
   const [activeModal, setActiveModal] = useState<ModalTarget>(null);
-  const [mcpFullscreen, setMcpFullscreen] = useState(false);
-
   const { shopify, woocommerce, wordpressIntegration } = useCurrentContext();
 
-  const { title, steps } = INSTRUCTIONS[platform];
-
-  const goPrev = () => setStepIndex((i) => Math.max(0, i - 1));
-  const goNext = () => setStepIndex((i) => Math.min(steps.length - 1, i + 1));
-
-  const integrationCards = [
+  // ── All 6 cards ──
+  const activeCards = [
+    {
+      key: 'mcp' as ModalTarget,
+      label: 'MCP',
+      description: 'Connect Immortel to any AI assistant via the Model Context Protocol.',
+      Icon: MCPIcon,
+      connected: true,  // MCP is always "available"
+      statusLabel: 'Active',
+      statusColor: 'text-[var(--sibling-primary)]',
+      dotColor: 'bg-[var(--sibling-primary)]',
+      cta: 'Get server URL',
+    },
     {
       key: 'shopify' as ModalTarget,
       label: 'Shopify',
       description: 'Store domain, install link, and OAuth for your workspace.',
-      icon: Store,
+      Icon: Store,
       connected: Boolean(shopify),
+      cta: Boolean(shopify) ? 'Manage connection' : 'Connect now',
     },
     {
       key: 'woocommerce' as ModalTarget,
       label: 'WooCommerce',
       description: 'Connect via the WooCommerce REST API authorization flow.',
-      icon: ShoppingBag,
+      Icon: ShoppingBag,
       connected: woocommerce?.status === 'installed',
+      cta: woocommerce?.status === 'installed' ? 'Manage connection' : 'Connect now',
     },
     {
       key: 'wordpress' as ModalTarget,
       label: 'WordPress',
       description: 'Connect a WordPress site using Application Passwords.',
-      icon: Globe,
+      Icon: Globe,
       connected: wordpressIntegration?.status === 'active',
+      cta: wordpressIntegration?.status === 'active' ? 'Manage connection' : 'Connect now',
+    },
+  ];
+
+  const comingSoonCards = [
+    {
+      key: 'acp',
+      label: 'ACP',
+      description: 'App Context Protocol — connect Immortel to ChatGPT for richer app integrations and extended workflows.',
+      Icon: SiOpenai,
+      badge: 'ChatGPT',
+      badgeClass: 'bg-primary/10 border-primary/20 text-primary',
+    },
+    {
+      key: 'ucp',
+      label: 'UCP',
+      description: 'Universal Context Protocol — bring Immortel data into Gemini for cross-platform AI integrations.',
+      Icon: SiGooglegemini,
+      badge: 'Gemini',
+      badgeClass: 'bg-blue-500/10 border-blue-500/20 text-blue-500',
     },
   ];
 
   return (
-    <div className="flex flex-col gap-5 p-6 h-full overflow-hidden">
+    <div className="flex flex-col gap-6 p-6 h-full overflow-y-auto">
 
-      {/* ── Top row: MCP (75%) + Coming Soon (25%) ── */}
-      <div className="flex gap-5 min-h-0" style={{ height: '60vh' }}>
+      {/* ── Page header ── */}
+      <div>
+        <h1 className="text-base font-semibold text-foreground tracking-tight">Connections</h1>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Connect Immortel to AI assistants and e-commerce platforms.
+        </p>
+      </div>
 
-        {/* MCP Panel */}
-        <div className="flex-[3] min-w-0 glass-card rounded-2xl overflow-hidden flex flex-col">
-          {/* Accent line */}
-          <div className="h-[2px] bg-gradient-to-r from-primary/50 via-primary/20 to-transparent flex-shrink-0" />
-
-          {/* Header */}
-            <div className="px-6 pt-5 pb-4 flex-shrink-0">
-              {/* Title row — add flex justify-between */}
+      {/* ── Active integrations: 4-col grid ── */}
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-3">Integrations</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {activeCards.map(({ key, label, description, Icon, connected, statusLabel, statusColor, dotColor, cta }) => (
+            <button
+              key={key}
+              onClick={() => setActiveModal(key)}
+              className="glass-card rounded-2xl p-5 flex flex-col justify-between text-left hover:shadow-lg hover:border-[var(--sibling-primary)]/30 transition-all duration-200 group min-h-[160px]"
+            >
+              <div className="space-y-3">
+              {/* Inside the activeCards.map, for the MCP card specifically */}
               <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground tracking-tight">MCP</h1>
-                  <p className="mt-0.5 text-xs text-muted-foreground max-w-md">
-                    Connect Immortel to AI assistants via the Model Context Protocol.
-                  </p>
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
+                  <Icon className="h-4.5 w-4.5" style={{ width: '18px', height: '18px' }} />
                 </div>
-                {/* ← new expand button */}
-                <button
-                  onClick={() => setMcpFullscreen(true)}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-button text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="View tutorial fullscreen"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                  </svg>
-                  Full view
-                </button>
-              </div>
-            {/* Platform chips */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {PLATFORMS.map(({ key, label, Icon }) => (
-                <button
-                  key={key}
-                  onClick={() => { setPlatform(key); setStepIndex(0); }}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-200 ${
-                    platform === key
-                      ? 'glass-button text-[var(--sibling-primary)] border border-[var(--sibling-primary)]/40 bg-[var(--sibling-primary)]/8'
-                      : 'glass-button text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Step slider — fills remaining height */}
-          <div className="flex-1 min-h-0 px-6 pb-5 flex flex-col gap-3">
-            <p className="text-sm font-semibold text-foreground flex-shrink-0">{title}</p>
+                {/* Top-right: status + tutorial button */}
+                <div className="flex items-center gap-2">
+                  {statusLabel ? (
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${statusColor}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                      {statusLabel}
+                    </span>
+                  ) : (
+                    <StatusDot connected={connected} />
+                  )}
 
-            <div className="flex items-center gap-3 flex-1 min-h-0">
-              {/* Prev */}
-              <button onClick={goPrev} disabled={stepIndex === 0}
-                className="flex-shrink-0 w-9 h-9 rounded-xl glass-button flex items-center justify-center text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Previous step">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-              </button>
-
-              {/* Slide viewport */}
-              <div className="flex-1 min-w-0 min-h-0 overflow-hidden rounded-xl"
-              style={{ isolation: 'isolate' }}>
-                  <div
-                      className="flex transition-transform duration-300 ease-out"  
-                      style={{
-                        width: `${steps.length * 100}%`,
-                        transform: `translateX(-${(stepIndex / steps.length) * 100}%)`,
-                      }}
+                  {/* Only render on MCP card */}
+                  {key === 'mcp' && (
+                    <Link
+                      href="/connection/mcp"
+                      prefetch={false}
+                      onClick={(e) => e.stopPropagation()}  // prevent card modal from opening
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border border-[var(--glass-border)] text-muted-foreground hover:text-foreground hover:border-[var(--sibling-primary)]/40 transition-colors bg-[var(--glass-hover)]"
                     >
-                  {steps.map((step, idx) => (
-                    <div key={idx} className="flex-shrink-0 px-1" style={{ width: `${100 / steps.length}%` }}>
-                      <div className="flex gap-3 items-start h-full">
-                        <span className="flex-shrink-0 w-7 h-7 mt-0.5 rounded-full bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)] flex items-center justify-center text-xs font-semibold">
-                          {idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0 space-y-3">
-                          <p className="text-sm text-foreground leading-relaxed">{step}</p>
-                          <StepImage platform={platform} stepNum={idx + 1} />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+                      </svg>
+                      See Tutorial
+                    </Link>
+                  )}
                 </div>
               </div>
 
-              {/* Next */}
-              <button onClick={goNext} disabled={stepIndex === steps.length - 1}
-                className="flex-shrink-0 w-9 h-9 rounded-xl glass-button flex items-center justify-center text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Next step">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
-            </div>
-
-            {/* Step dots */}
-            <div className="flex items-center justify-center gap-1.5 flex-shrink-0">
-              {steps.map((_, idx) => (
-                <button key={idx} onClick={() => setStepIndex(idx)}
-                  className={`rounded-full transition-all ${idx === stepIndex ? 'w-4 h-1.5 bg-[var(--sibling-primary)]' : 'w-1.5 h-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/50'}`}
-                  aria-label={`Go to step ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Coming Soon: ACP + UCP */}
-        <div className="flex-1 min-w-0 flex flex-col gap-4">
-
-          {/* ACP card */}
-          <div className="flex-1 glass-card rounded-2xl p-5 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                  Coming Soon
-                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">{description}</p>
+                </div>
               </div>
-              <h2 className="text-xl font-bold text-foreground tracking-tight">ACP</h2>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                App Context Protocol — connect Immortel to ChatGPT for richer app integrations and extended workflows.
-              </p>
-            </div>
-            <div className="mt-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary">
-                <SiOpenai className="w-3 h-3" />
-                ChatGPT
-              </span>
-            </div>
-          </div>
-
-          {/* UCP card */}
-          <div className="flex-1 glass-card rounded-2xl p-5 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                  Coming Soon
-                </span>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--sibling-primary)] mt-4">
+                {cta}
+                <ExternalLink className="w-3 h-3 opacity-60" />
               </div>
-              <h2 className="text-xl font-bold text-foreground tracking-tight">UCP</h2>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Universal Context Protocol — bring Immortel data into Gemini for cross-platform AI integrations.
-              </p>
-            </div>
-            <div className="mt-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 text-[11px] font-semibold text-blue-500">
-                <SiAnthropic className="w-3 h-3" />
-                Gemini
-              </span>
-            </div>
-          </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Bottom row: Integration cards (100% width, 35vh) ── */}
-      <div className="grid grid-cols-3 gap-4 flex-shrink-0" style={{ height: '35vh' }}>
-        {integrationCards.map(({ key, label, description, icon: Icon, connected }) => (
-          <button
-            key={key}
-            onClick={() => setActiveModal(key)}
-            className="glass-card rounded-2xl p-5 flex flex-col justify-between text-left hover:shadow-lg hover:border-[var(--sibling-primary)]/30 transition-all duration-200 group"
-          >
-            <div className="space-y-3">
-              {/* Icon + status */}
-              <div className="flex items-start justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <StatusDot connected={connected} />
+      {/* ── Coming soon: 2-col grid ── */}
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-3">Coming Soon</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {comingSoonCards.map(({ key, label, description, Icon, badge, badgeClass }) => (
+            <div key={key} className="glass-card rounded-2xl p-5 flex flex-col justify-between opacity-70 min-h-[130px]">
+              <div className="space-y-2">
+                <span className="inline-flex items-center rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                  Coming Soon
+                </span>
+                <h2 className="text-lg font-bold text-foreground tracking-tight">{label}</h2>
+                <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
               </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{description}</p>
+              <div className="mt-3">
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${badgeClass}`}>
+                  <Icon className="w-3 h-3" />
+                  {badge}
+                </span>
               </div>
             </div>
-
-            {/* CTA */}
-            <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--sibling-primary)] mt-4">
-              {connected ? 'Manage connection' : 'Connect now'}
-              <ExternalLink className="w-3 h-3 opacity-60" />
-            </div>
-          </button>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* ── Modals ── */}
-      {activeModal === 'shopify' && (
+      {activeModal === 'mcp' && (
+      <Modal
+          title="MCP Server"
+          icon={MCPIcon}
+          onClose={() => setActiveModal(null)}
+          headerAction={
+            <Link
+              href="/connection/mcp"
+              prefetch={false}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-semibold border border-[var(--glass-border)] text-muted-foreground hover:text-foreground hover:border-[var(--sibling-primary)]/40 transition-colors bg-primary/10 "
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className='bg-emerald-100'>
+                <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+              </svg>
+              See Tutorial
+            </Link>
+          }
+        >
+          <MCPContent />
+        </Modal>
+      )}      
+     {activeModal === 'shopify' && (
         <Modal title="Shopify" icon={Store} onClose={() => setActiveModal(null)}>
           <ShopifyContent />
         </Modal>
@@ -673,109 +646,6 @@ export default function ConnectionPageClient() {
         <Modal title="WordPress" icon={Globe} onClose={() => setActiveModal(null)}>
           <WordPressContent />
         </Modal>
-      )}
-      {/* ── MCP Fullscreen Tutorial Modal ── */}
-      {mcpFullscreen && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)] backdrop-blur-sm"
-          style={{ background: 'var(--glass-bg, var(--background))' }}
-        >
-          {/* Modal top bar */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--glass-border)] bg-[var(--glass)]/60 flex-shrink-0">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-foreground">MCP Tutorial</span>
-              {/* Platform chips — same as card */}
-              <div className="flex gap-2">
-                {PLATFORMS.map(({ key, label, Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => { setPlatform(key); setStepIndex(0); }}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 ${
-                      platform === key
-                        ? 'glass-button text-[var(--sibling-primary)] border border-[var(--sibling-primary)]/40'
-                        : 'glass-button text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button
-              onClick={() => setMcpFullscreen(false)}
-              className="p-2 rounded-lg hover:bg-[var(--glass-hover)] text-muted-foreground transition-colors"
-              aria-label="Close fullscreen"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M18 6L6 18M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Two-column: step list left, image right */}
-          <div className="flex flex-1 min-h-0 gap-0">
-
-            {/* Step list sidebar */}
-            <div className="w-72 flex-shrink-0 border-r border-[var(--glass-border)] bg-[var(--glass)]/30 overflow-y-auto p-4 space-y-1">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60 px-2 mb-3">
-                {INSTRUCTIONS[platform].title}
-              </p>
-              {INSTRUCTIONS[platform].steps.map((step, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setStepIndex(idx)}
-                  className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all duration-150 flex items-start gap-3 ${
-                    idx === stepIndex
-                      ? 'bg-[var(--sibling-primary)]/10 text-foreground border border-[var(--sibling-primary)]/20'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
-                  }`}
-                >
-                  <span className={`flex-shrink-0 w-5 h-5 mt-0.5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    idx === stepIndex
-                      ? 'bg-[var(--sibling-primary)] text-white'
-                      : 'bg-muted-foreground/15 text-muted-foreground'
-                  }`}>
-                    {idx + 1}
-                  </span>
-                  <span className="leading-relaxed">{step}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Main image area */}
-            <div className="flex-1 min-w-0 flex flex-col items-center justify-center p-8 gap-6">
-              <img
-                src={`/MCP_Tutorial/${
-                  platform === 'chatgpt' ? 'ChatGpt' : platform === 'perplexity' ? 'Perplexity' : 'Claude'
-                }/Step-${stepIndex + 1}.png`}
-                alt={`Step ${stepIndex + 1}`}
-                className="max-h-[65vh] w-auto max-w-full rounded-2xl object-contain border border-[var(--glass-border)] shadow-2xl bg-[var(--glass-hover)]"
-              />
-
-              {/* Prev / dots / next */}
-              <div className="flex items-center gap-4">
-                <button onClick={goPrev} disabled={stepIndex === 0}
-                  className="w-9 h-9 rounded-xl glass-button flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  aria-label="Previous step">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <div className="flex items-center gap-1.5">
-                  {INSTRUCTIONS[platform].steps.map((_, idx) => (
-                    <button key={idx} onClick={() => setStepIndex(idx)}
-                      className={`rounded-full transition-all ${idx === stepIndex ? 'w-4 h-1.5 bg-[var(--sibling-primary)]' : 'w-1.5 h-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/50'}`}
-                    />
-                  ))}
-                </div>
-                <button onClick={goNext} disabled={stepIndex === INSTRUCTIONS[platform].steps.length - 1}
-                  className="w-9 h-9 rounded-xl glass-button flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                  aria-label="Next step">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

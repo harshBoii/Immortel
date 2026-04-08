@@ -44,6 +44,11 @@ model Company {
   createdAt             DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
 
+  // Background job fields
+  autoRefreshAt         DateTime?               @map("auto_refresh_at")
+  autoRefreshFrequency  Frequency?              @map("auto_refresh_frequency") @default(MONTHLY)
+  autoRefreshLastRunAt  DateTime?               @map("auto_refresh_last_run_at")
+
   // Subscription fields
   subscriptionId        String?                 @map("subscription_id")
   subscriptionStatus    SubscriptionStatus      @map("subscription_status") @default(PENDING)
@@ -1078,4 +1083,12 @@ enum SubscriptionStatus {
   PENDING
   FAILED
   ON_HOLD
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  MID_MONTHLY
+  MID_WEEKLY
+  MONTHLY
 }

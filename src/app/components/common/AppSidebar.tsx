@@ -311,8 +311,10 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
     case 'connection':
       return (
         <>
-          <SectionLabel label="Integration" />
-          <SecondaryNavItem icon={Store} label="Connectors" href="/connection" />
+          <SectionLabel label="Connection" />
+          <SecondaryNavItem icon={Globe} label="Connectors" href="/connection" />
+          <SectionLabel label="Integration Tutorials" />
+          <SecondaryNavItem icon={Store} label="MCP" href="/connection/mcp" />
           {/* <SecondaryNavItem icon={SiOpenai} label="ACP" href="/connection/acp" />
           <SecondaryNavItem icon={SiGoogle} label="UCP" href="/connection/ucp" />
           <SecondaryNavItem icon={IconShop} label="Shopify" href="/connection/shopify" />
