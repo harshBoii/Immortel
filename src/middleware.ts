@@ -41,6 +41,9 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
   const isDodoWebhook = pathname.startsWith('/api/dodo/webhook');
   const isQstashCallback = pathname.startsWith('/api/qstash/callback');
+  const isJobsSeed = pathname.startsWith('/api/jobs/seed');
+  const isJobsRadar = pathname.startsWith('/api/jobs/radar');
+  const isJobsBounty = pathname.startsWith('/api/jobs/bounty');
 
   const isPublic =
     isLoginPage ||
@@ -64,7 +67,10 @@ export function middleware(request: NextRequest) {
     isPublicBountyHuntArticle||
     isRegisterPage||
     isDodoWebhook||
-    isQstashCallback;
+    isQstashCallback||
+    isJobsSeed||
+    isJobsRadar||
+    isJobsBounty;
 
   if (isPublic) {
     if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {
