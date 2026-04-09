@@ -164,6 +164,48 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
     }
   }
 
+  const prompt = await prisma.prompt.findFirst({
+    where: {
+      query: bounty.query,
+      llmTopic: { companyId },
+    },
+    select: {
+      id: true,
+      topicId: true,
+      topic: true,
+      llmTopic: { select: { name: true } },
+    },
+  });
+
+  const topicName = (prompt?.llmTopic?.name ?? prompt?.topic ?? "").trim() || null;
+
+  const topicPages =
+    prompt?.topicId
+      ? await prisma.aeoPage.findMany({
+          where: {
+            companyId,
+            llm_topic_id: prompt.topicId,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 25,
+          select: { summary: true },
+        })
+      : [];
+
+  const topicPagesSummaries = topicPages
+    .map((p) => {
+      const s = p.summary as unknown;
+      if (typeof s === "string") return s.trim();
+      if (s == null) return "";
+      try {
+        return JSON.stringify(s);
+      } catch {
+        return "";
+      }
+    })
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const payload = {
     base_url: baseUrl,
     same_as_links: sameAsLinks,
@@ -186,6 +228,8 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
       customer_feedback: customerFeedback,
     },
     query: bounty.query,
+    topic: topicName,
+    topic_pages: topicPagesSummaries,
     existing_slugs: existingSlugs,
   };
 
@@ -271,6 +315,8 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
         status: "DRAFT",
         title,
         description,
+        llm_prompt_id: prompt?.id ?? null,
+        llm_topic_id: prompt?.topicId ?? null,
         facts: (page.facts ?? []) as unknown as Prisma.InputJsonValue,
         faq: (page.faq ?? []) as unknown as Prisma.InputJsonValue,
         claims: (page.claims ?? []) as unknown as Prisma.InputJsonValue,
