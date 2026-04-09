@@ -39,6 +39,21 @@ function buildProductDescriptionWithPrice(input: {
   return `${desc} | Price: ${priceStr}`;
 }
 
+/** e.g. "hello i am world" → "/hello-i-am-world" */
+function topicTitleToPathSegment(title: string): string | null {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (!slug) return null;
+  return `/${slug}`;
+}
+
 export async function POST(_request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id: bountyId } = await context.params;
   const session = await getSession();
@@ -188,7 +203,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
           },
           orderBy: { createdAt: "desc" },
           take: 25,
-          select: { summary: true },
+          select: { summary: true, title: true },
         })
       : [];
 
@@ -205,6 +220,10 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
     })
     .map((s) => s.trim())
     .filter(Boolean);
+
+  const topicPageNames = topicPages
+    .map((p) => topicTitleToPathSegment(p.title ?? ""))
+    .filter((x): x is string => Boolean(x));
 
   const payload = {
     base_url: baseUrl,
@@ -230,6 +249,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
     query: bounty.query,
     topic: topicName,
     topic_pages: topicPagesSummaries,
+    topic_page_names: topicPageNames,
     existing_slugs: existingSlugs,
   };
 
