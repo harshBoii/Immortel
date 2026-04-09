@@ -5,8 +5,6 @@ import { ShopifyAdminError, shopifyGraphql } from "@/lib/shopify/admin";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
 import { minimalMarkdownToHtml } from "@/lib/geo/bounty/markdownToHtmlForPublish";
 
-const BLOG_CHANNEL_HANDLE = "quick-reads";
-
 const JSON_LD_NAMESPACE = "custom";
 const JSON_LD_KEY = "json_ld";
 
@@ -18,6 +16,20 @@ const PAYLOAD_KEY = "immortel_payload";
 type GqlUserError = { field: string[] | null; message: string; code: string | null };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function topicNameToShopifyBlogHandle(name: string): string | null {
+  const handle = name
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .join("-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return handle ? handle : null;
+}
 
 function jsonStringifyAndValidate(
   value: unknown
@@ -197,6 +209,8 @@ export async function POST(
           claims: true,
           faq: true,
           knowledgeGraph: true,
+          llm_topic: { select: { name: true } },
+          llm_prompt: { select: { topic: true, llmTopic: { select: { name: true } } } },
         },
       },
     },
@@ -250,13 +264,19 @@ export async function POST(
   }
 
   let blogId: string;
+  const rawTopicName =
+    bounty.aeoPage.llm_topic?.name ??
+    bounty.aeoPage.llm_prompt?.llmTopic?.name ??
+    bounty.aeoPage.llm_prompt?.topic ??
+    "";
+  const channelHandle = topicNameToShopifyBlogHandle(rawTopicName) ?? "quick-reads";
   try {
     const ensured = await ensureBlogChannel({
       shopId: shop.id,
       companyId,
       shopDomain: shop.shopDomain,
       accessToken: shop.accessToken,
-      handle: BLOG_CHANNEL_HANDLE,
+      handle: channelHandle,
     });
     blogId = ensured.blogId;
   } catch (e) {
@@ -337,7 +357,7 @@ export async function POST(
         body,
         author: { name: "Immortel" },                          // FIX: required field, was missing
         ...(publishDate ? { publishDate } : {}),               // FIX: was `publishedAt`, correct key is `publishDate`
-        tags: ["geo", "bounty", BLOG_CHANNEL_HANDLE],
+        tags: ["geo", "bounty", channelHandle],
         metafields: [
           {
             namespace: JSON_LD_NAMESPACE,
@@ -364,7 +384,7 @@ export async function POST(
       article.handle &&
       storefrontBlogArticleUrl({
         shopDomain: shop.shopDomain,
-        blogHandle: BLOG_CHANNEL_HANDLE,
+        blogHandle: channelHandle,
         articleHandle: article.handle,
       });
     if (publishedCanonical) {
@@ -385,7 +405,7 @@ export async function POST(
         data: {
           articleId: article.id,
           blogId,
-          channelHandle: BLOG_CHANNEL_HANDLE,
+          channelHandle,
           canonicalUrl: publishedCanonical ?? undefined,
         },
         userErrors,
@@ -405,7 +425,7 @@ export async function POST(
     article?.handle &&
     storefrontBlogArticleUrl({
       shopDomain: shop.shopDomain,
-      blogHandle: BLOG_CHANNEL_HANDLE,
+      blogHandle: channelHandle,
       articleHandle: article.handle,
     });
   if (publishedCanonical) {
@@ -426,7 +446,7 @@ export async function POST(
     data: {
       article,
       blogId,
-      channelHandle: BLOG_CHANNEL_HANDLE,
+      channelHandle,
       canonicalUrl: publishedCanonical ?? undefined,
     },
   });

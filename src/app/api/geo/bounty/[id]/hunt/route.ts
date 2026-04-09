@@ -201,7 +201,7 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
             companyId,
             llm_topic_id: prompt.topicId,
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: "asc" },
           take: 25,
           select: { summary: true, title: true },
         })
