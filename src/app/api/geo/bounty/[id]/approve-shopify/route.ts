@@ -3,13 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { ShopifyAdminError, shopifyGraphql } from "@/lib/shopify/admin";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
-import { minimalMarkdownToHtml } from "@/lib/geo/bounty/markdownToHtmlForPublish";
+import { buildRelatedArticlesAppend, minimalMarkdownToHtml } from "@/lib/geo/bounty/markdownToHtmlForPublish";
 
 const JSON_LD_NAMESPACE = "custom";
 const JSON_LD_KEY = "json_ld";
 
 const PAYLOAD_NAMESPACE = "custom";
 const PAYLOAD_KEY = "immortel_payload";
+
+const UPDATE_ARTICLE = `
+  mutation UpdateArticle($id: ID!, $article: ArticleUpdateInput!) {
+    articleUpdate(id: $id, article: $article) {
+      article { id handle body }
+      userErrors { field message code }
+    }
+  }
+`;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -174,6 +183,61 @@ function storefrontBlogArticleUrl(opts: {
   return `https://${host}/blogs/${blog}/${handle}`;
 }
 
+async function appendNewArticleLinkToPillar(opts: {
+  shopDomain: string;
+  accessToken: string;
+  channelHandle: string;
+  pillarPage: {
+    id: string;
+    shopifyArticleGid: string | null;
+  };
+  currentAeoPageId: string;
+  pillarMarkdown: string;
+  newArticleTitle: string;
+  newArticleHandle: string | null | undefined;
+}): Promise<void> {
+  const gid = opts.pillarPage.shopifyArticleGid;
+  const handle = opts.newArticleHandle?.trim();
+  if (!gid || !handle) return;
+  if (opts.pillarPage.id === opts.currentAeoPageId) return;
+
+  const newArticleUrl = storefrontBlogArticleUrl({
+    shopDomain: opts.shopDomain,
+    blogHandle: opts.channelHandle,
+    articleHandle: handle,
+  });
+  const updatedPillarPageContent = buildRelatedArticlesAppend(opts.pillarMarkdown, {
+    title: opts.newArticleTitle,
+    url: newArticleUrl,
+  });
+  const updatedBody = minimalMarkdownToHtml(updatedPillarPageContent);
+
+  const updateRes = await shopifyGraphql<{
+    articleUpdate: {
+      article: { id: string; handle: string } | null;
+      userErrors: GqlUserError[];
+    } | null;
+  }>({
+    ctx: { shopDomain: opts.shopDomain, accessToken: opts.accessToken },
+    query: UPDATE_ARTICLE,
+    variables: {
+      id: gid,
+      article: { body: updatedBody },
+    },
+  });
+
+  const updateErrors = updateRes.data?.articleUpdate?.userErrors ?? [];
+  if (updateErrors.length > 0) {
+    console.warn("[geo/approve-shopify] pillar articleUpdate errors", updateErrors);
+    return;
+  }
+
+  await prisma.aeoPage.update({
+    where: { id: opts.pillarPage.id },
+    data: { description: updatedPillarPageContent },
+  });
+}
+
 // ─── Route Handler ────────────────────────────────────────────────────────────
 
 export async function POST(
@@ -209,6 +273,7 @@ export async function POST(
           claims: true,
           faq: true,
           knowledgeGraph: true,
+          llm_topic_id: true,
           llm_topic: { select: { name: true } },
           llm_prompt: { select: { topic: true, llmTopic: { select: { name: true } } } },
         },
@@ -292,6 +357,29 @@ export async function POST(
   }
 
   const aeoPage = bounty.aeoPage;
+
+  const pillarPage = aeoPage.llm_topic_id
+    ? await prisma.aeoPage.findFirst({
+        where: { companyId, llm_topic_id: aeoPage.llm_topic_id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          slug: true,
+          locale: true,
+          title: true,
+          seoTitle: true,
+          description: true,
+          canonicalUrl: true,
+          shopifyArticleGid: true,
+          createdAt: true,
+          publishedAt: true,
+        },
+      })
+    : null;
+
+  const pillarPageContent = pillarPage?.description ?? "";
+
+
   const title = (aeoPage.seoTitle ?? aeoPage.title ?? bounty.query).trim();
   const body = minimalMarkdownToHtml(aeoPage.description ?? "");
   const publishDate = aeoPage.publishedAt ? aeoPage.publishedAt.toISOString() : null;
@@ -309,6 +397,18 @@ export async function POST(
     bountyId: bounty.id,
     query: bounty.query,
     pageType: bounty.pageType,
+    pillarPage: pillarPage
+      ? {
+          id: pillarPage.id,
+          slug: pillarPage.slug,
+          locale: pillarPage.locale,
+          title: pillarPage.title,
+          seoTitle: pillarPage.seoTitle,
+          canonicalUrl: pillarPage.canonicalUrl,
+          publishedAt: pillarPage.publishedAt?.toISOString() ?? null,
+          createdAt: pillarPage.createdAt.toISOString(),
+        }
+      : null,
     aeoPage: {
       id: aeoPage.id,
       slug: aeoPage.slug,
@@ -355,9 +455,14 @@ export async function POST(
         blogId,
         title,
         body,
-        author: { name: "Immortel" },                          // FIX: required field, was missing
+        author: { name: "Ramappa Ramachandra" },                          // FIX: required field, was missing
+        isPublished: true,                              
         ...(publishDate ? { publishDate } : {}),               // FIX: was `publishedAt`, correct key is `publishDate`
         tags: ["geo", "bounty", channelHandle],
+        seo: {
+          title: aeoPage.seoTitle ?? title,
+          description: aeoPage.summary ?? "",
+        },      
         metafields: [
           {
             namespace: JSON_LD_NAMESPACE,
@@ -387,10 +492,23 @@ export async function POST(
         blogHandle: channelHandle,
         articleHandle: article.handle,
       });
-    if (publishedCanonical) {
-      await prisma.aeoPage.update({
-        where: { id: aeoPage.id },
-        data: { canonicalUrl: publishedCanonical },
+    await prisma.aeoPage.update({
+      where: { id: aeoPage.id },
+      data: {
+        ...(publishedCanonical ? { canonicalUrl: publishedCanonical } : {}),
+        shopifyArticleGid: article.id,
+      },
+    });
+    if (pillarPage && article.handle) {
+      await appendNewArticleLinkToPillar({
+        shopDomain: shop.shopDomain,
+        accessToken: shop.accessToken,
+        channelHandle,
+        pillarPage: { id: pillarPage.id, shopifyArticleGid: pillarPage.shopifyArticleGid },
+        currentAeoPageId: aeoPage.id,
+        pillarMarkdown: pillarPageContent,
+        newArticleTitle: title,
+        newArticleHandle: article.handle,
       });
     }
     console.warn("[geo/approve-shopify] articleCreate partial success", {
@@ -428,10 +546,24 @@ export async function POST(
       blogHandle: channelHandle,
       articleHandle: article.handle,
     });
-  if (publishedCanonical) {
-    await prisma.aeoPage.update({
-      where: { id: aeoPage.id },
-      data: { canonicalUrl: publishedCanonical },
+  await prisma.aeoPage.update({
+    where: { id: aeoPage.id },
+    data: {
+      ...(publishedCanonical ? { canonicalUrl: publishedCanonical } : {}),
+      ...(article?.id ? { shopifyArticleGid: article.id } : {}),
+    },
+  });
+
+  if (pillarPage && article?.handle) {
+    await appendNewArticleLinkToPillar({
+      shopDomain: shop.shopDomain,
+      accessToken: shop.accessToken,
+      channelHandle,
+      pillarPage: { id: pillarPage.id, shopifyArticleGid: pillarPage.shopifyArticleGid },
+      currentAeoPageId: aeoPage.id,
+      pillarMarkdown: pillarPageContent,
+      newArticleTitle: title,
+      newArticleHandle: article.handle,
     });
   }
 

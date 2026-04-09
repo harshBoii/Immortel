@@ -491,6 +491,8 @@ model AeoPage {
   seoTitle           String?                @db.VarChar(500)
   seoDescription     String?
   canonicalUrl       String?                @db.VarChar(1000)
+  /// Shopify Admin API GID for the blog article when published via approve-shopify
+  shopifyArticleGid  String?                @db.VarChar(255)
   clusterId          String?
   publishedAt        DateTime?              @db.Timestamptz(3)
   createdAt          DateTime               @default(now()) @db.Timestamptz(3)

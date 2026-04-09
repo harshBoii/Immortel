@@ -62,3 +62,13 @@ export function minimalMarkdownToHtml(markdown: string): string {
   if (inList) htmlLines.push("</ul>");
   return htmlLines.join("\n");
 }
+
+/** Appends a markdown block linking to a related article (e.g. new cluster page from pillar). */
+export function buildRelatedArticlesAppend(
+  currentMarkdown: string,
+  item: { title: string; url: string }
+): string {
+  const base = currentMarkdown.trimEnd();
+  const block = `\n\n## Related reading\n\n- [${item.title.replace(/\]/g, "\\]")}](${item.url})\n`;
+  return base === "" ? block.trimStart() : base + block;
+}
