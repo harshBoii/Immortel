@@ -281,6 +281,7 @@ export async function POST(
     },
   });
 
+
   if (!bounty || !bounty.aeoPage) {
     return NextResponse.json(
       { success: false, error: "Bounty or generated page not found" },
@@ -554,7 +555,13 @@ export async function POST(
     },
   });
 
-  if (pillarPage && article?.handle) {
+  const topicPageCount = aeoPage.llm_topic_id
+    ? await prisma.aeoPage.count({
+        where: { companyId, llm_topic_id: aeoPage.llm_topic_id },
+      })
+    : 0;
+
+  if (pillarPage && article?.handle && topicPageCount > 1) {
     await appendNewArticleLinkToPillar({
       shopDomain: shop.shopDomain,
       accessToken: shop.accessToken,
