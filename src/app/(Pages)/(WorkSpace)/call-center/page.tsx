@@ -71,7 +71,7 @@ const LANGUAGE_OPTIONS = [
 ];
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
 const VOICE_MODE     = { quality: 'quality', speed: 'speed' };
-const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM';
+const DEFAULT_VOICE_ID = 'oO7sLA3dWfQXsKeSAjpA';
 
 const LLM_PROVIDER_OPTIONS = [
   { value: 'gemini', label: 'Gemini' },

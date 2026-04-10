@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 
 const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
 
 type LanguageMode = "english" | "hindi" | "other";
 type VoiceMode = "quality" | "speed";
