@@ -5,7 +5,7 @@ const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
 const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
 
 type LanguageMode = "english" | "hindi" | "other";
-type VoiceMode = "quality" | "speed";
+type VoiceMode = "quality" | "speed" | "eleven_v3";
 type LlmProvider = "gemini" | "openai" | "claude" | "groq";
 
 const LLM_PROVIDERS: LlmProvider[] = ["gemini", "openai", "claude", "groq"];
@@ -16,9 +16,9 @@ function normalizeLlmProvider(raw: unknown): LlmProvider {
 }
 
 function mapElevenlabsModel(mode: VoiceMode) {
-  return mode === "speed"
-    ? "eleven_flash_v2_5"
-    : "eleven_multilingual_v2";
+  if (mode === "speed") return "eleven_flash_v2_5";
+  if (mode === "eleven_v3") return "eleven_v3";
+  return "eleven_multilingual_v2";
 }
 
 function mapLanguage(mode: LanguageMode) {
@@ -70,7 +70,9 @@ export async function POST(request: Request) {
 
   const voiceRaw = body.voiceMode;
   const voiceMode: VoiceMode =
-    voiceRaw === "speed" || voiceRaw === "quality" ? voiceRaw : "quality";
+    voiceRaw === "speed" || voiceRaw === "quality" || voiceRaw === "eleven_v3"
+      ? voiceRaw
+      : "quality";
 
   const llm_provider = normalizeLlmProvider(body.llm_provider);
 

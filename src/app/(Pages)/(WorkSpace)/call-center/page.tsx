@@ -70,7 +70,7 @@ const LANGUAGE_OPTIONS = [
   { value: 'other',   label: 'Other (multi)' },
 ];
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
-const VOICE_MODE     = { quality: 'quality', speed: 'speed' };
+const VOICE_MODE     = { quality: 'quality', speed: 'speed', luxury: 'eleven_v3' };
 const DEFAULT_VOICE_ID = 'oO7sLA3dWfQXsKeSAjpA';
 
 const LLM_PROVIDER_OPTIONS = [
@@ -439,7 +439,9 @@ export default function CallCenterPage() {
                 <FieldLabel hint={
                   voiceMode === VOICE_MODE.quality
                     ? <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_multilingual_v2</code> — richer, slower</>
-                    : <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_flash_v2_5</code> — instant, leaner</>
+                    : voiceMode === VOICE_MODE.luxury
+                      ? <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_v3</code> — flagship, most expressive</>
+                      : <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_flash_v2_5</code> — instant, leaner</>
                 }>
                   Voice priority
                 </FieldLabel>
@@ -447,6 +449,7 @@ export default function CallCenterPage() {
                   options={[
                     { id: VOICE_MODE.quality, label: '✦ Quality' },
                     { id: VOICE_MODE.speed,   label: '⚡ Speed'   },
+                    { id: VOICE_MODE.luxury,  label: '◆ Luxury'  },
                   ]}
                   value={voiceMode}
                   onChange={setVoiceMode}
@@ -613,7 +616,13 @@ export default function CallCenterPage() {
               calling <span className="font-semibold text-foreground">{contactName.trim()}</span> at{' '}
               <span className="font-mono text-foreground">{phone.trim()}</span> · pitching{' '}
               <span className="font-semibold text-foreground">{resolvedProduct}</span> · in{' '}
-              {langLabel} · {voiceMode === VOICE_MODE.quality ? 'quality' : 'fast'} voice
+              {langLabel} ·{' '}
+              {voiceMode === VOICE_MODE.quality
+                ? 'quality'
+                : voiceMode === VOICE_MODE.luxury
+                  ? 'luxury'
+                  : 'fast'}{' '}
+              voice
             </div>
           )}
 
