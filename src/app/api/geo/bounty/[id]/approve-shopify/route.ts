@@ -477,6 +477,8 @@ export async function POST(
             type: "json",
             value: payloadStr.value,
           },
+          { namespace: "seo", key: "title", type: "single_line_text_field", value: aeoPage.seoTitle ?? title },
+          { namespace: "seo", key: "description", type: "single_line_text_field", value: aeoPage.summary ?? "" },        
         ],
       },
     },
