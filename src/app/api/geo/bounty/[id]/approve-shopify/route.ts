@@ -379,6 +379,11 @@ export async function POST(
     : null;
 
   const pillarPageContent = pillarPage?.description ?? "";
+  const topicPageCount = aeoPage.llm_topic_id
+    ? await prisma.aeoPage.count({
+        where: { companyId, llm_topic_id: aeoPage.llm_topic_id },
+      })
+    : 0;
 
 
   const title = (aeoPage.seoTitle ?? aeoPage.title ?? bounty.query).trim();
@@ -460,10 +465,6 @@ export async function POST(
         isPublished: true,                              
         ...(publishDate ? { publishDate } : {}),               // FIX: was `publishedAt`, correct key is `publishDate`
         tags: ["geo", "bounty", channelHandle],
-        seo: {
-          title: aeoPage.seoTitle ?? title,
-          description: aeoPage.summary ?? "",
-        },      
         metafields: [
           {
             namespace: JSON_LD_NAMESPACE,
@@ -502,7 +503,7 @@ export async function POST(
         shopifyArticleGid: article.id,
       },
     });
-    if (pillarPage && article.handle) {
+    if (pillarPage && article.handle && topicPageCount > 1) {
       await appendNewArticleLinkToPillar({
         shopDomain: shop.shopDomain,
         accessToken: shop.accessToken,
@@ -557,11 +558,6 @@ export async function POST(
     },
   });
 
-  const topicPageCount = aeoPage.llm_topic_id
-    ? await prisma.aeoPage.count({
-        where: { companyId, llm_topic_id: aeoPage.llm_topic_id },
-      })
-    : 0;
 
   if (pillarPage && article?.handle && topicPageCount > 1) {
     await appendNewArticleLinkToPillar({
