@@ -44,6 +44,7 @@ export function middleware(request: NextRequest) {
   const isJobsSeed = pathname.startsWith('/api/jobs/seed');
   const isJobsRadar = pathname.startsWith('/api/jobs/radar');
   const isJobsBounty = pathname.startsWith('/api/jobs/bounty');
+  const isCallCenter = pathname.startsWith('/call-center');
 
   const isPublic =
     isLoginPage ||
@@ -70,7 +71,8 @@ export function middleware(request: NextRequest) {
     isQstashCallback||
     isJobsSeed||
     isJobsRadar||
-    isJobsBounty;
+    isJobsBounty||
+    isCallCenter;
 
   if (isPublic) {
     if ((isLoginPage || isDevLoginPage) && hasValidAuthCookie(request)) {
