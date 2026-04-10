@@ -71,6 +71,15 @@ const LANGUAGE_OPTIONS = [
 ];
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
 const VOICE_MODE     = { quality: 'quality', speed: 'speed' };
+const DEFAULT_VOICE_ID = '21m00Tcm4TlvDq8ikWAM';
+
+const LLM_PROVIDER_OPTIONS = [
+  { value: 'gemini', label: 'Gemini' },
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'claude', label: 'Claude' },
+  { value: 'groq',   label: 'Groq'   },
+] as const;
+type LlmProviderValue = (typeof LLM_PROVIDER_OPTIONS)[number]['value'];
 
 /* ── reusable field label ── */
 const FieldLabel = ({
@@ -164,6 +173,8 @@ export default function CallCenterPage() {
   const [companyName,         setCompanyName]         = useState('');
   const [languageMode,        setLanguageMode]        = useState('english');
   const [voiceMode,           setVoiceMode]           = useState(VOICE_MODE.speed);   // ← speed default
+  const [voiceId,             setVoiceId]             = useState(DEFAULT_VOICE_ID);
+  const [llmProvider,         setLlmProvider]         = useState<LlmProviderValue>('groq');
   const [productSource,       setProductSource]       = useState(PRODUCT_SOURCE.shopify);
   const [shopifyProducts,     setShopifyProducts]     = useState<ProductItem[]>([]);
   const [wooProducts,         setWooProducts]         = useState<ProductItem[]>([]);
@@ -270,6 +281,8 @@ export default function CallCenterPage() {
           info_about_lead:  infoAboutLead.trim() || '—',
           languageMode,
           voiceMode,
+          voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
+          llm_provider:     llmProvider,
         }),
       });
       const json = await res.json().catch(() => null);
@@ -440,6 +453,57 @@ export default function CallCenterPage() {
                 />
               </div>
             </div>
+
+            <div>
+              <FieldLabel
+                htmlFor="call-center-llm-provider"
+                hint={
+                  <>
+                    Sent as{' '}
+                    <code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">llm_provider</code>
+                  </>
+                }
+              >
+                LLM provider
+              </FieldLabel>
+              <select
+                id="call-center-llm-provider"
+                name="llm_provider"
+                value={llmProvider}
+                onChange={(e) => setLlmProvider(e.target.value as LlmProviderValue)}
+                className={inputCls}
+              >
+                {LLM_PROVIDER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <FieldLabel
+                htmlFor="call-center-voice-id"
+                hint={
+                  <>
+                    ElevenLabs <code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">voiceId</code>{' '}
+                    — sent on every outbound call
+                  </>
+                }
+              >
+                Voice ID
+              </FieldLabel>
+              <input
+                id="call-center-voice-id"
+                name="voiceId"
+                type="text"
+                value={voiceId}
+                onChange={(e) => setVoiceId(e.target.value)}
+                className={`${inputCls} font-mono text-[13px]`}
+                placeholder={DEFAULT_VOICE_ID}
+                autoComplete="off"
+              />
+            </div>
           </FormSection>
 
           {/* ── Section 2: What are we pitching ── */}
@@ -449,7 +513,7 @@ export default function CallCenterPage() {
             description="The agent leads with this product and your perks angle"
           >
             <div>
-              <FieldLabel>Where's the product coming from?</FieldLabel>
+              <FieldLabel>Where is the product coming from?</FieldLabel>
               <PillToggle
                 options={[
                   { id: PRODUCT_SOURCE.shopify,     label: 'Shopify'     },

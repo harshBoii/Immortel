@@ -2,9 +2,18 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 
 const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
+const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 type LanguageMode = "english" | "hindi" | "other";
 type VoiceMode = "quality" | "speed";
+type LlmProvider = "gemini" | "openai" | "claude" | "groq";
+
+const LLM_PROVIDERS: LlmProvider[] = ["gemini", "openai", "claude", "groq"];
+
+function normalizeLlmProvider(raw: unknown): LlmProvider {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  return LLM_PROVIDERS.includes(s as LlmProvider) ? (s as LlmProvider) : "groq";
+}
 
 function mapElevenlabsModel(mode: VoiceMode) {
   return mode === "speed"
@@ -49,6 +58,9 @@ export async function POST(request: Request) {
     typeof body.perks_of_product === "string" ? body.perks_of_product.trim() : "";
   const info_about_lead =
     typeof body.info_about_lead === "string" ? body.info_about_lead.trim() : "";
+  const voiceIdRaw =
+    typeof body.voiceId === "string" ? body.voiceId.trim() : "";
+  const voiceId = voiceIdRaw || DEFAULT_VOICE_ID;
 
   const modeRaw = body.languageMode;
   const languageMode: LanguageMode =
@@ -59,6 +71,8 @@ export async function POST(request: Request) {
   const voiceRaw = body.voiceMode;
   const voiceMode: VoiceMode =
     voiceRaw === "speed" || voiceRaw === "quality" ? voiceRaw : "quality";
+
+  const llm_provider = normalizeLlmProvider(body.llm_provider);
 
   if (!to || !name || !company || !product) {
     return NextResponse.json(
@@ -83,6 +97,8 @@ export async function POST(request: Request) {
     product,
     perks_of_product: perks_of_product || "—",
     info_about_lead: info_about_lead || "—",
+    voiceId,
+    llm_provider,
   };
 
   try {
