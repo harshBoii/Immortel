@@ -565,7 +565,7 @@ export default function CallCenterPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <FieldLabel hint="Deepgram transcription locale">Language</FieldLabel>
+                    <FieldLabel hint="Deepgram or Sarvam transcription locale">Language</FieldLabel>
                     <select
                       value={languageMode}
                       onChange={(e) => setLanguageMode(e.target.value as LanguageMode)}
@@ -936,7 +936,7 @@ export default function CallCenterPage() {
                         value={agentRole}
                         onChange={(e) => setAgentRole(e.target.value)}
                         className={`${inputCls} text-[12px]`}
-                        placeholder="Sales Associate"
+                        placeholder="Warm and friendly sales associate"
                       />
                     </InstructionRow>
                   </div>
