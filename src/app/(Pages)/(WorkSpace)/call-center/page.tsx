@@ -289,7 +289,8 @@ export default function CallCenterPage() {
         voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
         llm_provider:     llmProvider,
         language:         languageMode,
-        deepgram_language: languageMode === "hindi" || languageMode === "english" ? languageMode : "multi",
+        deepgram_language: languageMode === "hindi" ? "hi" : languageMode === "english" ? "en" : "multi",
+   
       };
 
       console.log('[call-center] outbound payload', payload);
