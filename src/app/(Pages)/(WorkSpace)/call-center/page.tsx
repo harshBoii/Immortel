@@ -64,11 +64,21 @@ const IconAlertTriangle = () => (
 );
 
 /* ── constants ── */
+
 const LANGUAGE_OPTIONS = [
-  { value: 'english', label: 'English' },
-  { value: 'hindi',   label: 'Hindi'   },
-  { value: 'other',   label: 'Other (multi)' },
+  { value: 'english',  label: 'English' },
+  { value: 'hindi',    label: 'Hindi'   },
+  { value: 'other',    label: 'Other (multi)' },
+  {value: 'marathi',   label: 'Other (multi)' },
+  {value: 'kannada',   label: 'Other (multi)' },
+  {value: 'telugu',    label: 'Other (multi)' },
+  {value: 'tamil',     label: 'Other (multi)' },
+  {value: 'malayalam', label: 'Other (multi)' },
+  {value: 'punjabi',   label: 'Other (multi)' },
+  {value: 'bengali',   label: 'Other (multi)' },
+  {value: 'gujarati',  label: 'Other (multi)' },
 ];
+
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
 const VOICE_MODE     = { quality: 'quality', speed: 'speed', luxury: 'eleven_v3' };
 const DEFAULT_VOICE_ID = 'oO7sLA3dWfQXsKeSAjpA';
@@ -268,22 +278,26 @@ export default function CallCenterPage() {
     }
     setSubmitBusy(true);
     try {
+      const payload = {
+        to,
+        name:             contactName.trim(),
+        company:          companyName.trim(),
+        product:          resolvedProduct,
+        perks_of_product: perks.trim() || '—',
+        info_about_lead:  infoAboutLead.trim() || '—',
+        languageMode,
+        voiceMode,
+        voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
+        llm_provider:     llmProvider,
+      };
+
+      console.log('[call-center] outbound payload', payload);
+
       const res  = await fetch('/api/calling-agent/outbound', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          to,
-          name:             contactName.trim(),
-          company:          companyName.trim(),
-          product:          resolvedProduct,
-          perks_of_product: perks.trim() || '—',
-          info_about_lead:  infoAboutLead.trim() || '—',
-          languageMode,
-          voiceMode,
-          voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
-          llm_provider:     llmProvider,
-        }),
+        body: JSON.stringify(payload),
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.success !== false) {
