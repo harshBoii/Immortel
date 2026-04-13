@@ -24,168 +24,246 @@ type SubmitMessage = {
   detail?: string | null;
 };
 
-/* ── tiny inline icons ── */
-const IconPhone = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6.29 6.29l.94-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+/* ── icons ── */
+const IconPhone = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.56a16 16 0 0 0 6.29 6.29l.94-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
   </svg>
 );
 const IconUser = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
   </svg>
 );
 const IconBox = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+    <polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" />
   </svg>
 );
-const IconZap = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+const IconZap = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </svg>
 );
 const IconActivity = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
   </svg>
 );
-const IconCheck = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
+const IconCheck = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
-const IconAlertTriangle = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+const IconAlertTriangle = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+const IconBot = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="10" rx="2" /><circle cx="12" cy="5" r="2" />
+    <path d="M12 7v4" /><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" />
+  </svg>
+);
+const IconSparkles = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.88 5.76a1 1 0 0 0 .95.69h6.06l-4.9 3.56a1 1 0 0 0-.36 1.12L17.5 20l-4.9-3.56a1 1 0 0 0-1.18 0L6.5 20l1.87-5.87a1 1 0 0 0-.36-1.12L3.11 9.45h6.06a1 1 0 0 0 .95-.69L12 3z" />
+  </svg>
+);
+const IconMic = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" />
+  </svg>
+);
+const IconCpu = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" />
+    <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
+    <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
+    <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
+    <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+  </svg>
+);
+const IconMessageSquare = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+  </svg>
+);
+const IconHelpCircle = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );
 
 /* ── constants ── */
-
 const LANGUAGE_OPTIONS = [
-  { value: 'english',   label: 'English' },
-  { value: 'hindi',     label: 'Hindi' },
-  { value: 'marathi',   label: 'Marathi' },
-  { value: 'kannada',   label: 'Kannada' },
-  { value: 'telugu',    label: 'Telugu' },
-  { value: 'tamil',     label: 'Tamil' },
+  { value: 'english',   label: 'English'   },
+  { value: 'hindi',     label: 'Hindi'     },
+  { value: 'marathi',   label: 'Marathi'   },
+  { value: 'kannada',   label: 'Kannada'   },
+  { value: 'telugu',    label: 'Telugu'    },
+  { value: 'tamil',     label: 'Tamil'     },
   { value: 'malayalam', label: 'Malayalam' },
-  { value: 'punjabi',   label: 'Punjabi' },
-  { value: 'bengali',   label: 'Bengali' },
-  { value: 'gujarati',  label: 'Gujarati' },
-  { value: 'odia',      label: 'Odia' },
+  { value: 'punjabi',   label: 'Punjabi'   },
+  { value: 'bengali',   label: 'Bengali'   },
+  { value: 'gujarati',  label: 'Gujarati'  },
+  { value: 'odia',      label: 'Odia'      },
 ] as const;
 
 type LanguageMode = (typeof LANGUAGE_OPTIONS)[number]['value'];
 
 const DEEPGRAM_LANGUAGE_OPTIONS: Record<LanguageMode, string> = {
-  english:   'en',
-  hindi:     'hi',
-  marathi:   'mr',
-  kannada:   'kn',
-  telugu:    'te',
-  tamil:     'ta',
-  malayalam: 'ml',
-  punjabi:   'pa',
-  bengali:   'bn',
-  gujarati:  'gu',
-  odia:      'or',
+  english: 'en', hindi: 'hi', marathi: 'mr', kannada: 'kn', telugu: 'te',
+  tamil: 'ta', malayalam: 'ml', punjabi: 'pa', bengali: 'bn', gujarati: 'gu', odia: 'or',
 };
-
 
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
 const VOICE_MODE     = { quality: 'quality', speed: 'speed', luxury: 'eleven_v3' };
 const DEFAULT_VOICE_ID = 'oO7sLA3dWfQXsKeSAjpA';
 
 const LLM_PROVIDER_OPTIONS = [
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'claude', label: 'Claude' },
-  { value: 'groq',   label: 'Groq'   },
+  { value: 'groq',   label: 'Groq',   hint: 'Fastest inference' },
+  { value: 'gemini', label: 'Gemini', hint: 'Multimodal'        },
+  { value: 'openai', label: 'OpenAI', hint: 'GPT-4o'            },
+  { value: 'claude', label: 'Claude', hint: 'Most nuanced'      },
 ] as const;
 type LlmProviderValue = (typeof LLM_PROVIDER_OPTIONS)[number]['value'];
 
-/* ── reusable field label ── */
+/* ─── sub-components ─────────────────────────────────── */
+
+const inputCls =
+  'w-full px-3 py-2 rounded-lg text-sm bg-[var(--glass-hover)] border border-[var(--glass-border)] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)] placeholder:text-muted-foreground/35 transition-colors';
+
 const FieldLabel = ({
-  children,
-  hint,
-  htmlFor,
+  children, hint, htmlFor,
 }: {
   children: React.ReactNode;
   hint?: React.ReactNode;
   htmlFor?: string;
 }) => (
   <label htmlFor={htmlFor} className="block mb-1.5">
-    <span className="text-[12px] font-semibold text-foreground/80">{children}</span>
-    {hint && <span className="block text-[11px] text-muted-foreground/60 font-normal mt-0.5 leading-snug">{hint}</span>}
+    <span className="text-[12px] font-semibold text-foreground/80 uppercase tracking-wide">{children}</span>
+    {hint && <span className="block text-[11px] text-muted-foreground/55 font-normal mt-0.5 leading-snug normal-case tracking-normal">{hint}</span>}
   </label>
 );
 
-/* ── shared input class ── */
-const inputCls =
-  'w-full px-3 py-2 rounded-lg text-sm bg-[var(--glass-hover)] border border-[var(--glass-border)] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)] placeholder:text-muted-foreground/35 transition-colors';
-
-/* ── section wrapper with header ── */
-const FormSection = ({
-  icon,
-  title,
-  description,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) => (
-  <div className="rounded-2xl border border-[var(--glass-border)] overflow-hidden">
-    <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-[var(--glass-border)] bg-[var(--glass-hover)]/60">
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[var(--sibling-primary)]/12 text-[var(--sibling-primary)] flex-shrink-0">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-foreground leading-none">{title}</p>
-        {description && (
-          <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-snug">{description}</p>
-        )}
-      </div>
-    </div>
-    <div className="p-5 space-y-4 bg-[var(--glass-hover)]/25">{children}</div>
-  </div>
-);
-
-/* ── pill toggle ── */
+/* Pill toggle — horizontal compact */
 const PillToggle = ({
-  options,
-  value,
-  onChange,
+  options, value, onChange,
 }: {
   options: { id: string; label: string }[];
   value: string;
   onChange: (v: string) => void;
 }) => (
-  <div className="flex flex-wrap gap-2">
+  <div
+    role="group"
+    className="inline-flex items-center rounded-lg border border-[var(--glass-border)] bg-[var(--glass-hover)]/40 p-0.5 gap-0.5"
+  >
     {options.map((o) => (
       <button
         key={o.id}
         type="button"
         onClick={() => onChange(o.id)}
-        className={`relative px-3.5 py-1.5 rounded-lg text-[12px] font-medium border transition-all duration-150 ${
+        className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-all duration-150 ${
           value === o.id
-            ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/12 text-[var(--sibling-primary)]'
-            : 'border-[var(--glass-border)] bg-transparent text-muted-foreground hover:text-foreground'
+            ? 'bg-[var(--sibling-primary)] text-white shadow-sm'
+            : 'text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
         }`}
       >
         {o.label}
-        {value === o.id && (
-          <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-[var(--sibling-primary)]">
-            <span className="text-white" style={{ fontSize: 7, lineHeight: 1 }}>✓</span>
-          </span>
-        )}
       </button>
     ))}
+  </div>
+);
+
+/* Card-style section for the LEFT column */
+const LeftSection = ({
+  icon, title, description, children, step,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  step: number;
+}) => (
+  <div className="relative rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-hover)]/20 overflow-hidden">
+    {/* Step number watermark */}
+    <span className="absolute top-3 right-4 text-[42px] font-black text-foreground/[0.03] select-none leading-none pointer-events-none">
+      {step < 10 ? `0${step}` : step}
+    </span>
+    {/* Header */}
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--glass-border)]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)] flex-shrink-0">
+        {icon}
+      </span>
+      <div>
+        <p className="text-[13px] font-semibold text-foreground leading-none">{title}</p>
+        {description && (
+          <p className="text-[11px] text-muted-foreground/55 mt-0.5 leading-snug">{description}</p>
+        )}
+      </div>
+    </div>
+    <div className="p-5 space-y-4">{children}</div>
+  </div>
+);
+
+/* AI toggle pill — compact inline */
+const AiToggle = ({
+  checked, onChange, label = 'Auto',
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label?: string;
+}) => (
+  <button
+    type="button"
+    onClick={() => onChange(!checked)}
+    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all duration-150 ${
+      checked
+        ? 'border-[var(--sibling-primary)]/40 bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
+        : 'border-[var(--glass-border)] bg-transparent text-muted-foreground hover:text-foreground'
+    }`}
+  >
+    <IconSparkles size={10} />
+    {label}
+  </button>
+);
+
+/* Right panel instruction row */
+const InstructionRow = ({
+  icon, label, hint, children, aiChecked, onAiChange, disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+  aiChecked: boolean;
+  onAiChange: (v: boolean) => void;
+  disabled?: boolean;
+}) => (
+  <div className={`transition-opacity ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+    <div className="flex items-start justify-between gap-2 mb-1.5">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="text-[var(--sibling-primary)]/70 flex-shrink-0">{icon}</span>
+        <span className="text-[12px] font-semibold text-foreground/80 uppercase tracking-wide truncate">{label}</span>
+      </div>
+      <AiToggle checked={aiChecked} onChange={onAiChange} />
+    </div>
+    {hint && (
+      <p className="text-[11px] text-muted-foreground/50 mb-1.5 leading-snug">{hint}</p>
+    )}
+    <div className={aiChecked ? 'opacity-40 pointer-events-none' : ''}>{children}</div>
+    {aiChecked && (
+      <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-[var(--sibling-primary)]/80">
+        <IconSparkles size={10} />
+        <span>AI will generate this automatically</span>
+      </div>
+    )}
   </div>
 );
 
@@ -195,36 +273,36 @@ const PillToggle = ({
 export default function CallCenterPage() {
   const { company, loading: contextLoading, error: contextError } = useCurrentContext();
 
-  const [phone,               setPhone]               = useState('');
-  const [contactName,         setContactName]         = useState('');
-  const [companyName,         setCompanyName]         = useState('');
-  const [languageMode,        setLanguageMode]        = useState<LanguageMode>('english');
-  const [voiceMode,           setVoiceMode]           = useState(VOICE_MODE.speed);   // ← speed default
-  const [voiceId,             setVoiceId]             = useState(DEFAULT_VOICE_ID);
-  const [llmProvider,         setLlmProvider]         = useState<LlmProviderValue>('groq');
-  const [useAiSystemPrompt,   setUseAiSystemPrompt]   = useState(true);
-  const [systemPrompt,        setSystemPrompt]        = useState('');
-  const [useAiOpeningGreeting,setUseAiOpeningGreeting]= useState(true);
-  const [openingGreeting,     setOpeningGreeting]     = useState('');
-  const [useAiAgentName,      setUseAiAgentName]      = useState(true);
-  const [agentName,           setAgentName]           = useState('');
-  const [useAiAgentRole,      setUseAiAgentRole]      = useState(true);
-  const [agentRole,           setAgentRole]           = useState('');
-  const [useAiQuestions,      setUseAiQuestions]      = useState(true);
-  const [questionsToAsk,      setQuestionsToAsk]      = useState('');
-  const [productSource,       setProductSource]       = useState(PRODUCT_SOURCE.shopify);
-  const [shopifyProducts,     setShopifyProducts]     = useState<ProductItem[]>([]);
-  const [wooProducts,         setWooProducts]         = useState<ProductItem[]>([]);
-  const [inventoryLoading,    setInventoryLoading]    = useState(true);
-  const [inventoryError,      setInventoryError]      = useState<string | null>(null);
-  const [selectedInventoryId, setSelectedInventoryId] = useState('');
-  const [customProductTitle,  setCustomProductTitle]  = useState('');
-  const [perks,               setPerks]               = useState('');
-  const [infoAboutLead,       setInfoAboutLead]       = useState('');
-  const [healthStatus,        setHealthStatus]        = useState<HealthStatus | null>(null);
-  const [healthBusy,          setHealthBusy]          = useState(false);
-  const [submitBusy,          setSubmitBusy]          = useState(false);
-  const [submitMessage,       setSubmitMessage]       = useState<SubmitMessage | null>(null);
+  const [phone,                setPhone]                = useState('');
+  const [contactName,          setContactName]          = useState('');
+  const [companyName,          setCompanyName]          = useState('');
+  const [languageMode,         setLanguageMode]         = useState<LanguageMode>('english');
+  const [voiceMode,            setVoiceMode]            = useState(VOICE_MODE.speed);
+  const [voiceId,              setVoiceId]              = useState(DEFAULT_VOICE_ID);
+  const [llmProvider,          setLlmProvider]          = useState<LlmProviderValue>('groq');
+  const [useAiSystemPrompt,    setUseAiSystemPrompt]    = useState(true);
+  const [systemPrompt,         setSystemPrompt]         = useState('');
+  const [useAiOpeningGreeting, setUseAiOpeningGreeting] = useState(true);
+  const [openingGreeting,      setOpeningGreeting]      = useState('');
+  const [useAiAgentName,       setUseAiAgentName]       = useState(true);
+  const [agentName,            setAgentName]            = useState('');
+  const [useAiAgentRole,       setUseAiAgentRole]       = useState(true);
+  const [agentRole,            setAgentRole]            = useState('');
+  const [useAiQuestions,       setUseAiQuestions]       = useState(true);
+  const [questionsToAsk,       setQuestionsToAsk]       = useState('');
+  const [productSource,        setProductSource]        = useState(PRODUCT_SOURCE.shopify);
+  const [shopifyProducts,      setShopifyProducts]      = useState<ProductItem[]>([]);
+  const [wooProducts,          setWooProducts]          = useState<ProductItem[]>([]);
+  const [inventoryLoading,     setInventoryLoading]     = useState(true);
+  const [inventoryError,       setInventoryError]       = useState<string | null>(null);
+  const [selectedInventoryId,  setSelectedInventoryId]  = useState('');
+  const [customProductTitle,   setCustomProductTitle]   = useState('');
+  const [perks,                setPerks]                = useState('');
+  const [infoAboutLead,        setInfoAboutLead]        = useState('');
+  const [healthStatus,         setHealthStatus]         = useState<HealthStatus | null>(null);
+  const [healthBusy,           setHealthBusy]           = useState(false);
+  const [submitBusy,           setSubmitBusy]           = useState(false);
+  const [submitMessage,        setSubmitMessage]        = useState<SubmitMessage | null>(null);
 
   useEffect(() => {
     if (company?.name) setCompanyName((prev) => (prev === '' ? company.name : prev));
@@ -300,37 +378,32 @@ export default function CallCenterPage() {
       : phone.trim() ? `+${phone.trim().replace(/^\+/, '')}` : '';
 
     if (!to || !contactName.trim() || !companyName.trim() || !resolvedProduct) {
-      setSubmitMessage({ type: 'error', text: 'Phone, name, company, and a product are all needed before we dial.' });
+      setSubmitMessage({ type: 'error', text: 'Phone, name, company, and a product are required to dial.' });
       return;
     }
     setSubmitBusy(true);
     try {
       const trimmedQuestions = questionsToAsk
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .slice(0, 3)
-        .join('\n');
+        .split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 3).join('\n');
 
       const payload = {
         to,
-        name:             contactName.trim(),
-        company:          companyName.trim(),
-        product:          resolvedProduct,
-        perks_of_product: perks.trim() || '—',
-        info_about_lead:  infoAboutLead.trim() || '—',
+        name:              contactName.trim(),
+        company:           companyName.trim(),
+        product:           resolvedProduct,
+        perks_of_product:  perks.trim() || '—',
+        info_about_lead:   infoAboutLead.trim() || '—',
         languageMode,
         voiceMode,
-        voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
-        llm_provider:     llmProvider,
-        language:         languageMode,
+        voiceId:           voiceId.trim() || DEFAULT_VOICE_ID,
+        llm_provider:      llmProvider,
+        language:          languageMode,
         deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode] ?? 'en',
-        system_prompt:    useAiSystemPrompt ? undefined : (systemPrompt.trim() || undefined),
-        opening_greeting: useAiOpeningGreeting ? undefined : (openingGreeting.trim() || undefined),
-        agent_name:       useAiAgentName ? undefined : (agentName.trim() || undefined),
-        agent_role:       useAiAgentRole ? undefined : (agentRole.trim() || undefined),
-        questions_to_ask: useAiQuestions ? undefined : (trimmedQuestions || undefined),
-   
+        system_prompt:     useAiSystemPrompt    ? undefined : (systemPrompt.trim()    || undefined),
+        opening_greeting:  useAiOpeningGreeting ? undefined : (openingGreeting.trim() || undefined),
+        agent_name:        useAiAgentName       ? undefined : (agentName.trim()       || undefined),
+        agent_role:        useAiAgentRole       ? undefined : (agentRole.trim()       || undefined),
+        questions_to_ask:  useAiQuestions       ? undefined : (trimmedQuestions       || undefined),
       };
 
       console.log('[call-center] outbound payload', payload);
@@ -365,519 +438,560 @@ export default function CallCenterPage() {
 
   const previewReady = phone.trim() && contactName.trim() && resolvedProduct;
   const langLabel    = LANGUAGE_OPTIONS.find((l) => l.value === languageMode)?.label ?? languageMode;
+  const autoCount    = [useAiSystemPrompt, useAiOpeningGreeting, useAiAgentName, useAiAgentRole, useAiQuestions].filter(Boolean).length;
 
   return (
-    <div className="max-w-2xl mx-auto min-h-[60vh] px-6 pb-12 pt-2">
+    <div className="min-h-[60vh] px-4 pb-12 pt-2 w-full">
 
       {/* ── Page header ── */}
-      <div className="flex items-start justify-between gap-4 mb-1">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--sibling-primary)]/10">
-              <IconPhone />
+      <div className="flex items-start justify-between gap-4 mb-5 max-w-[1280px] mx-auto">
+        <div className="flex items-center gap-3">
+          {/* Icon badge */}
+          <div className="relative flex-shrink-0">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--sibling-primary)]/12 text-[var(--sibling-primary)]">
+              <IconPhone size={18} />
             </span>
-            <h1 className="text-2xl font-semibold text-foreground font-heading tracking-tight">
+            {/* live dot */}
+            <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground tracking-tight leading-none">
               Voice Drop
             </h1>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              Brief the agent, pick a product, and fire.
+            </p>
           </div>
-          <p className="text-[13px] text-muted-foreground max-w-lg leading-relaxed">
-            Brief the agent, pick a product, and hit fire and your AI rep handles the rest.{' '}
-            <span className="text-muted-foreground/50">
-              Workspace pre-fills the company. Catalog pulls live from Shopify &amp; WooCommerce.
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Agent status pill */}
+          {healthStatus && (
+            <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium border ${
+              healthStatus.ok
+                ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-600 dark:text-emerald-400'
+                : 'border-destructive/30 bg-destructive/8 text-destructive'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${healthStatus.ok ? 'bg-emerald-500' : 'bg-destructive'}`} />
+              {healthStatus.ok ? 'Agent ready' : 'Agent offline'}
             </span>
-          </p>
+          )}
+          <button
+            type="button"
+            onClick={checkHealth}
+            disabled={healthBusy || contextLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium border border-[var(--glass-border)] bg-[var(--glass-hover)]/60 hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-foreground transition-all disabled:opacity-40"
+          >
+            {healthBusy
+              ? <span className="inline-block w-3 h-3 rounded-full border border-current border-t-transparent animate-spin" />
+              : <IconActivity />}
+            {healthBusy ? 'Pinging…' : 'Ping agent'}
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={checkHealth}
-          disabled={healthBusy || contextLoading}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium border border-[var(--glass-border)] bg-[var(--glass-hover)]/60 hover:bg-[var(--glass-hover)] text-muted-foreground hover:text-foreground transition-all disabled:opacity-40"
-        >
-          <IconActivity />
-          {healthBusy ? 'Pinging…' : 'Ping agent'}
-        </button>
       </div>
-
-      {/* ── Health banner ── */}
-      {healthStatus && (
-        <div className={`mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl border text-[13px] ${
-          healthStatus.ok
-            ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400'
-            : 'border-destructive/30 bg-destructive/8 text-destructive'
-        }`}>
-          <span className={`flex h-5 w-5 items-center justify-center rounded-full flex-shrink-0 ${healthStatus.ok ? 'bg-emerald-500/15' : 'bg-destructive/15'}`}>
-            {healthStatus.ok ? <IconCheck /> : <IconAlertTriangle />}
-          </span>
-          {healthStatus.message}
-        </div>
-      )}
 
       {/* ── Context error ── */}
       {contextError && (
-        <div className="mt-3 flex items-center gap-2.5 px-4 py-3 rounded-xl border border-destructive/30 bg-destructive/8 text-[13px] text-destructive">
+        <div className="mb-4 max-w-[1280px] mx-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border border-destructive/30 bg-destructive/8 text-[13px] text-destructive">
           <IconAlertTriangle />
           {contextError}
         </div>
       )}
 
       {contextLoading ? (
-        <div className="mt-8 flex items-center gap-2 text-[13px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-[13px] text-muted-foreground mt-8 max-w-[1280px] mx-auto">
           <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-[var(--sibling-primary)] border-t-transparent animate-spin" />
           Loading workspace…
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit}>
 
-          {/* ── Section 1: Who are we calling ── */}
-          <FormSection
-            icon={<IconUser />}
-            title="Who are we calling?"
-            description="The lead this voice drop is aimed at"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel hint="E.164 format — starts with country code">
-                  Their number
-                </FieldLabel>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className={inputCls}
-                  placeholder="+91 98765 43210"
-                  autoComplete="tel"
-                />
-              </div>
-              <div>
-                <FieldLabel hint="How the agent addresses them">
-                  First name to use
-                </FieldLabel>
-                <input
-                  type="text"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  className={inputCls}
-                  placeholder="Samaira"
-                />
-              </div>
-            </div>
+          {/*
+           ┌─────────────────────────────────────────────────┐
+           │  60% LEFT — call config   │  40% RIGHT — agent  │
+           └─────────────────────────────────────────────────┘
+          */}
+          <div className="max-w-[1280px] mx-auto flex flex-col lg:flex-row gap-5 items-start">
 
-            <div>
-              <FieldLabel hint="Defaults to your workspace — edit if calling on behalf of another">
-                Calling from
-              </FieldLabel>
-              <input
-                type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                className={inputCls}
-                placeholder="Immortell"
-              />
-            </div>
+            {/* ════════════════════════════════
+                LEFT COLUMN  (60%)
+            ════════════════════════════════ */}
+            <div className="w-full lg:w-[60%] space-y-4">
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <FieldLabel hint="Sets Deepgram transcription locale">
-                  Conversation language
-                </FieldLabel>
-                <select
-                  value={languageMode}
-                  onChange={(e) => setLanguageMode(e.target.value as LanguageMode)}
-                  className={inputCls}
-                >
-                  {LANGUAGE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <FieldLabel hint={
-                  voiceMode === VOICE_MODE.quality
-                    ? <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_multilingual_v2</code> — richer, slower</>
-                    : voiceMode === VOICE_MODE.luxury
-                      ? <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_v3</code> — flagship, most expressive</>
-                      : <><code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">eleven_flash_v2_5</code> — instant, leaner</>
-                }>
-                  Voice priority
-                </FieldLabel>
-                <PillToggle
-                  options={[
-                    { id: VOICE_MODE.quality, label: '✦ Quality' },
-                    { id: VOICE_MODE.speed,   label: '⚡ Speed'   },
-                    { id: VOICE_MODE.luxury,  label: '◆ Luxury'  },
-                  ]}
-                  value={voiceMode}
-                  onChange={setVoiceMode}
-                />
-              </div>
-            </div>
-
-            <div>
-              <FieldLabel
-                htmlFor="call-center-llm-provider"
-                hint={
-                  <>
-                    Sent as{' '}
-                    <code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">llm_provider</code>
-                  </>
-                }
+              {/* ── Section 1: Who are we calling ── */}
+              <LeftSection
+                step={1}
+                icon={<IconUser />}
+                title="Who are we calling?"
+                description="Lead details for this voice drop"
               >
-                LLM provider
-              </FieldLabel>
-              <select
-                id="call-center-llm-provider"
-                name="llm_provider"
-                value={llmProvider}
-                onChange={(e) => setLlmProvider(e.target.value as LlmProviderValue)}
-                className={inputCls}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel hint="E.164 — include country code">Number</FieldLabel>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={inputCls}
+                      placeholder="+91 98765 43210"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel hint="How the agent addresses them">First name</FieldLabel>
+                    <input
+                      type="text"
+                      value={contactName}
+                      onChange={(e) => setContactName(e.target.value)}
+                      className={inputCls}
+                      placeholder="Samaira"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <FieldLabel hint="Pre-filled from your workspace">Calling from</FieldLabel>
+                  <input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    className={inputCls}
+                    placeholder="Immortell"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel hint="Deepgram transcription locale">Language</FieldLabel>
+                    <select
+                      value={languageMode}
+                      onChange={(e) => setLanguageMode(e.target.value as LanguageMode)}
+                      className={inputCls}
+                    >
+                      {LANGUAGE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel
+                      hint={
+                        voiceMode === VOICE_MODE.quality
+                          ? 'eleven_multilingual_v2 — richer, slower'
+                          : voiceMode === VOICE_MODE.luxury
+                            ? 'eleven_v3 — most expressive'
+                            : 'eleven_flash_v2_5 — instant response'
+                      }
+                    >
+                      Voice priority
+                    </FieldLabel>
+                    <PillToggle
+                      options={[
+                        { id: VOICE_MODE.speed,   label: '⚡ Speed'   },
+                        { id: VOICE_MODE.quality, label: '✦ Quality' },
+                        { id: VOICE_MODE.luxury,  label: '◆ Luxury'  },
+                      ]}
+                      value={voiceMode}
+                      onChange={setVoiceMode}
+                    />
+                  </div>
+                </div>
+
+                {/* LLM + Voice ID — two column compact */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel
+                      htmlFor="cc-llm"
+                      hint={LLM_PROVIDER_OPTIONS.find((o) => o.value === llmProvider)?.hint}
+                    >
+                      LLM model
+                    </FieldLabel>
+                    <select
+                      id="cc-llm"
+                      value={llmProvider}
+                      onChange={(e) => setLlmProvider(e.target.value as LlmProviderValue)}
+                      className={inputCls}
+                    >
+                      {LLM_PROVIDER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel htmlFor="cc-voice-id" hint="ElevenLabs voice ID">
+                      Voice ID
+                    </FieldLabel>
+                    <input
+                      id="cc-voice-id"
+                      type="text"
+                      value={voiceId}
+                      onChange={(e) => setVoiceId(e.target.value)}
+                      className={`${inputCls} font-mono text-[12px]`}
+                      placeholder={DEFAULT_VOICE_ID}
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+              </LeftSection>
+
+              {/* ── Section 2: What are we pitching ── */}
+              <LeftSection
+                step={2}
+                icon={<IconBox />}
+                title="What are we pitching?"
+                description="The product and context the agent leads with"
               >
-                {LLM_PROVIDER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div>
+                  <FieldLabel>Catalog source</FieldLabel>
+                  <PillToggle
+                    options={[
+                      { id: PRODUCT_SOURCE.shopify,     label: 'Shopify'     },
+                      { id: PRODUCT_SOURCE.woocommerce, label: 'WooCommerce' },
+                      { id: PRODUCT_SOURCE.custom,      label: 'Custom'      },
+                    ]}
+                    value={productSource}
+                    onChange={setProductSource}
+                  />
+                </div>
 
-            <div>
-              <FieldLabel
-                htmlFor="call-center-voice-id"
-                hint={
-                  <>
-                    ElevenLabs <code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">voiceId</code>{' '}
-                    — sent on every outbound call
-                  </>
-                }
-              >
-                Voice ID
-              </FieldLabel>
-              <input
-                id="call-center-voice-id"
-                name="voiceId"
-                type="text"
-                value={voiceId}
-                onChange={(e) => setVoiceId(e.target.value)}
-                className={`${inputCls} font-mono text-[13px]`}
-                placeholder={DEFAULT_VOICE_ID}
-                autoComplete="off"
-              />
-            </div>
-          </FormSection>
-
-          {/* ── Section 2: What are we pitching ── */}
-          <FormSection
-            icon={<IconBox />}
-            title="What are we pitching?"
-            description="The agent leads with this product and your perks angle"
-          >
-            <div>
-              <FieldLabel>Where is the product coming from?</FieldLabel>
-              <PillToggle
-                options={[
-                  { id: PRODUCT_SOURCE.shopify,     label: 'Shopify'     },
-                  { id: PRODUCT_SOURCE.woocommerce, label: 'WooCommerce' },
-                  { id: PRODUCT_SOURCE.custom,      label: 'Custom'      },
-                ]}
-                value={productSource}
-                onChange={setProductSource}
-              />
-            </div>
-
-            {productSource !== PRODUCT_SOURCE.custom ? (
-              <div>
-                <FieldLabel hint={inventoryLoading ? 'Pulling catalog…' : inventoryError ?? undefined}>
-                  Pick the product
-                </FieldLabel>
-                <select
-                  value={selectedInventoryId}
-                  onChange={(e) => setSelectedInventoryId(e.target.value)}
-                  disabled={inventoryLoading || inventoryOptions.filter((o) => o.source === productSource).length === 0}
-                  className={`${inputCls} disabled:opacity-50`}
-                >
-                  {inventoryOptions.filter((o) => o.source === productSource).length === 0 ? (
-                    <option value="">Nothing synced yet in this catalog</option>
-                  ) : (
-                    inventoryOptions
-                      .filter((o) => o.source === productSource)
-                      .map((o) => <option key={o.id} value={o.id}>{o.title}</option>)
-                  )}
-                </select>
-                {inventoryLoading && (
-                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
-                    <span className="inline-block w-3 h-3 rounded-full border border-[var(--sibling-primary)] border-t-transparent animate-spin" />
-                    Syncing catalogs…
+                {productSource !== PRODUCT_SOURCE.custom ? (
+                  <div>
+                    <FieldLabel hint={inventoryLoading ? 'Pulling catalog…' : inventoryError ?? undefined}>
+                      Product
+                    </FieldLabel>
+                    <select
+                      value={selectedInventoryId}
+                      onChange={(e) => setSelectedInventoryId(e.target.value)}
+                      disabled={inventoryLoading || inventoryOptions.filter((o) => o.source === productSource).length === 0}
+                      className={`${inputCls} disabled:opacity-50`}
+                    >
+                      {inventoryOptions.filter((o) => o.source === productSource).length === 0 ? (
+                        <option value="">Nothing synced yet</option>
+                      ) : (
+                        inventoryOptions
+                          .filter((o) => o.source === productSource)
+                          .map((o) => <option key={o.id} value={o.id}>{o.title}</option>)
+                      )}
+                    </select>
+                    {inventoryLoading && (
+                      <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/50">
+                        <span className="inline-block w-3 h-3 rounded-full border border-[var(--sibling-primary)] border-t-transparent animate-spin" />
+                        Syncing catalogs…
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <FieldLabel hint="Agent reads this as the product name">Offering name</FieldLabel>
+                    <input
+                      type="text"
+                      value={customProductTitle}
+                      onChange={(e) => setCustomProductTitle(e.target.value)}
+                      className={inputCls}
+                      placeholder="GEO authority package, monthly retainer"
+                    />
                   </div>
                 )}
-              </div>
-            ) : (
-              <div>
-                <FieldLabel hint="Free-text — agent reads this verbatim as the product">
-                  Name the offering
-                </FieldLabel>
-                <input
-                  type="text"
-                  value={customProductTitle}
-                  onChange={(e) => setCustomProductTitle(e.target.value)}
-                  className={inputCls}
-                  placeholder="GEO authority package, monthly retainer"
-                />
-              </div>
-            )}
 
-            <div>
-              <FieldLabel hint="Hook the agent opens with — discount, bonus, limited window">
-                The hook (optional)
-              </FieldLabel>
-              <input
-                type="text"
-                value={perks}
-                onChange={(e) => setPerks(e.target.value)}
-                className={inputCls}
-                placeholder="First month 10% off, onboarding included"
-              />
-            </div>
-
-            <div>
-              <FieldLabel
-                htmlFor="call-center-info-about-lead"
-                hint={
-                  <>
-                    Sent as{' '}
-                    <code className="text-[10px] font-mono bg-[var(--glass-border)]/40 px-1 rounded">
-                      info_about_lead
-                    </code>{' '}
-                    — the more context, the sharper the conversation
-                  </>
-                }
-              >
-                Intel on this lead
-              </FieldLabel>
-              <textarea
-                id="call-center-info-about-lead"
-                name="info_about_lead"
-                value={infoAboutLead}
-                onChange={(e) => setInfoAboutLead(e.target.value)}
-                rows={4}
-                className={`${inputCls} resize-y min-h-[96px]`}
-                placeholder="Runs a boutique maternity brand, asked about visibility last week, open to a 15-min call on Fridays."
-              />
-            </div>
-          </FormSection>
-
-          {/* ── Section 3: Agent instructions ── */}
-          <FormSection
-            icon={<IconZap />}
-            title="Agent instructions"
-            description="Optional overrides — leave empty and/or use AI to auto-generate"
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <FieldLabel
-                  htmlFor="call-center-system-prompt"
-                  hint={<>Leave empty to let AI smartly figure it out for you</>}
-                >
-                  System prompt
-                </FieldLabel>
-                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={useAiSystemPrompt}
-                    onChange={(e) => setUseAiSystemPrompt(e.target.checked)}
-                    className="accent-[var(--sibling-primary)]"
-                  />
-                  Use AI
-                </label>
-              </div>
-              <textarea
-                id="call-center-system-prompt"
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                disabled={useAiSystemPrompt}
-                rows={5}
-                className={`${inputCls} resize-y min-h-[120px] disabled:opacity-50`}
-                placeholder="Define the agent persona, goal, tone, constraints…"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <FieldLabel
-                  htmlFor="call-center-opening-greeting"
-                  hint={<>Leave empty to let AI smartly figure it out for you</>}
-                >
-                  Opening greeting
-                </FieldLabel>
-                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={useAiOpeningGreeting}
-                    onChange={(e) => setUseAiOpeningGreeting(e.target.checked)}
-                    className="accent-[var(--sibling-primary)]"
-                  />
-                  Use AI
-                </label>
-              </div>
-              <textarea
-                id="call-center-opening-greeting"
-                value={openingGreeting}
-                onChange={(e) => setOpeningGreeting(e.target.value)}
-                disabled={useAiOpeningGreeting}
-                rows={3}
-                className={`${inputCls} resize-y min-h-[84px] disabled:opacity-50`}
-                placeholder="The very first line the agent says."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel hint={<>Leave empty to let AI smartly figure it out for you</>}>
-                    Agent name
-                  </FieldLabel>
-                  <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel hint="Discount, bonus, limited window">The hook</FieldLabel>
                     <input
-                      type="checkbox"
-                      checked={useAiAgentName}
-                      onChange={(e) => setUseAiAgentName(e.target.checked)}
-                      className="accent-[var(--sibling-primary)]"
+                      type="text"
+                      value={perks}
+                      onChange={(e) => setPerks(e.target.value)}
+                      className={inputCls}
+                      placeholder="10% off, onboarding included"
                     />
-                    Use AI
-                  </label>
+                  </div>
+                  <div>
+                    {/* intentionally empty — asymmetric feel */}
+                  </div>
                 </div>
-                <input
-                  type="text"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  disabled={useAiAgentName}
-                  className={`${inputCls} disabled:opacity-50`}
-                  placeholder="Aarav"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <FieldLabel hint={<>Leave empty to let AI smartly figure it out for you</>}>
-                    Agent role
-                  </FieldLabel>
-                  <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
-                    <input
-                      type="checkbox"
-                      checked={useAiAgentRole}
-                      onChange={(e) => setUseAiAgentRole(e.target.checked)}
-                      className="accent-[var(--sibling-primary)]"
-                    />
-                    Use AI
-                  </label>
-                </div>
-                <input
-                  type="text"
-                  value={agentRole}
-                  onChange={(e) => setAgentRole(e.target.value)}
-                  disabled={useAiAgentRole}
-                  className={`${inputCls} disabled:opacity-50`}
-                  placeholder="Senior Sales Associate"
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-3">
-                <FieldLabel
-                  htmlFor="call-center-questions"
-                  hint={<>Recommended: don’t add more than 3 questions</>}
-                >
-                  Questions to ask
-                </FieldLabel>
-                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
-                  <input
-                    type="checkbox"
-                    checked={useAiQuestions}
-                    onChange={(e) => setUseAiQuestions(e.target.checked)}
-                    className="accent-[var(--sibling-primary)]"
+                <div>
+                  <FieldLabel
+                    htmlFor="cc-lead-info"
+                    hint="The more context you give, the sharper the conversation"
+                  >
+                    Intel on this lead
+                  </FieldLabel>
+                  <textarea
+                    id="cc-lead-info"
+                    value={infoAboutLead}
+                    onChange={(e) => setInfoAboutLead(e.target.value)}
+                    rows={4}
+                    className={`${inputCls} resize-y min-h-[96px]`}
+                    placeholder="Runs a boutique maternity brand, asked about visibility last week, open to calls on Fridays."
                   />
-                  Use AI
-                </label>
-              </div>
-              <textarea
-                id="call-center-questions"
-                value={questionsToAsk}
-                onChange={(e) => setQuestionsToAsk(e.target.value)}
-                disabled={useAiQuestions}
-                rows={4}
-                className={`${inputCls} resize-y min-h-[96px] disabled:opacity-50`}
-                placeholder={"1) What are you using today?\n2) What’s your monthly budget?\n3) When do you want to start?"}
-              />
-              {!useAiQuestions && (
-                <div className="text-[11px] text-muted-foreground/60">
-                  We’ll only send the first <span className="font-semibold text-foreground">3</span> non-empty lines.
+                </div>
+              </LeftSection>
+
+              {/* ── Call preview strip ── */}
+              {previewReady && (
+                <div className="rounded-xl border border-[var(--sibling-primary)]/25 bg-[var(--sibling-primary)]/6 px-4 py-3 text-[12px] leading-relaxed">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)]">
+                      <IconCheck size={10} />
+                    </span>
+                    <span className="font-semibold text-[var(--sibling-primary)] text-[11px] uppercase tracking-wide">
+                      Ready to dial
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Calling{' '}
+                    <span className="font-semibold text-foreground">{contactName.trim()}</span>
+                    {' '}at{' '}
+                    <span className="font-mono text-foreground">{phone.trim()}</span>
+                    {' '}· pitching{' '}
+                    <span className="font-semibold text-foreground">{resolvedProduct}</span>
+                    {' '}· {langLabel}{' '}
+                    · {voiceMode === VOICE_MODE.luxury ? 'luxury' : voiceMode === VOICE_MODE.quality ? 'quality' : 'fast'} voice
+                    {' '}· via <span className="font-semibold text-foreground">{llmProvider}</span>
+                  </p>
                 </div>
               )}
-            </div>
-          </FormSection>
 
-          {/* ── Call preview strip ── */}
-          {previewReady && (
-            <div className="rounded-xl border border-[var(--sibling-primary)]/20 bg-[var(--sibling-primary)]/5 px-4 py-3 text-[12px] text-muted-foreground leading-relaxed">
-              <span className="font-semibold text-[var(--sibling-primary)]">Ready to dial · </span>
-              calling <span className="font-semibold text-foreground">{contactName.trim()}</span> at{' '}
-              <span className="font-mono text-foreground">{phone.trim()}</span> · pitching{' '}
-              <span className="font-semibold text-foreground">{resolvedProduct}</span> · in{' '}
-              {langLabel} ·{' '}
-              {voiceMode === VOICE_MODE.quality
-                ? 'quality'
-                : voiceMode === VOICE_MODE.luxury
-                  ? 'luxury'
-                  : 'fast'}{' '}
-              voice
-            </div>
-          )}
+              {/* ── Submit feedback ── */}
+              {submitMessage && (
+                <div className={`flex gap-3 px-4 py-3.5 rounded-xl border text-[13px] ${
+                  submitMessage.type === 'success'
+                    ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400'
+                    : 'border-destructive/30 bg-destructive/8 text-destructive'
+                }`}>
+                  <span className={`mt-0.5 flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full ${
+                    submitMessage.type === 'success' ? 'bg-emerald-500/15' : 'bg-destructive/15'
+                  }`}>
+                    {submitMessage.type === 'success'
+                      ? <IconCheck size={12} />
+                      : <IconAlertTriangle size={12} />}
+                  </span>
+                  <div>
+                    <p>{submitMessage.text}</p>
+                    {submitMessage.detail && (
+                      <pre className="mt-2 text-[11px] whitespace-pre-wrap break-all opacity-70 font-mono">
+                        {submitMessage.detail}
+                      </pre>
+                    )}
+                  </div>
+                </div>
+              )}
 
-          {/* ── Submit feedback ── */}
-          {submitMessage && (
-            <div className={`flex gap-3 px-4 py-3.5 rounded-xl border text-[13px] ${
-              submitMessage.type === 'success'
-                ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400'
-                : 'border-destructive/30 bg-destructive/8 text-destructive'
-            }`}>
-              <span className={`mt-0.5 flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full ${submitMessage.type === 'success' ? 'bg-emerald-500/15' : 'bg-destructive/15'}`}>
-                {submitMessage.type === 'success' ? <IconCheck /> : <IconAlertTriangle />}
-              </span>
-              <div>
-                <p>{submitMessage.text}</p>
-                {submitMessage.detail && (
-                  <pre className="mt-2 text-[11px] whitespace-pre-wrap break-all opacity-70 font-mono">
-                    {submitMessage.detail}
-                  </pre>
+              {/* ── Submit button ── */}
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="submit"
+                  disabled={submitBusy}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13px] font-semibold bg-[var(--sibling-primary)] hover:opacity-90 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_-4px_var(--sibling-primary)]"
+                >
+                  {submitBusy ? (
+                    <>
+                      <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      Queueing call…
+                    </>
+                  ) : (
+                    <>
+                      <IconZap size={13} />
+                      Drop the call
+                    </>
+                  )}
+                </button>
+                {!previewReady && (
+                  <span className="text-[11px] text-muted-foreground/40">
+                    Fill phone, name &amp; product to unlock
+                  </span>
                 )}
               </div>
             </div>
-          )}
 
-          {/* ── Submit ── */}
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              type="submit"
-              disabled={submitBusy}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold border border-[var(--sibling-primary)] bg-[var(--sibling-primary)] hover:opacity-90 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_16px_-4px_var(--sibling-primary)]"
-            >
-              {submitBusy ? (
-                <>
-                  <span className="inline-block w-3.5 h-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                  Queueing…
-                </>
-              ) : (
-                <>
-                  <IconZap />
-                  Drop the call
-                </>
-              )}
-            </button>
-            {!previewReady && (
-              <span className="text-[11px] text-muted-foreground/45">
-                Fill phone, name &amp; product to unlock
-              </span>
-            )}
-          </div>
+            {/* ════════════════════════════════
+                RIGHT COLUMN  (40%) — sticky
+            ════════════════════════════════ */}
+            <div className="w-full lg:w-[40%] lg:sticky lg:top-4">
+              <div className="rounded-2xl border border-[var(--glass-border)] overflow-hidden">
+
+                {/* Panel header */}
+                <div className="px-5 py-4 border-b border-[var(--glass-border)] bg-[var(--sibling-primary)]/5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)]">
+                        <IconBot size={16} />
+                      </span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-foreground leading-none">Agent Instructions</p>
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                          Overrides — or let AI handle it
+                        </p>
+                      </div>
+                    </div>
+                    {/* Auto badge showing how many are set to AI */}
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--sibling-primary)]/10 border border-[var(--sibling-primary)]/20 text-[11px] font-semibold text-[var(--sibling-primary)]">
+                      <IconSparkles size={10} />
+                      {autoCount}/5 auto
+                    </span>
+                  </div>
+
+                  {/* "All AI" shortcut */}
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--glass-border)]/50">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseAiSystemPrompt(true);
+                        setUseAiOpeningGreeting(true);
+                        setUseAiAgentName(true);
+                        setUseAiAgentRole(true);
+                        setUseAiQuestions(true);
+                      }}
+                      className="text-[11px] text-[var(--sibling-primary)] hover:underline font-medium"
+                    >
+                      ✦ Let AI handle everything
+                    </button>
+                    <span className="text-muted-foreground/30 text-[10px]">·</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseAiSystemPrompt(false);
+                        setUseAiOpeningGreeting(false);
+                        setUseAiAgentName(false);
+                        setUseAiAgentRole(false);
+                        setUseAiQuestions(false);
+                      }}
+                      className="text-[11px] text-muted-foreground/60 hover:text-foreground hover:underline"
+                    >
+                      Override all manually
+                    </button>
+                  </div>
+                </div>
+
+                {/* Instruction rows */}
+                <div className="p-5 space-y-5 divide-y divide-[var(--glass-border)]">
+
+                  {/* System prompt */}
+                  <div className="pt-0">
+                    <InstructionRow
+                      icon={<IconCpu size={12} />}
+                      label="System prompt"
+                      hint="Agent persona, goal, tone & constraints"
+                      aiChecked={useAiSystemPrompt}
+                      onAiChange={setUseAiSystemPrompt}
+                    >
+                      <textarea
+                        id="cc-system-prompt"
+                        value={systemPrompt}
+                        onChange={(e) => setSystemPrompt(e.target.value)}
+                        rows={4}
+                        className={`${inputCls} resize-y min-h-[96px] text-[12px]`}
+                        placeholder="You are Aarav, a senior sales associate at {company}. Your goal is to…"
+                      />
+                    </InstructionRow>
+                  </div>
+
+                  {/* Opening greeting */}
+                  <div className="pt-4">
+                    <InstructionRow
+                      icon={<IconMessageSquare size={12} />}
+                      label="Opening greeting"
+                      hint="First line the agent says when call connects"
+                      aiChecked={useAiOpeningGreeting}
+                      onAiChange={setUseAiOpeningGreeting}
+                    >
+                      <textarea
+                        id="cc-greeting"
+                        value={openingGreeting}
+                        onChange={(e) => setOpeningGreeting(e.target.value)}
+                        rows={2}
+                        className={`${inputCls} resize-y min-h-[56px] text-[12px]`}
+                        placeholder="Hi {name}, this is Aarav calling from {company}…"
+                      />
+                    </InstructionRow>
+                  </div>
+
+                  {/* Agent identity — name + role side by side */}
+                  <div className="pt-4 grid grid-cols-2 gap-4">
+                    <InstructionRow
+                      icon={<IconUser />}
+                      label="Agent name"
+                      aiChecked={useAiAgentName}
+                      onAiChange={setUseAiAgentName}
+                    >
+                      <input
+                        type="text"
+                        value={agentName}
+                        onChange={(e) => setAgentName(e.target.value)}
+                        className={`${inputCls} text-[12px]`}
+                        placeholder="Aarav"
+                      />
+                    </InstructionRow>
+                    <InstructionRow
+                      icon={<IconZap size={12} />}
+                      label="Agent role"
+                      aiChecked={useAiAgentRole}
+                      onAiChange={setUseAiAgentRole}
+                    >
+                      <input
+                        type="text"
+                        value={agentRole}
+                        onChange={(e) => setAgentRole(e.target.value)}
+                        className={`${inputCls} text-[12px]`}
+                        placeholder="Sales Associate"
+                      />
+                    </InstructionRow>
+                  </div>
+
+                  {/* Questions */}
+                  <div className="pt-4">
+                    <InstructionRow
+                      icon={<IconHelpCircle size={12} />}
+                      label="Questions to ask"
+                      hint="Max 3 — one per line"
+                      aiChecked={useAiQuestions}
+                      onAiChange={setUseAiQuestions}
+                    >
+                      <textarea
+                        id="cc-questions"
+                        value={questionsToAsk}
+                        onChange={(e) => setQuestionsToAsk(e.target.value)}
+                        rows={4}
+                        className={`${inputCls} resize-y min-h-[96px] text-[12px]`}
+                        placeholder={"1) What are you currently using?\n2) What's your monthly budget?\n3) When do you want to start?"}
+                      />
+                      {!useAiQuestions && (
+                        <p className="mt-1.5 text-[11px] text-muted-foreground/50">
+                          Only the first <span className="font-semibold text-foreground">3</span> non-empty lines are sent.
+                        </p>
+                      )}
+                    </InstructionRow>
+                  </div>
+
+                </div>
+
+                {/* Panel footer — voice model line */}
+                <div className="px-5 py-3 border-t border-[var(--glass-border)] bg-[var(--glass-hover)]/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+                    <IconMic size={11} />
+                    <span>
+                      {voiceMode === VOICE_MODE.luxury
+                        ? 'eleven_v3'
+                        : voiceMode === VOICE_MODE.quality
+                          ? 'eleven_multilingual_v2'
+                          : 'eleven_flash_v2_5'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+                    <IconCpu size={11} />
+                    <span className="capitalize">{llmProvider}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+                    <span>{langLabel}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>{/* end split */}
         </form>
       )}
     </div>
