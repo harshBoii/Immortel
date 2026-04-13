@@ -66,8 +66,8 @@ const IconAlertTriangle = () => (
 /* ── constants ── */
 
 const LANGUAGE_OPTIONS = [
-  { value: 'english',  label: 'English' },
-  { value: 'hindi',    label: 'Hindi'   },
+  {value: 'english',  label: 'English' },
+  {value: 'hindi',    label: 'Hindi'   },
   {value: 'marathi',   label: 'Marathi' },
   {value: 'kannada',   label: 'Kannada' },
   {value: 'telugu',    label: 'Telugu' },
@@ -77,6 +77,21 @@ const LANGUAGE_OPTIONS = [
   {value: 'bengali',   label: 'Bengali' },
   {value: 'gujarati',  label: 'Gujarati' },
 ];
+
+  const DEEPGRAM_LANGUAGE_OPTIONS = {
+    "kannada": "kn",   // Kannada
+    "tamil": "ta",   // Tamil
+    "telugu": "te",   // Telugu
+    "malayalam": "ml",   // Malayalam
+    "marathi": "mr",   // Marathi
+    "gujarati": "gu",   // Gujarati
+    "bengali": "bn",   // Bengali
+    "punjabi": "pa",   // Punjabi
+    "odia": "od",   // Odia
+    "english": "en",   
+    "hindi": "hi",   
+  };
+
 
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
 const VOICE_MODE     = { quality: 'quality', speed: 'speed', luxury: 'eleven_v3' };
@@ -289,7 +304,7 @@ export default function CallCenterPage() {
         voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
         llm_provider:     llmProvider,
         language:         languageMode,
-        deepgram_language: languageMode === "hindi" ? "hi" : languageMode === "english" ? "en" : "multi",
+        deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode as keyof typeof DEEPGRAM_LANGUAGE_OPTIONS],
    
       };
 
