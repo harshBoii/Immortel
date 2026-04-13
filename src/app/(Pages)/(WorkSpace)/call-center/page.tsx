@@ -66,31 +66,34 @@ const IconAlertTriangle = () => (
 /* ── constants ── */
 
 const LANGUAGE_OPTIONS = [
-  {value: 'english',  label: 'English' },
-  {value: 'hindi',    label: 'Hindi'   },
-  {value: 'marathi',   label: 'Marathi' },
-  {value: 'kannada',   label: 'Kannada' },
-  {value: 'telugu',    label: 'Telugu' },
-  {value: 'tamil',     label: 'Tamil' },
-  {value: 'malayalam', label: 'Malayalam' },
-  {value: 'punjabi',   label: 'Punjabi' },
-  {value: 'bengali',   label: 'Bengali' },
-  {value: 'gujarati',  label: 'Gujarati' },
-];
+  { value: 'english',   label: 'English' },
+  { value: 'hindi',     label: 'Hindi' },
+  { value: 'marathi',   label: 'Marathi' },
+  { value: 'kannada',   label: 'Kannada' },
+  { value: 'telugu',    label: 'Telugu' },
+  { value: 'tamil',     label: 'Tamil' },
+  { value: 'malayalam', label: 'Malayalam' },
+  { value: 'punjabi',   label: 'Punjabi' },
+  { value: 'bengali',   label: 'Bengali' },
+  { value: 'gujarati',  label: 'Gujarati' },
+  { value: 'odia',      label: 'Odia' },
+] as const;
 
-  const DEEPGRAM_LANGUAGE_OPTIONS = {
-    "kannada": "kn",   // Kannada
-    "tamil": "ta",   // Tamil
-    "telugu": "te",   // Telugu
-    "malayalam": "ml",   // Malayalam
-    "marathi": "mr",   // Marathi
-    "gujarati": "gu",   // Gujarati
-    "bengali": "bn",   // Bengali
-    "punjabi": "pa",   // Punjabi
-    "odia": "od",   // Odia
-    "english": "en",   
-    "hindi": "hi",   
-  };
+type LanguageMode = (typeof LANGUAGE_OPTIONS)[number]['value'];
+
+const DEEPGRAM_LANGUAGE_OPTIONS: Record<LanguageMode, string> = {
+  english:   'en',
+  hindi:     'hi',
+  marathi:   'mr',
+  kannada:   'kn',
+  telugu:    'te',
+  tamil:     'ta',
+  malayalam: 'ml',
+  punjabi:   'pa',
+  bengali:   'bn',
+  gujarati:  'gu',
+  odia:      'or',
+};
 
 
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
@@ -195,7 +198,7 @@ export default function CallCenterPage() {
   const [phone,               setPhone]               = useState('');
   const [contactName,         setContactName]         = useState('');
   const [companyName,         setCompanyName]         = useState('');
-  const [languageMode,        setLanguageMode]        = useState('english');
+  const [languageMode,        setLanguageMode]        = useState<LanguageMode>('english');
   const [voiceMode,           setVoiceMode]           = useState(VOICE_MODE.speed);   // ← speed default
   const [voiceId,             setVoiceId]             = useState(DEFAULT_VOICE_ID);
   const [llmProvider,         setLlmProvider]         = useState<LlmProviderValue>('groq');
@@ -304,7 +307,7 @@ export default function CallCenterPage() {
         voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
         llm_provider:     llmProvider,
         language:         languageMode,
-        deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode as keyof typeof DEEPGRAM_LANGUAGE_OPTIONS],
+        deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode] ?? 'en',
    
       };
 
@@ -458,7 +461,7 @@ export default function CallCenterPage() {
                 </FieldLabel>
                 <select
                   value={languageMode}
-                  onChange={(e) => setLanguageMode(e.target.value)}
+                  onChange={(e) => setLanguageMode(e.target.value as LanguageMode)}
                   className={inputCls}
                 >
                   {LANGUAGE_OPTIONS.map((o) => (
