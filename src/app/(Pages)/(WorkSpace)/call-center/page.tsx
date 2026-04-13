@@ -68,15 +68,14 @@ const IconAlertTriangle = () => (
 const LANGUAGE_OPTIONS = [
   { value: 'english',  label: 'English' },
   { value: 'hindi',    label: 'Hindi'   },
-  { value: 'other',    label: 'Other (multi)' },
-  {value: 'marathi',   label: 'Other (multi)' },
-  {value: 'kannada',   label: 'Other (multi)' },
-  {value: 'telugu',    label: 'Other (multi)' },
-  {value: 'tamil',     label: 'Other (multi)' },
-  {value: 'malayalam', label: 'Other (multi)' },
-  {value: 'punjabi',   label: 'Other (multi)' },
-  {value: 'bengali',   label: 'Other (multi)' },
-  {value: 'gujarati',  label: 'Other (multi)' },
+  {value: 'marathi',   label: 'Marathi' },
+  {value: 'kannada',   label: 'Kannada' },
+  {value: 'telugu',    label: 'Telugu' },
+  {value: 'tamil',     label: 'Tamil' },
+  {value: 'malayalam', label: 'Malayalam' },
+  {value: 'punjabi',   label: 'Punjabi' },
+  {value: 'bengali',   label: 'Bengali' },
+  {value: 'gujarati',  label: 'Gujarati' },
 ];
 
 const PRODUCT_SOURCE = { shopify: 'shopify', woocommerce: 'woocommerce', custom: 'custom' };
@@ -289,6 +288,8 @@ export default function CallCenterPage() {
         voiceMode,
         voiceId:          voiceId.trim() || DEFAULT_VOICE_ID,
         llm_provider:     llmProvider,
+        language:         languageMode,
+        deepgram_language: languageMode === "hindi" || languageMode === "english" ? languageMode : "multi",
       };
 
       console.log('[call-center] outbound payload', payload);
