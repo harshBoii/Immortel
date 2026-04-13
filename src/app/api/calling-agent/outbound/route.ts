@@ -5,9 +5,15 @@ const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
 const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
 
 type VoiceMode = "quality" | "speed" | "eleven_v3";
-type LlmProvider = "gemini" | "openai" | "claude" | "groq";
+type LlmProvider = "gemini" | "openai" | "claude" | "groq" | "sarvam";
 
-const LLM_PROVIDERS: LlmProvider[] = ["gemini", "openai", "claude", "groq"];
+const LLM_PROVIDERS: LlmProvider[] = [
+  "gemini",
+  "openai",
+  "claude",
+  "groq",
+  "sarvam",
+];
 
 /** Slugs aligned with call-center page `LANGUAGE_OPTIONS` */
 const LANGUAGE_SLUGS = [

@@ -131,6 +131,7 @@ const LLM_PROVIDER_OPTIONS = [
   { value: 'gemini', label: 'Gemini', hint: 'Multimodal'        },
   { value: 'openai', label: 'OpenAI', hint: 'GPT-4o'            },
   { value: 'claude', label: 'Claude', hint: 'Most nuanced'      },
+  { value: 'sarvam', label: 'Sarvam', hint: 'Indian languages'    },
 ] as const;
 type LlmProviderValue = (typeof LLM_PROVIDER_OPTIONS)[number]['value'];
 
