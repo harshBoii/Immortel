@@ -202,6 +202,16 @@ export default function CallCenterPage() {
   const [voiceMode,           setVoiceMode]           = useState(VOICE_MODE.speed);   // ← speed default
   const [voiceId,             setVoiceId]             = useState(DEFAULT_VOICE_ID);
   const [llmProvider,         setLlmProvider]         = useState<LlmProviderValue>('groq');
+  const [useAiSystemPrompt,   setUseAiSystemPrompt]   = useState(true);
+  const [systemPrompt,        setSystemPrompt]        = useState('');
+  const [useAiOpeningGreeting,setUseAiOpeningGreeting]= useState(true);
+  const [openingGreeting,     setOpeningGreeting]     = useState('');
+  const [useAiAgentName,      setUseAiAgentName]      = useState(true);
+  const [agentName,           setAgentName]           = useState('');
+  const [useAiAgentRole,      setUseAiAgentRole]      = useState(true);
+  const [agentRole,           setAgentRole]           = useState('');
+  const [useAiQuestions,      setUseAiQuestions]      = useState(true);
+  const [questionsToAsk,      setQuestionsToAsk]      = useState('');
   const [productSource,       setProductSource]       = useState(PRODUCT_SOURCE.shopify);
   const [shopifyProducts,     setShopifyProducts]     = useState<ProductItem[]>([]);
   const [wooProducts,         setWooProducts]         = useState<ProductItem[]>([]);
@@ -295,6 +305,13 @@ export default function CallCenterPage() {
     }
     setSubmitBusy(true);
     try {
+      const trimmedQuestions = questionsToAsk
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join('\n');
+
       const payload = {
         to,
         name:             contactName.trim(),
@@ -308,6 +325,11 @@ export default function CallCenterPage() {
         llm_provider:     llmProvider,
         language:         languageMode,
         deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode] ?? 'en',
+        system_prompt:    useAiSystemPrompt ? undefined : (systemPrompt.trim() || undefined),
+        opening_greeting: useAiOpeningGreeting ? undefined : (openingGreeting.trim() || undefined),
+        agent_name:       useAiAgentName ? undefined : (agentName.trim() || undefined),
+        agent_role:       useAiAgentRole ? undefined : (agentRole.trim() || undefined),
+        questions_to_ask: useAiQuestions ? undefined : (trimmedQuestions || undefined),
    
       };
 
@@ -640,6 +662,156 @@ export default function CallCenterPage() {
                 className={`${inputCls} resize-y min-h-[96px]`}
                 placeholder="Runs a boutique maternity brand, asked about visibility last week, open to a 15-min call on Fridays."
               />
+            </div>
+          </FormSection>
+
+          {/* ── Section 3: Agent instructions ── */}
+          <FormSection
+            icon={<IconZap />}
+            title="Agent instructions"
+            description="Optional overrides — leave empty and/or use AI to auto-generate"
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel
+                  htmlFor="call-center-system-prompt"
+                  hint={<>Leave empty to let AI smartly figure it out for you</>}
+                >
+                  System prompt
+                </FieldLabel>
+                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                  <input
+                    type="checkbox"
+                    checked={useAiSystemPrompt}
+                    onChange={(e) => setUseAiSystemPrompt(e.target.checked)}
+                    className="accent-[var(--sibling-primary)]"
+                  />
+                  Use AI
+                </label>
+              </div>
+              <textarea
+                id="call-center-system-prompt"
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                disabled={useAiSystemPrompt}
+                rows={5}
+                className={`${inputCls} resize-y min-h-[120px] disabled:opacity-50`}
+                placeholder="Define the agent persona, goal, tone, constraints…"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel
+                  htmlFor="call-center-opening-greeting"
+                  hint={<>Leave empty to let AI smartly figure it out for you</>}
+                >
+                  Opening greeting
+                </FieldLabel>
+                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                  <input
+                    type="checkbox"
+                    checked={useAiOpeningGreeting}
+                    onChange={(e) => setUseAiOpeningGreeting(e.target.checked)}
+                    className="accent-[var(--sibling-primary)]"
+                  />
+                  Use AI
+                </label>
+              </div>
+              <textarea
+                id="call-center-opening-greeting"
+                value={openingGreeting}
+                onChange={(e) => setOpeningGreeting(e.target.value)}
+                disabled={useAiOpeningGreeting}
+                rows={3}
+                className={`${inputCls} resize-y min-h-[84px] disabled:opacity-50`}
+                placeholder="The very first line the agent says."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel hint={<>Leave empty to let AI smartly figure it out for you</>}>
+                    Agent name
+                  </FieldLabel>
+                  <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                    <input
+                      type="checkbox"
+                      checked={useAiAgentName}
+                      onChange={(e) => setUseAiAgentName(e.target.checked)}
+                      className="accent-[var(--sibling-primary)]"
+                    />
+                    Use AI
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={agentName}
+                  onChange={(e) => setAgentName(e.target.value)}
+                  disabled={useAiAgentName}
+                  className={`${inputCls} disabled:opacity-50`}
+                  placeholder="Aarav"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <FieldLabel hint={<>Leave empty to let AI smartly figure it out for you</>}>
+                    Agent role
+                  </FieldLabel>
+                  <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                    <input
+                      type="checkbox"
+                      checked={useAiAgentRole}
+                      onChange={(e) => setUseAiAgentRole(e.target.checked)}
+                      className="accent-[var(--sibling-primary)]"
+                    />
+                    Use AI
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={agentRole}
+                  onChange={(e) => setAgentRole(e.target.value)}
+                  disabled={useAiAgentRole}
+                  className={`${inputCls} disabled:opacity-50`}
+                  placeholder="Senior Sales Associate"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <FieldLabel
+                  htmlFor="call-center-questions"
+                  hint={<>Recommended: don’t add more than 3 questions</>}
+                >
+                  Questions to ask
+                </FieldLabel>
+                <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                  <input
+                    type="checkbox"
+                    checked={useAiQuestions}
+                    onChange={(e) => setUseAiQuestions(e.target.checked)}
+                    className="accent-[var(--sibling-primary)]"
+                  />
+                  Use AI
+                </label>
+              </div>
+              <textarea
+                id="call-center-questions"
+                value={questionsToAsk}
+                onChange={(e) => setQuestionsToAsk(e.target.value)}
+                disabled={useAiQuestions}
+                rows={4}
+                className={`${inputCls} resize-y min-h-[96px] disabled:opacity-50`}
+                placeholder={"1) What are you using today?\n2) What’s your monthly budget?\n3) When do you want to start?"}
+              />
+              {!useAiQuestions && (
+                <div className="text-[11px] text-muted-foreground/60">
+                  We’ll only send the first <span className="font-semibold text-foreground">3</span> non-empty lines.
+                </div>
+              )}
             </div>
           </FormSection>
 
