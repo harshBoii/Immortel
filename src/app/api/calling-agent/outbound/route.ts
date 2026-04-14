@@ -6,6 +6,7 @@ const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
 
 type VoiceMode = "quality" | "speed" | "eleven_v3";
 type LlmProvider = "gemini" | "openai" | "claude" | "groq" | "sarvam";
+type SarvamSpeaker = "rohan" | "dev" | "sunny";
 
 const LLM_PROVIDERS: LlmProvider[] = [
   "gemini",
@@ -71,6 +72,22 @@ function optionalTrimmedString(v: unknown): string | undefined {
   return t || undefined;
 }
 
+function optionalBoolean(v: unknown): boolean | undefined {
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    if (s === "true") return true;
+    if (s === "false") return false;
+  }
+  return undefined;
+}
+
+function normalizeSarvamSpeaker(raw: unknown): SarvamSpeaker | undefined {
+  const s = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  if (s === "rohan" || s === "dev" || s === "sunny") return s;
+  return undefined;
+}
+
 export type OutboundForwardedPayload = {
   to: string;
   name: string;
@@ -87,6 +104,8 @@ export type OutboundForwardedPayload = {
   deepgram_language: string;
   /** Derived for ElevenLabs; included so the client sees the full outbound shape. */
   elevenlabs_model: string;
+  use_sarvam_tts?: boolean;
+  sarvam_speaker?: SarvamSpeaker;
   system_prompt?: string;
   opening_greeting?: string;
   agent_name?: string;
@@ -147,6 +166,8 @@ export async function POST(request: Request) {
   const agent_name = optionalTrimmedString(body.agent_name);
   const agent_role = optionalTrimmedString(body.agent_role);
   const questions_to_ask = optionalTrimmedString(body.questions_to_ask);
+  const use_sarvam_tts = optionalBoolean(body.use_sarvam_tts) ?? false;
+  const sarvam_speaker = normalizeSarvamSpeaker(body.sarvam_speaker);
 
   if (!to || !name || !company || !product) {
     return NextResponse.json(
@@ -174,6 +195,11 @@ export async function POST(request: Request) {
     llm_provider,
   };
 
+  payload.use_sarvam_tts = use_sarvam_tts;
+  if (use_sarvam_tts && sarvam_speaker !== undefined) {
+    payload.sarvam_speaker = sarvam_speaker;
+  }
+
   if (system_prompt !== undefined) payload.system_prompt = system_prompt;
   if (opening_greeting !== undefined) payload.opening_greeting = opening_greeting;
   if (agent_name !== undefined) payload.agent_name = agent_name;
@@ -194,6 +220,8 @@ export async function POST(request: Request) {
     language: languageMode,
     deepgram_language,
     elevenlabs_model,
+    use_sarvam_tts,
+    ...(use_sarvam_tts && sarvam_speaker !== undefined && { sarvam_speaker }),
     ...(system_prompt !== undefined && { system_prompt }),
     ...(opening_greeting !== undefined && { opening_greeting }),
     ...(agent_name !== undefined && { agent_name }),

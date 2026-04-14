@@ -135,6 +135,13 @@ const LLM_PROVIDER_OPTIONS = [
 ] as const;
 type LlmProviderValue = (typeof LLM_PROVIDER_OPTIONS)[number]['value'];
 
+const SARVAM_SPEAKER_OPTIONS = [
+  { value: 'rohan', label: 'Rohan' },
+  { value: 'dev',   label: 'Dev' },
+  { value: 'sunny', label: 'Sunny' },
+] as const;
+type SarvamSpeaker = (typeof SARVAM_SPEAKER_OPTIONS)[number]['value'];
+
 /* ─── sub-components ─────────────────────────────────── */
 
 const inputCls =
@@ -291,6 +298,8 @@ export default function CallCenterPage() {
   const [agentRole,            setAgentRole]            = useState('');
   const [useAiQuestions,       setUseAiQuestions]       = useState(true);
   const [questionsToAsk,       setQuestionsToAsk]       = useState('');
+  const [useSarvamTts,         setUseSarvamTts]         = useState(false);
+  const [sarvamSpeaker,        setSarvamSpeaker]        = useState<SarvamSpeaker>('rohan');
   const [productSource,        setProductSource]        = useState(PRODUCT_SOURCE.shopify);
   const [shopifyProducts,      setShopifyProducts]      = useState<ProductItem[]>([]);
   const [wooProducts,          setWooProducts]          = useState<ProductItem[]>([]);
@@ -400,6 +409,8 @@ export default function CallCenterPage() {
         llm_provider:      llmProvider,
         language:          languageMode,
         deepgram_language: DEEPGRAM_LANGUAGE_OPTIONS[languageMode] ?? 'en',
+        use_sarvam_tts:    useSarvamTts,
+        sarvam_speaker:    useSarvamTts ? sarvamSpeaker : undefined,
         system_prompt:     useAiSystemPrompt    ? undefined : (systemPrompt.trim()    || undefined),
         opening_greeting:  useAiOpeningGreeting ? undefined : (openingGreeting.trim() || undefined),
         agent_name:        useAiAgentName       ? undefined : (agentName.trim()       || undefined),
@@ -634,6 +645,43 @@ export default function CallCenterPage() {
                       placeholder={DEFAULT_VOICE_ID}
                       autoComplete="off"
                     />
+                  </div>
+                </div>
+
+                {/* Sarvam TTS */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <FieldLabel hint="Send to agent as use_sarvam_tts">
+                      Sarvam TTS
+                    </FieldLabel>
+                    <label className="flex items-center gap-2 text-[12px] text-muted-foreground select-none">
+                      <input
+                        type="checkbox"
+                        checked={useSarvamTts}
+                        onChange={(e) => setUseSarvamTts(e.target.checked)}
+                        className="accent-[var(--sibling-primary)]"
+                      />
+                      Enabled
+                    </label>
+                    <p className="mt-1 text-[11px] text-muted-foreground/50 leading-snug">
+                      Leave off to use your normal voice settings.
+                    </p>
+                  </div>
+                  <div>
+                    <FieldLabel htmlFor="cc-sarvam-speaker" hint="Send to agent as sarvam_speaker">
+                      Sarvam speaker
+                    </FieldLabel>
+                    <select
+                      id="cc-sarvam-speaker"
+                      value={sarvamSpeaker}
+                      onChange={(e) => setSarvamSpeaker(e.target.value as SarvamSpeaker)}
+                      disabled={!useSarvamTts}
+                      className={`${inputCls} disabled:opacity-50`}
+                    >
+                      {SARVAM_SPEAKER_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </LeftSection>
