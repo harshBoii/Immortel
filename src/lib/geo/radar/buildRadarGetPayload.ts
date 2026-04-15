@@ -63,6 +63,7 @@ export async function buildRadarGetPayload(
     promptIdsFromRivals,
     topicPrompts,
     llmTopics,
+    promptsByModelAgg,
     promptMetrics,
     allBountiesForRevenue,
   ] = await Promise.all([
@@ -110,6 +111,12 @@ export async function buildRadarGetPayload(
       where: cw,
       orderBy: { createdAt: "desc" },
       take: takeLlmTopics,
+    }),
+    prisma.llmPromptMetric.groupBy({
+      by: ["model"],
+      where: cw,
+      _count: { promptId: true },
+      orderBy: { _count: { promptId: "desc" } },
     }),
     prisma.llmPromptMetric.findMany({
       where: cw,
@@ -494,6 +501,11 @@ export async function buildRadarGetPayload(
     avgQueryCoverage: v.count ? v.coverage / v.count : 0,
   }));
 
+  const promptsByModel = promptsByModelAgg.map((g) => ({
+    model: g.model,
+    count: g._count.promptId,
+  }));
+
   const actionQueueDedup = new Map<
     string,
     {
@@ -577,6 +589,7 @@ export async function buildRadarGetPayload(
     })),
     sovSeries,
     modelBreakdown,
+    promptsByModel,
     top3BenchmarkPct: TOP3_BENCHMARK_PCT,
     citationIntelligence: citationIntel.slice(0, 80).map((c) => ({
       promptId: c.promptId,

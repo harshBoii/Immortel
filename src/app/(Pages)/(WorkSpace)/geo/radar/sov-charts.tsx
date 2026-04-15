@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { ViewMoreDropdown } from "@/app/components/common/UI/ViewMoreDropdown";
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
   Legend,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -143,66 +144,86 @@ export function SovTrendChart({
   );
 }
 
-export type ModelBreakRow = {
+export type PromptByModel = {
   model: string;
-  avgShareOfVoice: number;
-  avgTop3Rate: number;
-  avgQueryCoverage: number;
+  count: number;
 };
 
-export function ModelBreakdownChart({
-  rows,
-  compare,
-  rivalColor,
-  primaryName = "You",
-}: {
-  rows: ModelBreakRow[];
-  compare?: { label: string; rows: ModelBreakRow[] } | null;
-  rivalColor?: string;
-  primaryName?: string;
-}) {
-  const compareByModel = new Map<string, number>();
-  for (const r of compare?.rows ?? []) {
-    compareByModel.set(r.model, Math.round(r.avgShareOfVoice * 10) / 10);
-  }
+const PIE_COLORS = [
+  "var(--primary)",
+  "#f97316",
+  "#a855f7",
+  "#06b6d4",
+  "#ec4899",
+  "#84cc16",
+  "#f59e0b",
+  "#14b8a6",
+  "#6366f1",
+  "#ef4444",
+  "#10b981",
+];
 
-  const data = rows.map((r) => ({
-    model: r.model,
-    label: r.model.length > 12 ? `${r.model.slice(0, 12)}…` : r.model,
-    sov: Math.round(r.avgShareOfVoice * 10) / 10,
-    rivalSov: compareByModel.get(r.model) ?? null,
-  }));
+export function ModelPromptPieChart({
+  data = [],
+}: {
+  data?: PromptByModel[];
+}) {
   if (data.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground py-8 text-center">No model breakdown.</p>
+      <p className="text-xs text-muted-foreground py-8 text-center">No prompt data by model.</p>
     );
   }
+
+  const total = data.reduce((s, d) => s + d.count, 0);
+
   return (
-    <div className="h-[220px] w-full min-w-0">
+    <div className="h-[260px] w-full min-w-0 flex items-center">
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--glass-border)]" />
-        <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-        <YAxis tick={{ fontSize: 10 }} unit="%" />
-        <Tooltip
-          contentStyle={{
-            background: "var(--glass)",
-            border: "1px solid var(--glass-border)",
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-        />
-        <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="sov" name={primaryName} fill="var(--primary)" radius={[4, 4, 0, 0]} />
-        {compare ? (
-          <Bar
-            dataKey="rivalSov"
-            name={compare.label}
-            fill={rivalColor ?? RIVAL_COLORS[0]}
-            radius={[4, 4, 0, 0]}
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="count"
+            nameKey="model"
+            cx="50%"
+            cy="50%"
+            innerRadius={45}
+            outerRadius={85}
+            paddingAngle={2}
+            label={(entry) => {
+              const payload = entry as unknown as { model?: string; count?: number };
+              const m = String(payload.model ?? "");
+              const c = Number(payload.count ?? 0);
+              const pct = total > 0 ? ((c / total) * 100).toFixed(1) : "0";
+              const name = m.length > 14 ? `${m.slice(0, 14)}…` : m;
+              return `${name} (${pct}%)`;
+            }}
+            labelLine={{ strokeWidth: 1 }}
+          >
+            {data.map((_, i) => (
+              <Cell
+                key={i}
+                fill={PIE_COLORS[i % PIE_COLORS.length]}
+                stroke="var(--glass-border)"
+                strokeWidth={1}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            formatter={(value: number | undefined, name: string | undefined) => {
+              const v = Number(value ?? 0);
+              return [
+                `${v} prompt${v !== 1 ? "s" : ""} (${total > 0 ? ((v / total) * 100).toFixed(1) : 0}%)`,
+                name ?? "",
+              ];
+            }}
+            contentStyle={{
+              background: "var(--glass)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
           />
-        ) : null}
-        </BarChart>
+        </PieChart>
       </ResponsiveContainer>
     </div>
   );
@@ -246,13 +267,55 @@ export function RadarCompareCharts({
   base,
   rivals,
 }: {
-  base: { sovSeries: SovPoint[]; modelBreakdown: ModelBreakRow[] };
+  base: { sovSeries: SovPoint[]; promptsByModel?: PromptByModel[] };
   rivals: Array<{ id: string; name: string }>;
 }) {
   const [compareId, setCompareId] = useState<string>("");
   const [comparePayload, setComparePayload] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const [basePromptsByModel, setBasePromptsByModel] = useState<PromptByModel[]>(
+    base.promptsByModel ?? []
+  );
+  const [basePromptsLoading, setBasePromptsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      // If server already provided it, don’t refetch.
+      if ((base.promptsByModel ?? []).length > 0) {
+        setBasePromptsByModel(base.promptsByModel ?? []);
+        return;
+      }
+      setBasePromptsLoading(true);
+      try {
+        const res = await fetch("/api/geo/radar/prompts-by-model", {
+          method: "GET",
+          credentials: "include",
+        });
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok || !json?.success) {
+          // Don’t hard-fail the page; just show empty.
+          setBasePromptsByModel([]);
+          return;
+        }
+        setBasePromptsByModel((json.promptsByModel ?? []) as PromptByModel[]);
+      } finally {
+        if (!cancelled) setBasePromptsLoading(false);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [base.promptsByModel]);
+
+  const basePromptTotal = useMemo(
+    () => (basePromptsByModel ?? []).reduce((s, r) => s + (Number(r.count) || 0), 0),
+    [basePromptsByModel]
+  );
 
   const compareLabel = useMemo(() => {
     const raw = rivals.find((r) => r.id === compareId)?.name ?? "";
@@ -305,7 +368,7 @@ export function RadarCompareCharts({
     ? {
         label: compareLabel,
         sovSeries: (comparePayload.sovSeries ?? []) as SovPoint[],
-        modelBreakdown: (comparePayload.modelBreakdown ?? []) as ModelBreakRow[],
+        promptsByModel: (comparePayload.promptsByModel ?? []) as PromptByModel[],
       }
     : null;
 
@@ -388,15 +451,24 @@ export function RadarCompareCharts({
           </div>
         </div>
         <div className="glass-card card-anime-float min-w-0 rounded-xl p-4">
-          <h3 className="text-sm font-semibold text-foreground">Model breakdown</h3>
-          <p className="text-xs text-muted-foreground mt-1">Average SoV by model</p>
-          <div className="mt-2 min-h-[220px] w-full min-w-0">
-            <ModelBreakdownChart
-              rows={base.modelBreakdown}
-              compare={compare ? { label: compare.label, rows: compare.modelBreakdown } : null}
-              rivalColor={rivalColor}
-            />
+          <h3 className="text-sm font-semibold text-foreground">Prompts by model</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Prompt distribution across LLMs{basePromptTotal ? ` · ${basePromptTotal} prompts tracked` : ""}
+          </p>
+          <div className="mt-2 min-h-[260px] w-full min-w-0">
+            <ModelPromptPieChart data={basePromptsByModel ?? []} />
           </div>
+          {basePromptsLoading ? (
+            <p className="mt-1 text-[11px] text-muted-foreground">Loading prompt metrics…</p>
+          ) : null}
+          {compare && (compare.promptsByModel ?? []).length > 0 ? (
+            <div className="mt-4 border-t border-[var(--glass-border)] pt-4">
+              <p className="text-xs text-muted-foreground mb-2">{compare.label} prompts by model</p>
+              <div className="min-h-[260px] w-full min-w-0">
+                <ModelPromptPieChart data={compare.promptsByModel ?? []} />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 

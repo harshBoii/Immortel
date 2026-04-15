@@ -64,6 +64,10 @@ export default async function RadarContent() {
     }),
   ]);
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[geo/radar] companyId", companyId, "promptsByModel", payload.promptsByModel?.length ?? 0);
+  }
+
 
   
   const hasRadarMetrics = payload.metrics.length > 0;
@@ -190,7 +194,7 @@ export default async function RadarContent() {
       
       {hasRadarMetrics ? (
         <RadarCompareCharts
-          base={{ sovSeries: payload.sovSeries, modelBreakdown: payload.modelBreakdown }}
+          base={{ sovSeries: payload.sovSeries }}
           rivals={rivals
             .map((r) => r.rivalCompany)
             .filter((c): c is { id: string; name: string } => Boolean(c))}
