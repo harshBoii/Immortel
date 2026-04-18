@@ -8,9 +8,17 @@ import { ThemeProvider } from "./components/common/ThemeProvider";
 const themeScript = `
 (function() {
   var t = localStorage.getItem('theme');
-  var dark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  if (dark) document.documentElement.classList.add('dark');
-  else document.documentElement.classList.remove('dark');
+  if (t === 'graphite') t = 'midnight';
+  if (t !== 'dark' && t !== 'light' && t !== 'minimal' && t !== 'midnight' && t !== 'monochrome' && t !== 'paper') {
+    t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  var h = document.documentElement;
+  h.classList.remove('dark', 'minimal', 'monochrome');
+  if (t === 'dark') h.classList.add('dark');
+  else if (t === 'minimal') h.classList.add('minimal');
+  else if (t === 'midnight') { h.classList.add('minimal'); h.classList.add('dark'); }
+  else if (t === 'monochrome') { h.classList.add('dark'); h.classList.add('monochrome'); }
+  else if (t === 'paper') { h.classList.add('monochrome'); }
 })();
 `;
 

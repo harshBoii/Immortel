@@ -2,7 +2,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+export type Theme =
+  | 'light'
+  | 'dark'
+  | 'minimal'
+  | 'midnight'
+  | 'monochrome'
+  | 'paper';
 
 const ThemeContext = createContext<{
   theme: Theme;
@@ -11,34 +17,57 @@ const ThemeContext = createContext<{
 } | null>(null);
 
 const STORAGE_KEY = 'theme';
+const VALID_THEMES: readonly Theme[] = [
+  'light',
+  'dark',
+  'minimal',
+  'midnight',
+  'monochrome',
+  'paper',
+];
+
+function applyThemeClass(theme: Theme) {
+  const h = document.documentElement;
+  h.classList.remove('dark', 'minimal', 'monochrome');
+  if (theme === 'dark') {
+    h.classList.add('dark');
+  } else if (theme === 'minimal') {
+    h.classList.add('minimal');
+  } else if (theme === 'midnight') {
+    h.classList.add('minimal', 'dark');
+  } else if (theme === 'monochrome') {
+    h.classList.add('dark', 'monochrome');
+  } else if (theme === 'paper') {
+    h.classList.add('monochrome');
+  }
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const isDark =
-      stored === 'dark' ||
-      (!stored && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const next: Theme = isDark ? 'dark' : 'light';
-    setThemeState(next);
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === 'graphite') {
+      localStorage.setItem(STORAGE_KEY, 'midnight');
     }
-    setMounted(true);
+    const stored = (raw === 'graphite' ? 'midnight' : raw) as Theme | null;
+    let next: Theme;
+    if (stored && (VALID_THEMES as readonly string[]).includes(stored)) {
+      next = stored;
+    } else {
+      const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches;
+      next = prefersDark ? 'dark' : 'light';
+    }
+    setThemeState(next);
+    applyThemeClass(next);
   }, []);
 
   const setTheme = (next: Theme) => {
     setThemeState(next);
     localStorage.setItem(STORAGE_KEY, next);
-    if (next === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyThemeClass(next);
   };
 
   const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');

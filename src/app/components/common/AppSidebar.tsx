@@ -6,8 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap } from 'lucide-react';
-import { DayNightLottieToggle } from '../animations/dayNight/DayNightLottieToggle';
-import { useTheme } from './ThemeProvider';
+import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
 
 /* ============================================
@@ -446,7 +445,6 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
 export default function AppSidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
-  const { theme } = useTheme();
   const [activeSection,    setActiveSection]    = useState('home');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const {
@@ -596,12 +594,9 @@ export default function AppSidebar() {
         <div className="mt-auto flex flex-col items-center gap-1 pt-4 w-full px-2">
           <div className="w-8 h-px bg-[var(--sidebar-glass-border)] mb-2 opacity-50" />
 
-          <DayNightLottieToggle
-            labelId="sidebar-theme-toggle-label"
-            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground hover:text-black dark:hover:text-[var(--alien-glow-green)] transition-colors"
-          />
-          <span id="sidebar-theme-toggle-label" className="text-[9px] leading-none text-muted-foreground/50 mb-1">
-            {theme === 'dark' ? 'Dark' : 'Light'}
+          <ThemePicker orientation="vertical" />
+          <span id="sidebar-theme-toggle-label" className="text-[9px] leading-none text-muted-foreground/50 mb-1 mt-1">
+            Theme
           </span>
 
           <Link

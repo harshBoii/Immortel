@@ -370,6 +370,658 @@
 }
 
 
+/* ======================================================
+   PAPER — Editorial white & ink (light monochrome)
+   White is the central color. Text and accents are
+   pure greys and near-black. No chroma anywhere.
+   ====================================================== */
+.monochrome:not(.dark) {
+  --radius: 0.5rem;
+
+  --sibling-primary:       oklch(0.18 0 0);   /* near-black ink */
+  --sibling-primary-light: oklch(0.32 0 0);
+  --sibling-primary-dark:  oklch(0.08 0 0);
+  --sibling-accent:        oklch(0.40 0 0);
+  --sibling-accent-light:  oklch(0.55 0 0);
+  --sibling-surface:       #ffffff;
+  --sibling-surface-hover: oklch(0.97 0 0);
+
+  --alien-glow-green:   oklch(0.30 0 0 / 0.18);
+  --alien-core-green:   oklch(0.22 0 0 / 0.30);
+  --alien-accent-green: oklch(0.14 0 0 / 0.40);
+
+  --success:            oklch(0.45 0 0);
+  --success-foreground: #ffffff;
+  --warning:            oklch(0.55 0 0);
+  --warning-foreground: #ffffff;
+  --info:               oklch(0.50 0 0);
+  --info-foreground:    #ffffff;
+
+  --bokeh-body-1:   transparent;
+  --bokeh-body-2:   transparent;
+  --bokeh-body-3:   transparent;
+  --bokeh-primary:  transparent;
+  --bokeh-accent:   transparent;
+  --bokeh-tertiary: transparent;
+
+  --glass:            #ffffff;
+  --glass-bg:         #ffffff;
+  --glass-bg-solid:   #ffffff;
+  --glass-border:     rgba(0, 0, 0, 0.08);
+  --glass-border-top: rgba(0, 0, 0, 0.06);
+  --glass-shadow:     0 1px 2px rgba(0, 0, 0, 0.04),
+                        0 1px 3px rgba(0, 0, 0, 0.03);
+  --glass-shadow-lg:  0 6px 24px rgba(0, 0, 0, 0.06),
+                        0 2px 6px rgba(0, 0, 0, 0.04);
+  --glass-blur:       0px;
+  --glass-saturate:   1;
+  --glass-hover:      oklch(0.97 0 0);
+  --glass-active:     oklch(0.92 0 0);
+
+  --sidebar-glass-bg:               #ffffff;
+  --sidebar-glass-border:           rgba(0, 0, 0, 0.07);
+  --sidebar-secondary-glass-bg:     oklch(0.985 0 0);
+  --sidebar-secondary-glass-border: rgba(0, 0, 0, 0.08);
+  --sidebar-secondary-header-border: rgba(0, 0, 0, 0.14);
+  --sidebar-icon-bg:                oklch(0.96 0 0);
+  --sidebar-icon-active:            oklch(0.90 0 0);
+
+  --navbar-glass-bg:     rgba(255, 255, 255, 0.96);
+  --navbar-glass-border: rgba(0, 0, 0, 0.07);
+
+  --tier-free:        oklch(0.55 0 0);
+  --tier-pro:         oklch(0.18 0 0);
+  --tier-business:    oklch(0.28 0 0);
+  --tier-enterprise:  oklch(0.08 0 0);
+  --tier-trial:       oklch(0.45 0 0);
+
+  --background:           #ffffff;
+  --foreground:           oklch(0.14 0 0);  /* near-black ink */
+  --card:                 #ffffff;
+  --card-foreground:      oklch(0.14 0 0);
+  --popover:              #ffffff;
+  --popover-foreground:   oklch(0.14 0 0);
+  --primary:              oklch(0.14 0 0);  /* black on white CTA */
+  --primary-foreground:   #ffffff;
+  --secondary:            oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.14 0 0);
+  --muted:                oklch(0.96 0 0);
+  --muted-foreground:     oklch(0.48 0 0);  /* mid-grey */
+  --accent:               oklch(0.94 0 0);
+  --accent-foreground:    oklch(0.14 0 0);
+  --destructive:          oklch(0.55 0.2 27);
+  --border:               rgba(0, 0, 0, 0.09);
+  --input:                #ffffff;
+  --ring:                 oklch(0.22 0 0);
+
+  --chart-1: oklch(0.14 0 0);
+  --chart-2: oklch(0.35 0 0);
+  --chart-3: oklch(0.55 0 0);
+  --chart-4: oklch(0.72 0 0);
+  --chart-5: oklch(0.86 0 0);
+
+  --sidebar:                    #ffffff;
+  --sidebar-foreground:         oklch(0.14 0 0);
+  --sidebar-primary:            oklch(0.14 0 0);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             oklch(0.96 0 0);
+  --sidebar-accent-foreground:  oklch(0.14 0 0);
+  --sidebar-border:             rgba(0, 0, 0, 0.08);
+  --sidebar-ring:               oklch(0.22 0 0);
+}
+
+
+/* ======================================================
+   MONOCHROME — Editorial black & white
+   True achromatic neutrals, no gold or chroma accents.
+   Near-black canvas, soft white ink, layered grey surfaces.
+   ====================================================== */
+.dark.monochrome,
+.monochrome.dark {
+  --sibling-primary:       oklch(0.94 0 0);
+  --sibling-primary-light: oklch(0.98 0 0);
+  --sibling-primary-dark:  oklch(0.78 0 0);
+  --sibling-accent:        oklch(0.55 0 0);
+  --sibling-accent-light:  oklch(0.70 0 0);
+  --sibling-surface:       oklch(0.10 0 0);
+  --sibling-surface-hover: oklch(0.14 0 0);
+
+  --alien-glow-green:   oklch(0.88 0 0);
+  --alien-core-green:   oklch(0.75 0 0);
+  --alien-accent-green: oklch(0.55 0 0);
+
+  --success:            oklch(0.78 0 0);
+  --success-foreground: oklch(0.08 0 0);
+  --warning:            oklch(0.72 0 0);
+  --warning-foreground: oklch(0.08 0 0);
+  --info:               oklch(0.68 0 0);
+  --info-foreground:    oklch(0.08 0 0);
+
+  --bokeh-body-1:   transparent;
+  --bokeh-body-2:   transparent;
+  --bokeh-body-3:   transparent;
+  --bokeh-primary:  transparent;
+  --bokeh-accent:   transparent;
+  --bokeh-tertiary: transparent;
+
+  --glass:            oklch(0.11 0 0 / 0.85);
+  --glass-bg:         oklch(0.11 0 0 / 0.85);
+  --glass-bg-solid:   oklch(0.09 0 0 / 0.98);
+  --glass-border:     rgba(255, 255, 255, 0.10);
+  --glass-border-top: rgba(255, 255, 255, 0.14);
+  --glass-shadow:     0 4px 24px rgba(0, 0, 0, 0.45),
+                        0 1px 6px rgba(0, 0, 0, 0.35),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --glass-shadow-lg:  0 8px 48px rgba(0, 0, 0, 0.55),
+                        0 2px 12px rgba(0, 0, 0, 0.4),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --glass-blur:       20px;
+  --glass-saturate:   1;
+  --glass-hover:      oklch(0.15 0 0 / 0.72);
+  --glass-active:     oklch(0.94 0 0 / 0.12);
+
+  --sidebar-glass-bg:               oklch(0.09 0 0 / 0.88);
+  --sidebar-glass-border:           rgba(255, 255, 255, 0.09);
+  --sidebar-secondary-glass-bg:     oklch(0.12 0 0 / 0.9);
+  --sidebar-secondary-glass-border: rgba(255, 255, 255, 0.08);
+  --sidebar-secondary-header-border: rgba(255, 255, 255, 0.14);
+  --sidebar-icon-bg:                oklch(0.14 0 0 / 0.65);
+  --sidebar-icon-active:            oklch(0.94 0 0 / 0.14);
+
+  --navbar-glass-bg:     oklch(0.08 0 0 / 0.92);
+  --navbar-glass-border: rgba(255, 255, 255, 0.09);
+
+  --tier-free:        oklch(0.55 0 0);
+  --tier-pro:         oklch(0.88 0 0);
+  --tier-business:    oklch(0.72 0 0);
+  --tier-enterprise:  oklch(0.94 0 0);
+  --tier-trial:       oklch(0.78 0 0);
+
+  --background:           oklch(0.07 0 0);
+  --foreground:           oklch(0.96 0 0);
+  --card:                 oklch(0.11 0 0);
+  --card-foreground:      oklch(0.96 0 0);
+  --popover:              oklch(0.10 0 0);
+  --popover-foreground:   oklch(0.96 0 0);
+  --primary:              oklch(0.94 0 0);
+  --primary-foreground:   oklch(0.06 0 0);
+  --secondary:            oklch(0.16 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted:                oklch(0.16 0 0);
+  --muted-foreground:     oklch(0.62 0 0);
+  --accent:               oklch(0.18 0 0);
+  --accent-foreground:    oklch(0.96 0 0);
+  --destructive:          oklch(0.62 0.2 25);
+  --border:               rgba(255, 255, 255, 0.09);
+  --input:                oklch(0.14 0 0 / 0.85);
+  --ring:                 oklch(0.88 0 0);
+
+  --chart-1: oklch(0.92 0 0);
+  --chart-2: oklch(0.65 0 0);
+  --chart-3: oklch(0.45 0 0);
+  --chart-4: oklch(0.78 0 0);
+  --chart-5: oklch(0.32 0 0);
+
+  --sidebar:                    oklch(0.085 0 0);
+  --sidebar-foreground:         oklch(0.96 0 0);
+  --sidebar-primary:            oklch(0.94 0 0);
+  --sidebar-primary-foreground: oklch(0.06 0 0);
+  --sidebar-accent:             oklch(0.16 0 0);
+  --sidebar-accent-foreground:  oklch(0.96 0 0);
+  --sidebar-border:             rgba(255, 255, 255, 0.09);
+  --sidebar-ring:               oklch(0.88 0 0);
+}
+
+
+/* ======================================================
+   MINIMAL MODE — Enhanced (Render.com Inspired)
+   
+   Philosophy: Near-white surfaces · Ink-black text · 
+   Single cool-slate accent · Hairline borders · 
+   Precise depth through shadow, not color.
+   
+   Light  → Pure white + warm-off-white surfaces
+   Dark   → Deep graphite (not pure black) + same accent
+   
+   Accent: Slate-indigo (Render's "electric" blue-slate)
+   Primary text: Near-black with a cool tint
+   Muted:  Refined mid-grey, never warm
+   ====================================================== */
+
+   .minimal {
+    --radius: 0.375rem;   /* Tighter radius — more precision, less bubble */
+  
+    /* ── Brand tokens ── */
+    --sibling-primary:       oklch(0.46 0.18 262);    /* Slate-indigo          */
+    --sibling-primary-light: oklch(0.58 0.16 262);    /* Lighter slate         */
+    --sibling-primary-dark:  oklch(0.34 0.20 262);    /* Deep slate            */
+    --sibling-accent:        #0a0a0a;
+    --sibling-accent-light:  #1e1e1e;
+    --sibling-surface:       #ffffff;
+    --sibling-surface-hover: #f8f8f8;
+  
+    /* ── Kill alien greens ── */
+    --alien-glow-green:   transparent;
+    --alien-core-green:   transparent;
+    --alien-accent-green: transparent;
+  
+    /* ── Semantic ── */
+    --success:            oklch(0.50 0.16 145);
+    --success-foreground: #ffffff;
+    --warning:            oklch(0.62 0.16 72);
+    --warning-foreground: #0a0a0a;
+    --info:               oklch(0.46 0.18 262);
+    --info-foreground:    #ffffff;
+  
+    /* ── Kill bokeh ── */
+    --bokeh-body-1:   transparent;
+    --bokeh-body-2:   transparent;
+    --bokeh-body-3:   transparent;
+    --bokeh-primary:  transparent;
+    --bokeh-accent:   transparent;
+    --bokeh-tertiary: transparent;
+  
+    /* ── Glass → Flat surfaces ──
+       No blur, no glow. Pure white with hairline borders.
+       Depth comes only from shadow.                      */
+    --glass:            #ffffff;
+    --glass-bg:         #ffffff;
+    --glass-bg-solid:   #ffffff;
+    --glass-border:     rgba(0, 0, 0, 0.08);
+    --glass-border-top: rgba(0, 0, 0, 0.08);
+    --glass-shadow:     0 1px 2px rgba(0, 0, 0, 0.04),
+                        0 1px 3px rgba(0, 0, 0, 0.03);
+    --glass-shadow-lg:  0 4px 6px -1px rgba(0, 0, 0, 0.07),
+                        0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --glass-blur:       0px;
+    --glass-saturate:   1;
+    --glass-hover:      #f9f9fb;
+    --glass-active:     oklch(0.96 0.03 262);   /* Very faint slate tint on press */
+  
+    /* ── Sidebar glass (flat white) ── */
+    --sidebar-glass-bg:                #ffffff;
+    --sidebar-glass-border:            rgba(0, 0, 0, 0.07);
+    --sidebar-secondary-glass-bg:      #f7f7f8;
+    --sidebar-secondary-glass-border:  rgba(0, 0, 0, 0.08);
+    --sidebar-secondary-header-border: oklch(0.46 0.18 262 / 0.18);
+    --sidebar-icon-bg:                 #f3f3f5;
+    --sidebar-icon-active:             oklch(0.94 0.05 262);
+  
+    /* ── Navbar (flat white) ── */
+    --navbar-glass-bg:     rgba(255, 255, 255, 0.95);
+    --navbar-glass-border: rgba(0, 0, 0, 0.07);
+  
+    /* ── Tiers ── */
+    --tier-free:        #737373;
+    --tier-pro:         oklch(0.46 0.18 262);
+    --tier-business:    #171717;
+    --tier-enterprise:  #0a0a0a;
+    --tier-trial:       oklch(0.58 0.16 262);
+  
+    /* ── shadcn/ui Base Tokens ── */
+    --background:           #ffffff;
+    --foreground:           oklch(0.13 0.02 262);    /* Cool near-black ink     */
+    --card:                 #ffffff;
+    --card-foreground:      oklch(0.13 0.02 262);
+    --popover:              #ffffff;
+    --popover-foreground:   oklch(0.13 0.02 262);
+    --primary:              oklch(0.46 0.18 262);    /* Slate-indigo            */
+    --primary-foreground:   #ffffff;
+    --secondary:            #f4f4f6;
+    --secondary-foreground: oklch(0.13 0.02 262);
+    --muted:                #f4f4f6;
+    --muted-foreground:     oklch(0.50 0.02 262);    /* Cool mid-grey           */
+    --accent:               #f4f4f6;
+    --accent-foreground:    oklch(0.13 0.02 262);
+    --destructive:          oklch(0.55 0.22 27);
+    --border:               rgba(0, 0, 0, 0.08);
+    --input:                #ffffff;
+    --ring:                 oklch(0.46 0.18 262);
+  
+    /* ── Charts ── */
+    --chart-1: oklch(0.46 0.18 262);    /* Slate-indigo       */
+    --chart-2: #0a0a0a;
+    --chart-3: #737373;
+    --chart-4: oklch(0.62 0.15 262);    /* Lighter slate      */
+    --chart-5: #d4d4d8;
+  
+    /* ── Sidebar tokens ── */
+    --sidebar:                    #ffffff;
+    --sidebar-foreground:         oklch(0.13 0.02 262);
+    --sidebar-primary:            oklch(0.46 0.18 262);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent:             #f4f4f6;
+    --sidebar-accent-foreground:  oklch(0.13 0.02 262);
+    --sidebar-border:             rgba(0, 0, 0, 0.07);
+    --sidebar-ring:               oklch(0.46 0.18 262);
+  }
+  
+  
+  /* ======================================================
+     MINIMAL DARK — Deep graphite + Slate-indigo accent
+     
+     Not pure black — #0e0f11 base, same as Render's dark.
+     Surfaces are distinct graphite layers.
+     Accent stays the same hue, just lightened for contrast.
+     ====================================================== */
+  
+  .minimal.dark,
+  .dark.minimal {
+    --radius: 0.375rem;
+  
+    /* ── Brand tokens ── */
+    --sibling-primary:       oklch(0.65 0.18 262);    /* Lighter slate for dark  */
+    --sibling-primary-light: oklch(0.74 0.14 262);
+    --sibling-primary-dark:  oklch(0.54 0.20 262);
+    --sibling-accent:        oklch(0.92 0.01 262);    /* Near-white              */
+    --sibling-accent-light:  oklch(0.80 0.02 262);
+    --sibling-surface:       oklch(0.14 0.01 262);    /* Deep graphite surface   */
+    --sibling-surface-hover: oklch(0.18 0.01 262);
+  
+    /* ── Kill alien greens ── */
+    --alien-glow-green:   transparent;
+    --alien-core-green:   transparent;
+    --alien-accent-green: transparent;
+  
+    /* ── Semantic (Dark) ── */
+    --success:            oklch(0.65 0.18 145);
+    --success-foreground: oklch(0.10 0.01 262);
+    --warning:            oklch(0.75 0.18 72);
+    --warning-foreground: oklch(0.10 0.01 262);
+    --info:               oklch(0.65 0.18 262);
+    --info-foreground:    oklch(0.10 0.01 262);
+  
+    /* ── Kill bokeh ── */
+    --bokeh-body-1:   transparent;
+    --bokeh-body-2:   transparent;
+    --bokeh-body-3:   transparent;
+    --bokeh-primary:  transparent;
+    --bokeh-accent:   transparent;
+    --bokeh-tertiary: transparent;
+  
+    /* ── Glass → Flat dark surfaces ──
+       Render dark: layered graphite, no glow.
+       Borders are ultra-subtle light edges.    */
+    --glass:            oklch(0.14 0.01 262);
+    --glass-bg:         oklch(0.14 0.01 262);
+    --glass-bg-solid:   oklch(0.12 0.01 262);
+    --glass-border:     rgba(255, 255, 255, 0.07);
+    --glass-border-top: rgba(255, 255, 255, 0.10);
+    --glass-shadow:     0 1px 2px rgba(0, 0, 0, 0.3),
+                        0 1px 3px rgba(0, 0, 0, 0.2);
+    --glass-shadow-lg:  0 4px 6px -1px rgba(0, 0, 0, 0.4),
+                        0 2px 4px -1px rgba(0, 0, 0, 0.25);
+    --glass-blur:       0px;
+    --glass-saturate:   1;
+    --glass-hover:      oklch(0.18 0.01 262);
+    --glass-active:     oklch(0.46 0.18 262 / 0.2);
+  
+    /* ── Sidebar glass (dark) ── */
+    --sidebar-glass-bg:                oklch(0.12 0.01 262);
+    --sidebar-glass-border:            rgba(255, 255, 255, 0.07);
+    --sidebar-secondary-glass-bg:      oklch(0.15 0.01 262);
+    --sidebar-secondary-glass-border:  rgba(255, 255, 255, 0.07);
+    --sidebar-secondary-header-border: oklch(0.65 0.18 262 / 0.3);
+    --sidebar-icon-bg:                 oklch(0.18 0.01 262);
+    --sidebar-icon-active:             oklch(0.46 0.18 262 / 0.25);
+  
+    /* ── Navbar (dark) ── */
+    --navbar-glass-bg:     oklch(0.12 0.01 262 / 0.95);
+    --navbar-glass-border: rgba(255, 255, 255, 0.07);
+  
+    /* ── Tiers ── */
+    --tier-free:        oklch(0.55 0.01 262);
+    --tier-pro:         oklch(0.65 0.18 262);
+    --tier-business:    oklch(0.80 0.01 262);
+    --tier-enterprise:  oklch(0.92 0.01 262);
+    --tier-trial:       oklch(0.74 0.14 262);
+  
+    /* ── shadcn/ui Base Tokens (Minimal Dark) ── */
+    --background:           oklch(0.10 0.01 262);    /* #0e0f11 — Render base   */
+    --foreground:           oklch(0.93 0.01 262);    /* Cool near-white         */
+    --card:                 oklch(0.14 0.01 262);    /* Graphite card surface   */
+    --card-foreground:      oklch(0.93 0.01 262);
+    --popover:              oklch(0.14 0.01 262);
+    --popover-foreground:   oklch(0.93 0.01 262);
+    --primary:              oklch(0.65 0.18 262);    /* Bright slate-indigo     */
+    --primary-foreground:   oklch(0.10 0.01 262);
+    --secondary:            oklch(0.18 0.01 262);
+    --secondary-foreground: oklch(0.93 0.01 262);
+    --muted:                oklch(0.18 0.01 262);
+    --muted-foreground:     oklch(0.58 0.02 262);    /* Muted cool-grey         */
+    --accent:               oklch(0.18 0.01 262);
+    --accent-foreground:    oklch(0.93 0.01 262);
+    --destructive:          oklch(0.65 0.22 27);
+    --border:               rgba(255, 255, 255, 0.07);
+    --input:                oklch(0.16 0.01 262);
+    --ring:                 oklch(0.65 0.18 262);
+  
+    /* ── Charts (Minimal Dark) ── */
+    --chart-1: oklch(0.65 0.18 262);    /* Bright slate         */
+    --chart-2: oklch(0.92 0.01 262);    /* Near-white           */
+    --chart-3: oklch(0.55 0.02 262);    /* Mid-grey             */
+    --chart-4: oklch(0.74 0.14 262);    /* Lighter slate        */
+    --chart-5: oklch(0.30 0.01 262);    /* Dark graphite        */
+  
+    /* ── Sidebar tokens (Minimal Dark) ── */
+    --sidebar:                    oklch(0.12 0.01 262);
+    --sidebar-foreground:         oklch(0.93 0.01 262);
+    --sidebar-primary:            oklch(0.65 0.18 262);
+    --sidebar-primary-foreground: oklch(0.10 0.01 262);
+    --sidebar-accent:             oklch(0.18 0.01 262);
+    --sidebar-accent-foreground:  oklch(0.93 0.01 262);
+    --sidebar-border:             rgba(255, 255, 255, 0.07);
+    --sidebar-ring:               oklch(0.65 0.18 262);
+  }
+  
+  
+  /* ======================================================
+     MINIMAL MODE — Component Overrides
+     Applied only when .minimal is active.
+     Reinforces the Render-style precision: no glass 
+     effects bleed through, clean inputs, tight layout.
+     ====================================================== */
+  
+  /* ── Page background: pure white, no mesh ── */
+  .minimal body {
+    background-color: #ffffff;
+    background-image: none;
+  }
+  .minimal.dark body,
+  .dark.minimal body {
+    background-color: oklch(0.10 0.01 262);
+    background-image: none;
+  }
+  
+  /* ── Inputs: clean bordered, no backdrop-filter ── */
+  .minimal input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .minimal textarea,
+  .minimal select {
+    background-color: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    color: oklch(0.13 0.02 262);
+    border-radius: var(--radius-md);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .minimal input:focus,
+  .minimal textarea:focus,
+  .minimal select:focus {
+    background-color: #ffffff !important;
+    border-color: oklch(0.46 0.18 262) !important;
+    box-shadow: 0 0 0 3px oklch(0.46 0.18 262 / 0.12) !important;
+    outline: none;
+  }
+  
+  .minimal.dark input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .dark.minimal input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .minimal.dark textarea,
+  .dark.minimal textarea,
+  .minimal.dark select,
+  .dark.minimal select {
+    background-color: oklch(0.16 0.01 262) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.09) !important;
+    color: oklch(0.93 0.01 262);
+  }
+  .minimal.dark input:focus,
+  .dark.minimal input:focus,
+  .minimal.dark textarea:focus,
+  .dark.minimal textarea:focus {
+    border-color: oklch(0.65 0.18 262) !important;
+    box-shadow: 0 0 0 3px oklch(0.65 0.18 262 / 0.18) !important;
+  }
+  
+  /* ── Glass cards → flat cards with hairline border + shadow ── */
+  .minimal .glass-card,
+  .minimal .glass-card-elevated,
+  .minimal .glass {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-top-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .minimal .glass-card:hover,
+  .minimal .glass-card-elevated:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    transform: translateY(-1px);
+    border-color: rgba(0, 0, 0, 0.10);
+  }
+  
+  .minimal.dark .glass-card,
+  .dark.minimal .glass-card,
+  .minimal.dark .glass-card-elevated,
+  .dark.minimal .glass-card-elevated,
+  .minimal.dark .glass,
+  .dark.minimal .glass {
+    background: oklch(0.14 0.01 262);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-top-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+  .minimal.dark .glass-card:hover,
+  .dark.minimal .glass-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+  
+  /* ── Anime float cards → flat in minimal ── */
+  .minimal .card-anime-float {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  .minimal .card-anime-float::before,
+  .minimal .card-anime-float::after { display: none; }
+  .minimal .card-anime-float:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    transform: translateY(-1px);
+    border-color: rgba(0, 0, 0, 0.12);
+  }
+  
+  /* ── Navbar: crisp white, clean bottom border ── */
+  .minimal .glass-navbar {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: none;
+  }
+  .minimal.dark .glass-navbar,
+  .dark.minimal .glass-navbar {
+    background: oklch(0.10 0.01 262 / 0.97);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: none;
+  }
+  
+  /* ── Sidebar: flat white, hairline right border ── */
+  .minimal .glass-sidebar {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-right: 1px solid rgba(0, 0, 0, 0.07);
+    box-shadow: none;
+  }
+  .minimal.dark .glass-sidebar,
+  .dark.minimal .glass-sidebar {
+    background: oklch(0.12 0.01 262);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: none;
+  }
+  
+  /* ── Secondary sidebar: flat in minimal (no bevel/sheen) ── */
+  .minimal .glass-sidebar-secondary {
+    background: #f7f7f8;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-right: 1px solid rgba(0, 0, 0, 0.07);
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .minimal .glass-sidebar-secondary::before { display: none; }
+  .minimal.dark .glass-sidebar-secondary,
+  .dark.minimal .glass-sidebar-secondary {
+    background: oklch(0.14 0.01 262);
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: none;
+  }
+  .minimal.dark .glass-sidebar-secondary::before { display: none; }
+  
+  /* ── Buttons: precise, no gradients ── */
+  .minimal button[data-variant="default"],
+  .minimal [class*="btn-primary"],
+  .minimal .btn-primary {
+    background: oklch(0.46 0.18 262);
+    color: #ffffff;
+    border: 1px solid oklch(0.40 0.20 262);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+  }
+  .minimal button[data-variant="default"]:hover,
+  .minimal [class*="btn-primary"]:hover {
+    background: oklch(0.40 0.20 262);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  }
+  
+  /* ── Scrollbar: thin, minimal ── */
+  .minimal ::-webkit-scrollbar { width: 6px; height: 6px; }
+  .minimal ::-webkit-scrollbar-track { background: transparent; }
+  .minimal ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 99px;
+  }
+  .minimal ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+  .minimal.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); }
+  .minimal.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.20); }
+  
+  /* ── Selection: slate tint ── */
+  .minimal ::selection {
+    background: oklch(0.46 0.18 262 / 0.15);
+    color: oklch(0.13 0.02 262);
+  }
+  .minimal.dark ::selection {
+    background: oklch(0.65 0.18 262 / 0.25);
+    color: oklch(0.93 0.01 262);
+  }
+  
+  /* ── Focus ring: slate, clean ── */
+  .minimal :focus-visible {
+    outline: 2px solid oklch(0.46 0.18 262);
+    outline-offset: 2px;
+  }
+  .minimal.dark :focus-visible {
+    outline: 2px solid oklch(0.65 0.18 262);
+  }
+
 /* ================================
    BASE LAYER
    ================================ */
@@ -401,6 +1053,28 @@
     background-image: var(--page-mesh);
     background-attachment: fixed;
     background-size: 100% 100%;
+  }
+
+  html.dark.monochrome,
+  html.monochrome.dark {
+    background: oklch(0.07 0 0);
+    background-image: none;
+  }
+
+  .dark.monochrome body,
+  .monochrome.dark body {
+    background-color: oklch(0.07 0 0);
+    background-image: none;
+  }
+
+  html.monochrome:not(.dark) {
+    background: #ffffff;
+    background-image: none;
+  }
+
+  .monochrome:not(.dark) body {
+    background-color: #ffffff;
+    background-image: none;
   }
 
   /* All layout shells transparent in light so body parchment shows; dark uses --background */
@@ -438,6 +1112,36 @@
     background-color: oklch(0.12 0.008 60 / 0.6) !important;
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 25%, transparent),
                 inset 0 1px 0 oklch(0.22 0.012 60 / 0.4);
+  }
+
+  .dark.monochrome input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+  .dark.monochrome textarea:focus,
+  .dark.monochrome select:focus,
+  .monochrome.dark input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+  .monochrome.dark textarea:focus,
+  .monochrome.dark select:focus {
+    background-color: oklch(0.12 0 0 / 0.65) !important;
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 22%, transparent),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .monochrome:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  .monochrome:not(.dark) textarea,
+  .monochrome:not(.dark) select {
+    background-color: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    color: oklch(0.14 0 0);
+    border-radius: var(--radius-md);
+  }
+  .monochrome:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+  .monochrome:not(.dark) textarea:focus,
+  .monochrome:not(.dark) select:focus {
+    background-color: #ffffff !important;
+    border-color: oklch(0.22 0 0) !important;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -1230,5 +1934,335 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+}
+
+
+/* ================================
+   MINIMAL MODE — OVERRIDES (light minimal only)
+   Graphite = html.minimal.dark — see .minimal.dark block above.
+   Flatten every glass/bokeh/sheen utility for white minimal only.
+   ================================ */
+
+html.minimal:not(.dark),
+html.minimal:not(.dark) body {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+html.minimal:not(.dark) body > div,
+html.minimal:not(.dark) main,
+html.minimal:not(.dark) [role="main"] {
+  background-color: #ffffff;
+}
+
+html.minimal:not(.dark) .glass,
+html.minimal:not(.dark) .glass-solid,
+html.minimal:not(.dark) .glass-sidebar,
+html.minimal:not(.dark) .glass-sidebar-secondary,
+html.minimal:not(.dark) .glass-navbar,
+html.minimal:not(.dark) .glass-card,
+html.minimal:not(.dark) .glass-card-elevated,
+html.minimal:not(.dark) .glass-dropdown,
+html.minimal:not(.dark) .card-anime-float {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid #e5e5e5;
+  border-top-color: #e5e5e5;
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+
+html.minimal:not(.dark) .glass-card:hover,
+html.minimal:not(.dark) .glass-card.card-anime-float:hover,
+html.minimal:not(.dark) .card-anime-float:hover {
+  background: #ffffff;
+  border-color: #d4d4d4;
+  box-shadow: none;
+  transform: none;
+}
+
+html.minimal:not(.dark) .glass-sidebar,
+html.minimal:not(.dark) .glass-sidebar-secondary {
+  border-right: 1px solid #e5e5e5;
+}
+
+html.minimal:not(.dark) .glass-navbar {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* Kill all decorative pseudo elements (bokeh, sheen, ambient orbs) — all minimal */
+html.minimal .bokeh-layer::before,
+html.minimal .bokeh-layer::after,
+html.minimal .bokeh-tertiary-orb,
+html.minimal .card-anime-float::before,
+html.minimal .card-anime-float::after,
+html.minimal .glass-card-elevated::before,
+html.minimal .glass-sidebar-secondary::before {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+
+/* Buttons — flat royal blue primary, flat everything else (light minimal) */
+html.minimal:not(.dark) [class*="btn-"] {
+  box-shadow: none;
+}
+html.minimal:not(.dark) [class*="btn-"]:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+html.minimal:not(.dark) .btn-primary {
+  background: oklch(0.45 0.18 265);
+  color: #ffffff;
+  border: 1px solid oklch(0.45 0.18 265);
+}
+html.minimal:not(.dark) .btn-primary:hover {
+  background: oklch(0.40 0.18 265);
+  border-color: oklch(0.40 0.18 265);
+}
+
+html.minimal:not(.dark) .btn-orange-outline {
+  background: #ffffff;
+  color: oklch(0.45 0.18 265);
+  border: 1px solid oklch(0.45 0.18 265);
+}
+html.minimal:not(.dark) .btn-orange-outline:hover {
+  background: #f0f4ff;
+}
+
+html.minimal:not(.dark) .btn-navy {
+  background: #0a0a0a;
+  color: #ffffff;
+  border: 1px solid #0a0a0a;
+}
+html.minimal:not(.dark) .btn-navy:hover {
+  background: #262626;
+  border-color: #262626;
+}
+
+html.minimal:not(.dark) .btn-navy-outline {
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 1px solid #0a0a0a;
+}
+html.minimal:not(.dark) .btn-navy-outline:hover {
+  background: #f5f5f5;
+}
+
+html.minimal:not(.dark) .btn-ghost {
+  background: #ffffff;
+  color: #0a0a0a;
+  border: 1px solid #e5e5e5;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.minimal:not(.dark) .btn-ghost:hover {
+  background: #f5f5f5;
+  border-color: #d4d4d4;
+}
+
+/* Inputs — flat white w/ royal-blue focus ring (light minimal) */
+html.minimal:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html.minimal:not(.dark) textarea,
+html.minimal:not(.dark) select {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e5e5 !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: #0a0a0a;
+}
+html.minimal:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+html.minimal:not(.dark) textarea:focus,
+html.minimal:not(.dark) select:focus {
+  background-color: #ffffff !important;
+  border-color: oklch(0.45 0.18 265) !important;
+  box-shadow: 0 0 0 3px oklch(0.45 0.18 265 / 0.15) !important;
+  outline: none;
+}
+
+/* Sidebar icons — flat (light minimal) */
+html.minimal:not(.dark) .sidebar-icon {
+  background: transparent;
+  box-shadow: none;
+}
+html.minimal:not(.dark) .sidebar-icon:hover {
+  background: #f5f5f5;
+  box-shadow: none;
+}
+html.minimal:not(.dark) .sidebar-icon.active {
+  background: #f0f4ff;
+  box-shadow: inset 0 0 0 1px oklch(0.45 0.18 265);
+}
+
+/* Kill login card alien-green glow (light minimal) */
+html.minimal:not(.dark) .glass-card.login-card-alien {
+  border: 1px solid #e5e5e5;
+  box-shadow: none;
+}
+html.minimal:not(.dark) .glass-card.login-card-alien:hover {
+  border-color: #d4d4d4;
+  box-shadow: none;
+  transform: none;
+}
+
+
+/* ================================
+   PAPER MODE — OVERRIDES (light monochrome only)
+   White-dominant canvas, greys and ink as secondary.
+   Flatten glass/bokeh, clean borders, neutral accents.
+   ================================ */
+
+html.monochrome:not(.dark),
+html.monochrome:not(.dark) body {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+html.monochrome:not(.dark) body > div,
+html.monochrome:not(.dark) main,
+html.monochrome:not(.dark) [role="main"] {
+  background-color: #ffffff;
+}
+
+html.monochrome:not(.dark) .glass,
+html.monochrome:not(.dark) .glass-solid,
+html.monochrome:not(.dark) .glass-sidebar,
+html.monochrome:not(.dark) .glass-sidebar-secondary,
+html.monochrome:not(.dark) .glass-navbar,
+html.monochrome:not(.dark) .glass-card,
+html.monochrome:not(.dark) .glass-card-elevated,
+html.monochrome:not(.dark) .glass-dropdown,
+html.monochrome:not(.dark) .card-anime-float {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid oklch(0.92 0 0);
+  border-top-color: oklch(0.92 0 0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius-md);
+}
+
+html.monochrome:not(.dark) .glass-card:hover,
+html.monochrome:not(.dark) .glass-card.card-anime-float:hover,
+html.monochrome:not(.dark) .card-anime-float:hover {
+  background: oklch(0.985 0 0);
+  border-color: oklch(0.86 0 0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transform: none;
+}
+
+html.monochrome:not(.dark) .glass-sidebar,
+html.monochrome:not(.dark) .glass-sidebar-secondary {
+  border-right: 1px solid oklch(0.92 0 0);
+}
+
+html.monochrome:not(.dark) .glass-navbar {
+  border-bottom: 1px solid oklch(0.92 0 0);
+}
+
+html.monochrome .bokeh-layer::before,
+html.monochrome .bokeh-layer::after,
+html.monochrome .bokeh-tertiary-orb,
+html.monochrome .card-anime-float::before,
+html.monochrome .card-anime-float::after,
+html.monochrome .glass-card-elevated::before,
+html.monochrome .glass-sidebar-secondary::before {
+  display: none !important;
+  content: none !important;
+  animation: none !important;
+}
+
+html.monochrome:not(.dark) [class*="btn-"] {
+  box-shadow: none;
+}
+html.monochrome:not(.dark) [class*="btn-"]:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+html.monochrome:not(.dark) .btn-primary {
+  background: oklch(0.14 0 0);
+  color: #ffffff;
+  border: 1px solid oklch(0.14 0 0);
+}
+html.monochrome:not(.dark) .btn-primary:hover {
+  background: oklch(0.22 0 0);
+  border-color: oklch(0.22 0 0);
+}
+
+html.monochrome:not(.dark) .btn-orange-outline,
+html.monochrome:not(.dark) .btn-navy-outline {
+  background: #ffffff;
+  color: oklch(0.14 0 0);
+  border: 1px solid oklch(0.14 0 0);
+}
+html.monochrome:not(.dark) .btn-orange-outline:hover,
+html.monochrome:not(.dark) .btn-navy-outline:hover {
+  background: oklch(0.96 0 0);
+}
+
+html.monochrome:not(.dark) .btn-navy {
+  background: oklch(0.14 0 0);
+  color: #ffffff;
+  border: 1px solid oklch(0.14 0 0);
+}
+html.monochrome:not(.dark) .btn-navy:hover {
+  background: oklch(0.24 0 0);
+  border-color: oklch(0.24 0 0);
+}
+
+html.monochrome:not(.dark) .btn-ghost {
+  background: #ffffff;
+  color: oklch(0.14 0 0);
+  border: 1px solid oklch(0.92 0 0);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.monochrome:not(.dark) .btn-ghost:hover {
+  background: oklch(0.96 0 0);
+  border-color: oklch(0.86 0 0);
+}
+
+html.monochrome:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+html.monochrome:not(.dark) textarea,
+html.monochrome:not(.dark) select {
+  background-color: #ffffff !important;
+  border: 1px solid oklch(0.88 0 0) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: oklch(0.14 0 0);
+}
+html.monochrome:not(.dark) input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus,
+html.monochrome:not(.dark) textarea:focus,
+html.monochrome:not(.dark) select:focus {
+  background-color: #ffffff !important;
+  border-color: oklch(0.22 0 0) !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08) !important;
+  outline: none;
+}
+
+html.monochrome:not(.dark) .sidebar-icon {
+  background: transparent;
+  box-shadow: none;
+}
+html.monochrome:not(.dark) .sidebar-icon:hover {
+  background: oklch(0.96 0 0);
+  box-shadow: none;
+}
+html.monochrome:not(.dark) .sidebar-icon.active {
+  background: oklch(0.94 0 0);
+  box-shadow: inset 0 0 0 1px oklch(0.22 0 0);
+}
+
+html.monochrome:not(.dark) .glass-card.login-card-alien {
+  border: 1px solid oklch(0.92 0 0);
+  box-shadow: none;
+}
+html.monochrome:not(.dark) .glass-card.login-card-alien:hover {
+  border-color: oklch(0.86 0 0);
+  box-shadow: none;
+  transform: none;
 }
 
