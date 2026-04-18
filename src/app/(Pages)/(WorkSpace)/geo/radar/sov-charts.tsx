@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { ViewMoreDropdown } from "@/app/components/common/UI/ViewMoreDropdown";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
   Line,
@@ -139,6 +141,108 @@ export function SovTrendChart({
           />
         ) : null}
         </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export type ModelBreakRow = {
+  model: string;
+  avgShareOfVoice: number;
+  avgTop3Rate: number;
+  avgQueryCoverage: number;
+};
+
+export function ModelBreakdownChart({
+  rows,
+  compare,
+  rivalColor,
+  primaryName = "You",
+}: {
+  rows: ModelBreakRow[];
+  compare?: { label: string; rows: ModelBreakRow[] } | null;
+  rivalColor?: string;
+  /** Legend / tooltip label for the primary series (default "You"). */
+  primaryName?: string;
+}) {
+  const compareByModel = new Map<string, number>();
+  for (const r of compare?.rows ?? []) {
+    compareByModel.set(r.model, Number(r.avgShareOfVoice) || 0);
+  }
+
+  const modelOrder: string[] = [];
+  const seen = new Set<string>();
+  for (const r of rows ?? []) {
+    if (!seen.has(r.model)) {
+      seen.add(r.model);
+      modelOrder.push(r.model);
+    }
+  }
+  for (const r of compare?.rows ?? []) {
+    if (!seen.has(r.model)) {
+      seen.add(r.model);
+      modelOrder.push(r.model);
+    }
+  }
+
+  const primaryByModel = new Map<string, number>();
+  for (const r of rows ?? []) {
+    primaryByModel.set(r.model, Number(r.avgShareOfVoice) || 0);
+  }
+
+  const data = modelOrder.map((model) => ({
+    model,
+    shortModel: model.length > 14 ? `${model.slice(0, 14)}…` : model,
+    primarySov: primaryByModel.has(model) ? primaryByModel.get(model)! : null,
+    rivalSov: compareByModel.has(model) ? compareByModel.get(model)! : null,
+  }));
+
+  if (data.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-8 text-center">No model breakdown yet.</p>
+    );
+  }
+
+  return (
+    <div className="h-[220px] w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" className="stroke-[var(--glass-border)]" />
+          <XAxis dataKey="shortModel" tick={{ fontSize: 10 }} interval={0} />
+          <YAxis tick={{ fontSize: 10 }} />
+          <Tooltip
+            labelFormatter={(_, payload) => payload?.[0]?.payload?.model ?? ""}
+            formatter={(value: number | string | undefined, name) => {
+              const n = typeof value === "number" ? value : Number(value ?? 0);
+              const label =
+                name === "rivalSov"
+                  ? (compare ? `${compare.label} avg SoV` : "Rival avg SoV")
+                  : `${primaryName} avg SoV`;
+              return [`${n.toFixed(1)}`, label];
+            }}
+            contentStyle={{
+              background: "var(--glass)",
+              border: "1px solid var(--glass-border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          <Bar
+            dataKey="primarySov"
+            name={primaryName}
+            fill="var(--primary)"
+            radius={[4, 4, 0, 0]}
+          />
+          {compare ? (
+            <Bar
+              dataKey="rivalSov"
+              name={compare.label}
+              fill={rivalColor ?? RIVAL_COLORS[0]}
+              radius={[4, 4, 0, 0]}
+            />
+          ) : null}
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
