@@ -371,7 +371,11 @@ export function RadarCompareCharts({
   base,
   rivals,
 }: {
-  base: { sovSeries: SovPoint[]; promptsByModel?: PromptByModel[] };
+  base: {
+    sovSeries: SovPoint[];
+    promptsByModel?: PromptByModel[];
+    modelBreakdown?: ModelBreakRow[];
+  };
   rivals: Array<{ id: string; name: string }>;
 }) {
   const [compareId, setCompareId] = useState<string>("");
