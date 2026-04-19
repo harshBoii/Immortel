@@ -16,6 +16,7 @@ export async function GET() {
         expectedShopDomain: null,
         wordpressIntegration: null,
         woocommerce: null,
+        meta: null,
         hqEligible: false,
         organizationName: null,
         organizationCompanies: null,
@@ -26,7 +27,7 @@ export async function GET() {
 
   const companyId = session.companyId;
 
-  const [company, shop, cms, wp, wc] = await Promise.all([
+  const [company, shop, cms, wp, wc, meta] = await Promise.all([
     prisma.company.findUnique({
       where: { id: companyId },
       select: {
@@ -75,6 +76,10 @@ export async function GET() {
       orderBy: { installedAt: "desc" },
       select: { id: true, storeUrl: true, status: true, keyPermissions: true, installedAt: true },
     }),
+    prisma.metaIntegration.findUnique({
+      where: { companyId },
+      select: { adAccountId: true, fbPageId: true, lastRefreshed: true, createdAt: true },
+    }),
   ]);
 
   if (!company) {
@@ -88,6 +93,7 @@ export async function GET() {
         expectedShopDomain: null,
         wordpressIntegration: null,
         woocommerce: null,
+        meta: null,
         hqEligible: false,
         organizationName: null,
         organizationCompanies: null,
@@ -123,6 +129,7 @@ export async function GET() {
     expectedShopDomain,
     wordpressIntegration: wp,
     woocommerce: wc,
+    meta,
     hqEligible,
     organizationName: org?.name ?? null,
     organizationCompanies,

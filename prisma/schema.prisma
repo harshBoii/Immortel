@@ -55,6 +55,7 @@ model Company {
   subscriptionCreatedAt DateTime?               @map("subscription_created_at")
   subscriptionUpdatedAt DateTime?               @map("subscription_updated_at")
 
+  metaIntegration       MetaIntegration?
   aeoGenerationProfiles AeoGenerationProfile[]
   aeoPages              AeoPage[]
   assetIntelligence     AssetIntelligence[]
@@ -907,6 +908,23 @@ model WordPressIntegration {
 
   @@index([tenantId])
   @@map("wordpress_integrations")
+}
+
+model MetaIntegration {
+  id            String   @id @default(uuid())
+  companyId     String   @unique
+  /// AES-256 encrypted
+  accessToken   String   @db.Text
+  /// Format: act_XXXXXXXXX
+  adAccountId   String   @db.VarChar(100)
+  fbPageId      String   @db.VarChar(100)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  lastRefreshed DateTime @updatedAt @map("last_refreshed") @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("meta_integrations")
 }
 
 /// WooCommerce REST API keys after wc-auth/v1/authorize (or manual dev entry).

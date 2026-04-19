@@ -4,15 +4,16 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Globe, ShoppingBag, Store, ExternalLink, Copy, Check } from 'lucide-react';
-import { SiOpenai, SiPerplexity, SiAnthropic,SiGooglegemini } from 'react-icons/si';
+import { SiOpenai, SiPerplexity, SiAnthropic,SiGooglegemini, SiMeta } from 'react-icons/si';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 import LoadingAnimation from '@/app/components/animations/loading';
+import { ViewMoreDropdown } from '@/app/components/common/UI/ViewMoreDropdown';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const MCP_SERVER_URL = 'https://immortell.shop/api/mcpServer';
 
-type ModalTarget = 'mcp' | 'shopify' | 'woocommerce' | 'wordpress' | null;
+type ModalTarget = 'mcp' | 'shopify' | 'woocommerce' | 'wordpress' | 'meta' | null;
 
 // ── Integration status dot ─────────────────────────────────────────────────────
 
@@ -440,6 +441,275 @@ function WordPressContent() {
   );
 }
 
+// ── Meta modal content ─────────────────────────────────────────────────────────
+
+type MetaNode = { id: string; name: string };
+
+function MetaDropdown({
+  label,
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  options: MetaNode[];
+  value: MetaNode | null;
+  onChange: (n: MetaNode) => void;
+  placeholder: string;
+}) {
+  const selectedLabel = value ? `${value.name}` : placeholder;
+  return (
+    <div>
+      <label className="block text-[11px] font-medium text-muted-foreground mb-1.5">{label}</label>
+      <div className="flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass-hover)] px-3 py-2">
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm truncate ${value ? 'text-foreground' : 'text-muted-foreground'}`}>
+            {selectedLabel}
+          </p>
+          {value && (
+            <p className="text-[11px] font-mono text-muted-foreground truncate">{value.id}</p>
+          )}
+        </div>
+        <ViewMoreDropdown tooltipContent={`Select ${label.toLowerCase()}`} align="right">
+          {(close) => (
+            <div className="max-h-64 overflow-y-auto min-w-[240px]">
+              {options.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-muted-foreground">No results.</p>
+              ) : (
+                options.map((opt) => {
+                  const active = value?.id === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => { onChange(opt); close(); }}
+                      className={`flex flex-col w-full px-3 py-2 text-left text-sm hover:bg-blue-500/20 transition-colors ${active ? 'bg-[#FF2D92]/15 font-medium' : ''}`}
+                      role="menuitem"
+                    >
+                      <span className="text-[#1a1a1a] truncate">{opt.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground truncate">{opt.id}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+        </ViewMoreDropdown>
+      </div>
+    </div>
+  );
+}
+
+function MetaContent() {
+  const { meta, refetch } = useCurrentContext();
+  const [accessToken, setAccessToken] = useState('');
+  const [showToken, setShowToken] = useState(false);
+
+  const [fetching, setFetching] = useState(false);
+  const [adAccounts, setAdAccounts] = useState<MetaNode[]>([]);
+  const [pages, setPages] = useState<MetaNode[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const [selectedAdAccount, setSelectedAdAccount] = useState<MetaNode | null>(
+    meta ? { id: meta.adAccountId, name: meta.adAccountId } : null,
+  );
+  const [selectedPage, setSelectedPage] = useState<MetaNode | null>(
+    meta ? { id: meta.fbPageId, name: meta.fbPageId } : null,
+  );
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!meta) return;
+    setSelectedAdAccount((prev) => prev ?? { id: meta.adAccountId, name: meta.adAccountId });
+    setSelectedPage((prev) => prev ?? { id: meta.fbPageId, name: meta.fbPageId });
+  }, [meta]);
+
+  const mergeSaved = (list: MetaNode[], savedId: string | undefined): MetaNode[] => {
+    if (!savedId) return list;
+    if (list.some((n) => n.id === savedId)) return list;
+    return [{ id: savedId, name: savedId }, ...list];
+  };
+
+  const adAccountOptions = loaded
+    ? mergeSaved(adAccounts, meta?.adAccountId)
+    : meta
+    ? [{ id: meta.adAccountId, name: meta.adAccountId }]
+    : [];
+  const pageOptions = loaded
+    ? mergeSaved(pages, meta?.fbPageId)
+    : meta
+    ? [{ id: meta.fbPageId, name: meta.fbPageId }]
+    : [];
+
+  const handleFetch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    setSaved(false);
+    setLoaded(false);
+    setFetching(true);
+    try {
+      const res = await fetch('/api/meta/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ accessToken: accessToken.trim() }),
+      });
+      const data = await res.json().catch(() => ({})) as {
+        adAccounts?: MetaNode[]; pages?: MetaNode[]; error?: string;
+      };
+      if (!res.ok) { setFormError(data.error ?? 'Could not fetch from Meta'); return; }
+      const nextAdAccounts = data.adAccounts ?? [];
+      const nextPages = data.pages ?? [];
+      setAdAccounts(nextAdAccounts);
+      setPages(nextPages);
+      setSelectedAdAccount((prev) => {
+        if (!prev) return null;
+        const match = nextAdAccounts.find((a) => a.id === prev.id);
+        return match ?? prev;
+      });
+      setSelectedPage((prev) => {
+        if (!prev) return null;
+        const match = nextPages.find((p) => p.id === prev.id);
+        return match ?? prev;
+      });
+      setLoaded(true);
+    } catch { setFormError('Network error'); } finally { setFetching(false); }
+  };
+
+  const handleSave = async () => {
+    if (!selectedAdAccount || !selectedPage) return;
+    setFormError(null);
+    setSaved(false);
+    setSaving(true);
+    try {
+      const res = await fetch('/api/meta/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          accessToken: accessToken.trim(),
+          adAccountId: selectedAdAccount.id,
+          fbPageId: selectedPage.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) { setFormError(data.error ?? 'Could not save'); return; }
+      setSaved(true);
+      refetch();
+      window.dispatchEvent(new Event('immortel:refetch-context'));
+    } catch { setFormError('Network error'); } finally { setSaving(false); }
+  };
+
+  const showSelections = loaded || Boolean(meta);
+  const canSave = Boolean(selectedAdAccount && selectedPage && accessToken.trim());
+
+  return (
+    <div className="px-5 py-4 space-y-4">
+      {/* Connected banner */}
+      {meta && (
+        <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs font-semibold text-emerald-500">Connected</span>
+          </div>
+          <span className="text-[11px] text-muted-foreground">
+            Last refreshed {new Date(meta.lastRefreshed).toLocaleDateString()}
+          </span>
+        </div>
+      )}
+
+      {/* Step 1 — token */}
+      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/50 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            {meta ? 'Access token · update to save changes' : 'Step 1 · Access token'}
+          </p>
+          {loaded && <span className="text-[11px] font-medium text-emerald-500">Loaded</span>}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {meta
+            ? 'Your token is encrypted and not shown. Paste a new one to refresh the asset lists or re-save.'
+            : "Paste a Meta Graph API access token. We'll use it to list your ad accounts and pages."}
+        </p>
+        <form onSubmit={handleFetch} className="space-y-3">
+          <div className="relative">
+            <input
+              type={showToken ? 'text' : 'password'}
+              value={accessToken}
+              onChange={(e) => { setAccessToken(e.target.value); setLoaded(false); }}
+              placeholder={meta ? '•••••••••••••••••••••  (paste a new token to update)' : 'EAAG…'}
+              className="w-full px-3 py-2 pr-16 rounded-lg text-sm border border-[var(--glass-border)] bg-[var(--glass-hover)] font-mono"
+              required
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              onClick={() => setShowToken((v) => !v)}
+              className="absolute inset-y-0 right-2 my-1 px-2 rounded-md text-[11px] font-semibold text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] transition-colors"
+            >
+              {showToken ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <button
+            type="submit"
+            disabled={fetching || !accessToken.trim()}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+          >
+            {fetching ? 'Fetching…' : loaded ? 'Refresh lists' : 'Fetch ad accounts & pages'}
+          </button>
+        </form>
+      </div>
+
+      {/* Step 2 — selections (pre-populated when already connected) */}
+      {showSelections && (
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/50 p-4 space-y-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            {meta && !loaded ? 'Current selection' : 'Step 2 · Choose assets'}
+          </p>
+
+          <MetaDropdown
+            label="Ad account"
+            options={adAccountOptions}
+            value={selectedAdAccount}
+            onChange={setSelectedAdAccount}
+            placeholder={adAccountOptions.length ? 'Select an ad account' : 'No ad accounts available'}
+          />
+
+          <MetaDropdown
+            label="Facebook page"
+            options={pageOptions}
+            value={selectedPage}
+            onChange={setSelectedPage}
+            placeholder={pageOptions.length ? 'Select a page' : 'No pages available'}
+          />
+
+          {meta && !loaded && !accessToken.trim() && (
+            <p className="text-[11px] text-muted-foreground">
+              Enter a fresh access token above to change the selection.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !canSave}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-primary/15 text-primary hover:bg-primary/25 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : meta ? 'Update connection' : 'Save & connect Meta'}
+          </button>
+        </div>
+      )}
+
+      {formError && <p className="text-xs text-destructive">{formError}</p>}
+      {saved && <p className="text-xs text-emerald-500">Meta connection saved.</p>}
+    </div>
+  );
+}
+
 // ── MCP icon ───────────────────────────────────────────────────────────────────
 
 function MCPIcon({ className }: { className?: string }) {
@@ -456,7 +726,7 @@ function MCPIcon({ className }: { className?: string }) {
 
 export default function ConnectionPageClient() {
   const [activeModal, setActiveModal] = useState<ModalTarget>(null);
-  const { shopify, woocommerce, wordpressIntegration } = useCurrentContext();
+  const { shopify, woocommerce, wordpressIntegration, meta } = useCurrentContext();
 
   // ── All 6 cards ──
   const activeCards = [
@@ -494,6 +764,14 @@ export default function ConnectionPageClient() {
       Icon: Globe,
       connected: wordpressIntegration?.status === 'active',
       cta: wordpressIntegration?.status === 'active' ? 'Manage connection' : 'Connect now',
+    },
+    {
+      key: 'meta' as ModalTarget,
+      label: 'Meta',
+      description: 'Connect Facebook & Instagram via a Meta Graph API access token.',
+      Icon: SiMeta,
+      connected: Boolean(meta),
+      cta: meta ? 'Manage connection' : 'Connect now',
     },
   ];
 
@@ -645,6 +923,11 @@ export default function ConnectionPageClient() {
       {activeModal === 'wordpress' && (
         <Modal title="WordPress" icon={Globe} onClose={() => setActiveModal(null)}>
           <WordPressContent />
+        </Modal>
+      )}
+      {activeModal === 'meta' && (
+        <Modal title="Meta" icon={SiMeta} onClose={() => setActiveModal(null)}>
+          <MetaContent />
         </Modal>
       )}
     </div>

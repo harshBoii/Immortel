@@ -36,6 +36,13 @@ type WooCommerceSummary = {
   installedAt: string;
 };
 
+type MetaSummary = {
+  adAccountId: string;
+  fbPageId: string;
+  lastRefreshed: string;
+  createdAt: string;
+};
+
 type AppContextState = {
   loading: boolean;
   error: string | null;
@@ -46,6 +53,7 @@ type AppContextState = {
   expectedShopDomain: string | null;
   wordpressIntegration: WordPressIntegrationSummary | null;
   woocommerce: WooCommerceSummary | null;
+  meta: MetaSummary | null;
   hqEligible: boolean;
   organizationName: string | null;
   organizationCompanies: OrgCompanyRow[] | null;
@@ -62,6 +70,7 @@ export function useCurrentContext(): AppContextState {
     expectedShopDomain: null,
     wordpressIntegration: null,
     woocommerce: null,
+    meta: null,
     hqEligible: false,
     organizationName: null,
     organizationCompanies: null,
@@ -96,6 +105,7 @@ export function useCurrentContext(): AppContextState {
             expectedShopDomain: data.expectedShopDomain ?? null,
             wordpressIntegration: data.wordpressIntegration ?? null,
             woocommerce: data.woocommerce ?? null,
+            meta: data.meta ?? null,
             hqEligible: Boolean(data.hqEligible),
             organizationName: data.organizationName ?? null,
             organizationCompanies: data.organizationCompanies ?? null,
