@@ -257,7 +257,7 @@ import {
       {
         title: "Get company data",
         description:
-          "Authenticate a company using its password and return the full GEO data-mine payload: company profile, brand entity, offerings, branding, and all GEO data sources (files, text, URLs). Optionally include `email`, `companyName`, or `userName` to speed up the lookup.",
+          "Authenticate a company using its password and return the full GEO data-mine payload: company profile, a flat `identity` block (canonicalName, aliases, entityType, oneLiner, about, industry, category, headquarters, foundedYear, employeeRange, businessModel, topics, keywords, targetAudiences), brand entity, offerings, branding, and all GEO data sources (files, text, URLs). Optionally include `email`, `companyName`, or `userName` to speed up the lookup.",
         inputSchema: (getCompanyDataInputSchema as any).shape,
       },
       (async (input: unknown) => {
@@ -298,7 +298,7 @@ import {
 
         const data = await res.json();
         console.log(
-          `[get_company_data] ✓ company="${data.company?.name}" sources=${data.dataMine?.sources?.length ?? 0} offerings=${data.dataMine?.offerings?.length ?? 0}`
+          `[get_company_data] ✓ company="${data.company?.name}" sources=${data.dataMine?.sources?.length ?? 0} offerings=${data.dataMine?.offerings?.length ?? 0} topics=${data.identity?.topics?.length ?? 0} keywords=${data.identity?.keywords?.length ?? 0} audiences=${data.identity?.targetAudiences?.length ?? 0}`
         );
 
         return {

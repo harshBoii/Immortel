@@ -97,6 +97,27 @@ export async function POST(request: Request) {
 
   const payload = await loadSerializedDataMineForCompany(company.id);
 
+  const be = payload.brandEntity;
+  const identity = be
+    ? {
+        canonicalName: be.canonicalName ?? null,
+        aliases: be.aliases ?? [],
+        entityType: be.entityType ?? null,
+        oneLiner: be.oneLiner ?? null,
+        about: be.about ?? null,
+        industry: be.industry ?? null,
+        category: be.category ?? null,
+        headquartersCity: be.headquartersCity ?? null,
+        headquartersCountry: be.headquartersCountry ?? null,
+        foundedYear: be.foundedYear ?? null,
+        employeeRange: be.employeeRange ?? null,
+        businessModel: be.businessModel ?? null,
+        topics: be.topics ?? [],
+        keywords: be.keywords ?? [],
+        targetAudiences: be.targetAudiences ?? [],
+      }
+    : null;
+
   return NextResponse.json({
     success: true,
     company: {
@@ -115,6 +136,7 @@ export async function POST(request: Request) {
       createdAt: company.createdAt.toISOString(),
       updatedAt: company.updatedAt.toISOString(),
     },
+    identity,
     dataMine: payload,
   });
 }
