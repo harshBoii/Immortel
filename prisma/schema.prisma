@@ -970,6 +970,8 @@ model MetaMedia {
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
 
+  @@unique([metaIntegrationId, imageHash])
+  @@unique([metaIntegrationId, videoId])
   @@index([metaIntegrationId])
   @@index([imageHash])
   @@index([videoId])

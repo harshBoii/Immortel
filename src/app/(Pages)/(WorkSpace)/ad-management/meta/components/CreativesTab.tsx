@@ -48,6 +48,7 @@ export function CreativesTab() {
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const loadGallery = useCallback(async () => {
     setLoading(true);
@@ -72,6 +73,27 @@ export function CreativesTab() {
     if (meta) void loadGallery();
     else setLoading(false);
   }, [meta, loadGallery]);
+
+  const syncFromMeta = async () => {
+    setSyncing(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/meta/media/sync', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        setError(typeof j.error === 'string' ? j.error : 'Sync failed');
+      } else {
+        await loadGallery();
+      }
+    } catch {
+      setError('Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const onFiles = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -104,6 +126,18 @@ export function CreativesTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Media library</h3>
+        <button
+          type="button"
+          onClick={() => void syncFromMeta()}
+          disabled={syncing}
+          className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+        >
+          {syncing ? 'Syncing…' : 'Sync from Meta'}
+        </button>
+      </div>
+
       <div
         className="rounded-xl border-2 border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-4 py-8 text-center text-sm text-muted-foreground"
         onDragOver={(e) => {
