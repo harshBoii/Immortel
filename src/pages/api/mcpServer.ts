@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await server.connect(transport);
     const rawBody = await getRawBody(req);
-    const body = JSON.parse(rawBody.toString("utf-8")); // ← fix here
+    const body = JSON.parse(rawBody.toString("utf-8")); 
     await transport.handleRequest(req as any, res as any, body);
   } catch (error) {
     console.error("MCP error:", error);

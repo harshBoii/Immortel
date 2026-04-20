@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap } from 'lucide-react';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone } from 'lucide-react';
+import { SiMeta, SiGoogle } from 'react-icons/si';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
 
@@ -122,6 +123,7 @@ const MAIN_SECTIONS = [
   { id: 'home',     label: 'Home',       icon: IconHome,  hasSecondary: true },
   { id: 'geo',      label: 'GEO',        icon: IconGlobe, hasSecondary: true },
   { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
+  { id: 'adManagement', label: 'Ads',    icon: Megaphone,   hasSecondary: true },
   { id: 'Settings', label: 'Settings',   icon: Settings,  hasSecondary: true },
 ];
 
@@ -169,6 +171,29 @@ const PrimarySidebarIcon = ({
 /* ============================================
    SECONDARY NAV ITEM
 ============================================ */
+const DisabledSecondaryNavItem = ({
+  icon: Icon,
+  label,
+  badge,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  badge: string;
+}) => (
+  <div
+    className="relative flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] text-muted-foreground/45 cursor-not-allowed select-none"
+    aria-disabled
+  >
+    {Icon && (
+      <Icon className="w-3.5 h-3.5 flex-shrink-0 opacity-50" />
+    )}
+    <span className="flex-1 truncate">{label}</span>
+    <span className="text-[9px] font-medium rounded-full border border-[var(--glass-border)] px-2 py-0.5 text-muted-foreground/50">
+      {badge}
+    </span>
+  </div>
+);
+
 const SecondaryNavItem = ({
   icon: Icon,
   label,
@@ -418,6 +443,14 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={ShoppingBag}         label="WooCommerce" href="/shop/woocommerce-products" />
         </>
       );
+    case 'adManagement':
+      return (
+        <>
+          <SectionLabel label="Ad Management" />
+          <SecondaryNavItem icon={SiMeta} label="Meta" href="/ad-management/meta" />
+          <DisabledSecondaryNavItem icon={SiGoogle} label="Google" badge="Coming Soon" />
+        </>
+      );
     case 'Settings':
       return (
         <>
@@ -472,6 +505,7 @@ export default function AppSidebar() {
       case 'ingestion':return '/ingestion';
       case 'geo':      return '/geo/geoknight';
       case 'shop':     return '/shop/products';
+      case 'adManagement': return '/ad-management/meta';
       case 'Settings': return '/connection';
       default:         return '/';
     }
@@ -498,6 +532,7 @@ export default function AppSidebar() {
     else if (pathname?.startsWith('/ingestion'))              setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo'))                    setActiveSection('geo');
     else if (pathname?.startsWith('/shop'))                   setActiveSection('shop');
+    else if (pathname?.startsWith('/ad-management'))            setActiveSection('adManagement');
     else if (pathname?.startsWith('/connection'))             setActiveSection('Settings');
     else if (pathname?.startsWith('/jobs'))                   setActiveSection('Settings');
     else                                                      setActiveSection('home');

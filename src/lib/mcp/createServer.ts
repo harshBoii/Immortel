@@ -230,6 +230,84 @@ import {
       }) as any
     );
   
+    // ─── get_company_data ───────────────────────────────────────────────────
+
+    const getCompanyDataInputSchema = z.object({
+      password: z
+        .string()
+        .min(1)
+        .describe("Company account password. Always required."),
+      email: z
+        .string()
+        .optional()
+        .describe("Optional company email to narrow the lookup and avoid scanning all companies."),
+      companyName: z
+        .string()
+        .optional()
+        .describe("Optional company name or slug to narrow the lookup."),
+      userName: z
+        .string()
+        .optional()
+        .describe("Optional company userName to narrow the lookup."),
+    });
+    type GetCompanyDataInput = z.infer<typeof getCompanyDataInputSchema>;
+
+    server.registerTool(
+      "get_company_data",
+      {
+        title: "Get company data",
+        description:
+          "Authenticate a company using its password and return the full GEO data-mine payload: company profile, brand entity, offerings, branding, and all GEO data sources (files, text, URLs). Optionally include `email`, `companyName`, or `userName` to speed up the lookup.",
+        inputSchema: (getCompanyDataInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { password, email, companyName, userName } = input as GetCompanyDataInput;
+        const url = new URL("/api/mcp/company-data", IMMORTEL_BASE_URL);
+
+        const body: Record<string, unknown> = { password };
+        if (email) body.email = email;
+        if (companyName) body.companyName = companyName;
+        if (userName) body.userName = userName;
+
+        console.log(
+          "[get_company_data] →",
+          url.toString(),
+          "hints:",
+          JSON.stringify({
+            email: email ? "***" : undefined,
+            companyName,
+            userName,
+          })
+        );
+
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          console.error("[get_company_data] ✗ HTTP", res.status);
+          let errText = `Error: ${res.status}`;
+          try {
+            const j = await res.json();
+            if (j?.error) errText = `Error: ${j.error}`;
+          } catch {}
+          return { content: [{ type: "text" as const, text: errText }] };
+        }
+
+        const data = await res.json();
+        console.log(
+          `[get_company_data] ✓ company="${data.company?.name}" sources=${data.dataMine?.sources?.length ?? 0} offerings=${data.dataMine?.offerings?.length ?? 0}`
+        );
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(data) }],
+          structuredContent: data,
+        };
+      }) as any
+    );
+
     // ─── UI Resources ────────────────────────────────────────────────────────
   
     registerAppResource(

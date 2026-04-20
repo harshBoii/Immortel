@@ -910,6 +910,10 @@ model WordPressIntegration {
   @@map("wordpress_integrations")
 }
 
+// ================================================================
+// Meta Integration
+// ================================================================
+
 model MetaIntegration {
   id            String   @id @default(uuid())
   companyId     String   @unique
@@ -921,11 +925,206 @@ model MetaIntegration {
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
   lastRefreshed DateTime @updatedAt @map("last_refreshed") @db.Timestamptz(3)
 
-  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  // ── Ad Context (from best performing ads analysis) ──────────────
+  brandVoice       Json?    // extracted tone, style, hook patterns
+  topAdExamples    Json?    // top 5 ad copy + why they worked
+  audienceInsights Json?    // what targeting/demographics performed best
+  avgWinningCtr    Float?   // benchmark CTR for this account
+  contextBuiltAt   DateTime? // when the context was last analysed
+
+  // ── Relations ───────────────────────────────────────────────────
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaigns  MetaCampaign[]
+  creatives  MetaCreative[]
+  media      MetaMedia[]
+  adSets     MetaAdSet[]
+  ads        MetaAd[]
 
   @@index([companyId])
   @@map("meta_integrations")
 }
+
+model MetaMedia {
+  id                String   @id @default(uuid())
+  metaIntegrationId String
+  kind              String   @db.VarChar(10) // "image" | "video"
+
+  imageHash         String?  @db.VarChar(200)
+  videoId           String?  @db.VarChar(100)
+
+  imageUrl          String?  @db.VarChar(1000)
+  videoUrl          String?  @db.VarChar(1000)
+  videoStreamId     String?  @db.VarChar(100)
+  thumbnailUrl      String?  @db.VarChar(1000)
+  r2Key             String?  @db.VarChar(500)
+
+  filename   String?  @db.VarChar(500)
+  mimeType   String?  @db.VarChar(200)
+  bytes      Int?
+  width      Int?
+  height     Int?
+  durationMs Int?
+
+  status     String   @default("ready") @db.VarChar(20) // uploading|processing|ready|error
+
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+
+  @@index([metaIntegrationId])
+  @@index([imageHash])
+  @@index([videoId])
+  @@index([videoStreamId])
+  @@map("meta_media")
+}
+
+// ── Campaigns ────────────────────────────────────────────────────────
+model MetaCampaign {
+  id                String   @id @default(uuid())
+  metaIntegrationId String
+  /// Returned by Meta API after creation
+  metaCampaignId    String   @db.VarChar(100)
+  name              String
+  objective         String   // OUTCOME_TRAFFIC, OUTCOME_SALES etc.
+  status            String   // PAUSED, ACTIVE, ARCHIVED
+  dailyBudget       Int      @default(0) // in smallest currency unit (paise); 0 when budget lives on ad set
+  specialAdCategory String?  // HOUSING, CREDIT etc. null if none
+  metaAdSetId       String?  @db.VarChar(100) // legacy / last-created ad set id
+  metaAdId          String?  @db.VarChar(100) // legacy / last-created ad id
+  targeting         Json     // age, geo, interests, placements
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  publishedAt       DateTime? // when status flipped to ACTIVE
+  reviewStatus      String?  // IN_REVIEW, ACTIVE, DISAPPROVED
+  reviewFeedback    String?  // rejection reason from Meta if disapproved
+
+  metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+  creative        MetaCreative?
+  adSets          MetaAdSet[]
+
+  @@unique([metaIntegrationId, metaCampaignId])
+  @@index([metaIntegrationId])
+  @@index([metaCampaignId])
+  @@map("meta_campaigns")
+}
+
+// ── Creatives ─────────────────────────────────────────────────────────
+model MetaCreative {
+  id                String   @id @default(uuid())
+  metaIntegrationId String
+  metaCampaignId    String?  @unique // one creative per campaign
+  /// Returned by Meta after adcreatives POST
+  metaCreativeId    String?  @db.VarChar(100)
+  /// Returned after adimages POST
+  imageHash         String?  @db.VarChar(200)
+  videoId           String?  @db.VarChar(100) // if video ad
+  headline          String
+  primaryText       String   @db.Text
+  description       String?
+  ctaType           String   // LEARN_MORE, SHOP_NOW etc.
+  landingUrl        String
+
+  imageUrl          String?  // stored URL of generated image
+  imagePrompt       String?  @db.Text // prompt used to generate image
+
+  videoUrl          String?  // stored URL of generated video
+  videoPrompt       String?  @db.Text // prompt used to generate video
+  videoStreamId     String?   // Stream video ID for management
+  thumbnailUrl      String?   // Stream auto-generated thumbnail
+
+
+  aiGenerated       Boolean  @default(true) // always true for your pipeline
+  // Compliance
+  compliancePassed  Boolean  @default(false)
+  complianceFlags   Json?    // array of violation strings if any
+  complianceCheckedAt DateTime?
+  // Approval
+  approvedByUser    Boolean  @default(false)
+  approvedAt        DateTime?
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+  campaign        MetaCampaign?   @relation(fields: [metaCampaignId], references: [id])
+  ads             MetaAd[]
+
+  @@unique([metaIntegrationId, metaCreativeId])
+  @@index([metaIntegrationId])
+  @@index([metaCreativeId])
+  @@map("meta_creatives")
+}
+
+model MetaAdSet {
+  id                String   @id @default(uuid())
+  metaIntegrationId String
+  campaignId        String
+  metaAdSetId       String   @db.VarChar(100)
+  name              String?
+  status            String?  @db.VarChar(50)
+  dailyBudget       Int?
+  optimizationGoal  String?  @db.VarChar(100)
+  billingEvent      String?  @db.VarChar(50)
+  bidStrategy       String?  @db.VarChar(50)
+  targeting         Json?
+  startTime         DateTime? @db.Timestamptz(3)
+  endTime           DateTime? @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+  campaign        MetaCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads             MetaAd[]
+
+  @@unique([metaIntegrationId, metaAdSetId])
+  @@index([campaignId])
+  @@index([metaIntegrationId])
+  @@map("meta_ad_sets")
+}
+
+model MetaAd {
+  id                String   @id @default(uuid())
+  metaIntegrationId String
+  adSetId           String
+  metaCreativeDbId  String?
+  metaAdId          String   @db.VarChar(100)
+  name              String?
+  status            String?  @db.VarChar(50)
+  publishedAt       DateTime? @db.Timestamptz(3)
+  reviewStatus      String?  @db.VarChar(50)
+  reviewFeedback    String?  @db.Text
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+  adSet           MetaAdSet       @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  creative        MetaCreative?   @relation(fields: [metaCreativeDbId], references: [id], onDelete: SetNull)
+
+  @@unique([metaIntegrationId, metaAdId])
+  @@index([adSetId])
+  @@index([metaIntegrationId])
+  @@map("meta_ads")
+}
+
+// ── Performance Metrics (polled every 6h) ────────────────────────────
+model MetaAdMetrics {
+  id             String   @id @default(uuid())
+  metaCampaignId String   // references MetaCampaign.id (your DB id)
+  metaAdId       String   @db.VarChar(100)
+  impressions    Int
+  clicks         Int
+  ctr            Float
+  spend          Float    // in account currency
+  cpc            Float?
+  roas           Float?
+  actions        Json?    // full actions array from Meta
+  datePreset     String   // e.g. "last_7d", "last_30d"
+  recordedAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([metaCampaignId])
+  @@index([metaAdId])
+  @@map("meta_ad_metrics")
+}
+
+// ================================================================
+// WooCommerce Integration
+// ================================================================
 
 /// WooCommerce REST API keys after wc-auth/v1/authorize (or manual dev entry).
 model WooCommerceStore {

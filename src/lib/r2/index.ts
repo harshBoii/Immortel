@@ -3,12 +3,15 @@ import { S3Client , GetObjectCommand} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const r2 = new S3Client({
-  region: "auto" as string  ,
-  endpoint: process.env.R2_ENDPOINT as string , // e.g., https://abc123.r2.cloudflarestorage.com
+  region: "auto" as string,
+  // R2 + AWS SDK v3: virtual-hosted style can yield NoSuchBucket even when the bucket exists.
+  // Path-style keeps requests as https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
+  endpoint: process.env.R2_ENDPOINT as string, // https://<ACCOUNT_ID>.r2.cloudflarestorage.com
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID as string,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY as string,
   },
+  forcePathStyle: true,
 });
 
 export async function generatePresignedUrl(r2Key: string, r2Bucket: string, expiresIn = 86400) {
