@@ -7,6 +7,7 @@ import {
   getMetaBucket,
   getPresignedGetUrl,
   metaImageKey,
+  StreamBody,
   streamToR2,
 } from "@/lib/cloudfare";
 
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
   const key = metaImageKey(loaded.companyId, file.name || "image");
   try {
     await streamToR2({
-      body: file.stream(),
+      body: file.stream() as unknown as StreamBody,
       key,
       contentType: mime,
       bucket,
