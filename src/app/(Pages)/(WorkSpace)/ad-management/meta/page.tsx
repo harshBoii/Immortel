@@ -31,14 +31,14 @@ function MetaAdManagementInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const tabFromUrl = searchParams.get('tab');
+  const tabFromUrl = searchParams?.get('tab');
   const activeTab: MetaTabId = useMemo(
-    () => (isTab(tabFromUrl) ? tabFromUrl : 'profile'),
+    () => (tabFromUrl && isTab(tabFromUrl) ? tabFromUrl : 'profile'),
     [tabFromUrl],
   );
 
   const setTab = (id: MetaTabId) => {
-    const q = new URLSearchParams(searchParams.toString());
+    const q = new URLSearchParams(searchParams?.toString() ?? '');
     q.set('tab', id);
     router.replace(`${pathname}?${q.toString()}`, { scroll: false });
   };
