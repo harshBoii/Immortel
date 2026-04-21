@@ -17,7 +17,7 @@ function citationTypeLabel(query: string) {
   return "Citation";
 }
 
-export default async function HomePage() {
+export default async function RadarPage() {
   const session = await getSession();
   if (!session?.companyId) redirect("/login");
   const companyId = session.companyId;
