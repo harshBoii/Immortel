@@ -85,44 +85,56 @@ export function ProfileTab() {
   }
 
   return (
-    <div className="space-y-4 max-w-lg">
-      {err && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
-          {err}
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          {err && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+              {err}
+            </div>
+          )}
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20 p-4">
+            <h3 className="text-sm font-semibold mb-3">Meta connection</h3>
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
+                <dt className="text-muted-foreground">Ad account</dt>
+                <dd className="text-right font-mono text-xs">{data?.meta?.adAccountId}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
+                <dt className="text-muted-foreground">Ad account name</dt>
+                <dd className="text-right">{data?.adAccountName ?? '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
+                <dt className="text-muted-foreground">Page</dt>
+                <dd className="text-right font-mono text-xs">{data?.meta?.fbPageId}</dd>
+              </div>
+              <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
+                <dt className="text-muted-foreground">Page name</dt>
+                <dd className="text-right">{data?.pageName ?? '—'}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Last refreshed</dt>
+                <dd className="text-right text-xs">
+                  {data?.meta?.lastRefreshed ? new Date(data.meta.lastRefreshed).toLocaleString() : '—'}
+                </dd>
+              </div>
+            </dl>
+          </div>
         </div>
-      )}
-      <dl className="space-y-2 text-sm">
-        <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
-          <dt className="text-muted-foreground">Ad account</dt>
-          <dd className="text-right font-mono text-xs">{data?.meta?.adAccountId}</dd>
+
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20 p-4 h-fit">
+          <h3 className="text-sm font-semibold">Actions</h3>
+          <p className="text-xs text-muted-foreground mt-1">Disconnecting will remove the Meta integration from this workspace.</p>
+          <button
+            type="button"
+            onClick={() => void disconnect()}
+            disabled={disconnecting}
+            className="mt-4 rounded-lg border border-red-500/40 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 disabled:opacity-50"
+          >
+            {disconnecting ? 'Disconnecting…' : 'Disconnect Meta'}
+          </button>
         </div>
-        <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
-          <dt className="text-muted-foreground">Ad account name</dt>
-          <dd className="text-right">{data?.adAccountName ?? '—'}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
-          <dt className="text-muted-foreground">Page</dt>
-          <dd className="text-right font-mono text-xs">{data?.meta?.fbPageId}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-[var(--glass-border)] pb-2">
-          <dt className="text-muted-foreground">Page name</dt>
-          <dd className="text-right">{data?.pageName ?? '—'}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted-foreground">Last refreshed</dt>
-          <dd className="text-right text-xs">
-            {data?.meta?.lastRefreshed ? new Date(data.meta.lastRefreshed).toLocaleString() : '—'}
-          </dd>
-        </div>
-      </dl>
-      <button
-        type="button"
-        onClick={() => void disconnect()}
-        disabled={disconnecting}
-        className="rounded-lg border border-red-500/40 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-500/10 disabled:opacity-50"
-      >
-        {disconnecting ? 'Disconnecting…' : 'Disconnect Meta'}
-      </button>
+      </div>
     </div>
   );
 }

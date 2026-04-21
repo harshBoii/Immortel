@@ -124,119 +124,123 @@ export function CampaignsTab() {
   if (!meta) return null;
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={create} className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-4 max-w-xl">
-        <h3 className="text-sm font-semibold">New campaign</h3>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Objective</span>
-          <ViewMoreDropdown tooltipContent="Objective" align="left">
-            {(close) => (
-              <div className="py-1 max-h-56 overflow-auto">
-                {OBJECTIVES.map((o) => (
-                  <button
-                    key={o}
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
-                    onClick={() => {
-                      setObjective(o);
-                      close();
-                    }}
-                  >
-                    {o}
-                  </button>
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <form onSubmit={create} className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-4">
+            <h3 className="text-sm font-semibold">New campaign</h3>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Objective</span>
+              <ViewMoreDropdown tooltipContent="Objective" align="left">
+                {(close) => (
+                  <div className="py-1 max-h-56 overflow-auto">
+                    {OBJECTIVES.map((o) => (
+                      <button
+                        key={o}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
+                        onClick={() => {
+                          setObjective(o);
+                          close();
+                        }}
+                      >
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ViewMoreDropdown>
+              <p className="text-xs text-muted-foreground/80">{objective}</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Daily budget (paise, 0 = use ad set)</label>
+              <input
+                value={dailyPaise}
+                onChange={(e) => setDailyPaise(e.target.value.replace(/[^\d]/g, ''))}
+                inputMode="numeric"
+                className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
+                placeholder="0"
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Special ad categories</span>
+              <div className="flex flex-wrap gap-2">
+                {SPECIAL.map((s) => (
+                  <label key={s} className="flex items-center gap-1.5 text-xs">
+                    <input type="checkbox" checked={special.includes(s)} onChange={() => toggleSpecial(s)} />
+                    {s}
+                  </label>
                 ))}
               </div>
-            )}
-          </ViewMoreDropdown>
-          <p className="text-xs text-muted-foreground/80">{objective}</p>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {saving ? 'Creating…' : 'Create (PAUSED)'}
+            </button>
+          </form>
+
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
+          )}
         </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Daily budget (paise, 0 = use ad set)</label>
-          <input
-            value={dailyPaise}
-            onChange={(e) => setDailyPaise(e.target.value.replace(/[^\d]/g, ''))}
-            inputMode="numeric"
-            className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
-            placeholder="0"
-          />
-        </div>
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Special ad categories</span>
-          <div className="flex flex-wrap gap-2">
-            {SPECIAL.map((s) => (
-              <label key={s} className="flex items-center gap-1.5 text-xs">
-                <input
-                  type="checkbox"
-                  checked={special.includes(s)}
-                  onChange={() => toggleSpecial(s)}
-                />
-                {s}
-              </label>
-            ))}
+
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
+            <h3 className="text-sm font-semibold">Your campaigns</h3>
+            <button
+              type="button"
+              onClick={() => void sync()}
+              disabled={syncing}
+              className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+            >
+              {syncing ? 'Syncing…' : 'Sync from Meta'}
+            </button>
           </div>
-        </div>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {saving ? 'Creating…' : 'Create (PAUSED)'}
-        </button>
-      </form>
 
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Your campaigns</h3>
-        <button
-          type="button"
-          onClick={() => void sync()}
-          disabled={syncing}
-          className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-        >
-          {syncing ? 'Syncing…' : 'Sync from Meta'}
-        </button>
+          {loading ? (
+            <p className="p-3 text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <div className="max-h-[calc(100vh-260px)] overflow-auto">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 border-b border-[var(--glass-border)] bg-[var(--glass)]/70 backdrop-blur">
+                    <tr>
+                      <th className="p-2 font-medium">Name</th>
+                      <th className="p-2 font-medium">Objective</th>
+                      <th className="p-2 font-medium">Status</th>
+                      <th className="p-2 font-medium">Daily (paise)</th>
+                      <th className="p-2 font-medium">Meta ID</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((c) => (
+                      <tr key={c.id} className="border-b border-[var(--glass-border)]/60">
+                        <td className="p-2">{c.name}</td>
+                        <td className="p-2 font-mono">{c.objective}</td>
+                        <td className="p-2">{c.status}</td>
+                        <td className="p-2">{c.dailyBudget}</td>
+                        <td className="p-2 font-mono text-[10px]">{c.metaCampaignId}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
-      )}
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--glass-border)]">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-[var(--glass-border)] bg-[var(--glass)]/50">
-              <tr>
-                <th className="p-2 font-medium">Name</th>
-                <th className="p-2 font-medium">Objective</th>
-                <th className="p-2 font-medium">Status</th>
-                <th className="p-2 font-medium">Daily (paise)</th>
-                <th className="p-2 font-medium">Meta ID</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c.id} className="border-b border-[var(--glass-border)]/60">
-                  <td className="p-2">{c.name}</td>
-                  <td className="p-2 font-mono">{c.objective}</td>
-                  <td className="p-2">{c.status}</td>
-                  <td className="p-2">{c.dailyBudget}</td>
-                  <td className="p-2 font-mono text-[10px]">{c.metaCampaignId}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }

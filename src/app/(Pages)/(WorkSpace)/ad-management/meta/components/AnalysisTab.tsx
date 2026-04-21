@@ -120,242 +120,251 @@ export function AnalysisTab() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">Ad creative analysis</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Pulls media from your current top 5 ads (by last 7d impressions), mirrors it to R2, and sends videos for intelligence
-            processing.
-          </p>
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20 p-4">
+            <h3 className="text-sm font-semibold">Ad creative analysis</h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pulls media from your current top 5 ads (by last 7d impressions), mirrors it to R2, and sends videos for intelligence processing.
+            </p>
+            <button
+              type="button"
+              onClick={() => void analyze()}
+              disabled={running}
+              className="mt-4 rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+            >
+              {running ? 'Analyzing…' : 'Analyze top 5 ads'}
+            </button>
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => void analyze()}
-          disabled={running}
-          className="rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
-        >
-          {running ? 'Analyzing…' : 'Analyze top 5 ads'}
-        </button>
-      </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
-      )}
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
+          <div className="border-b border-[var(--glass-border)] px-3 py-2">
+            <h3 className="text-sm font-semibold">Analyzed assets</h3>
+          </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : items.length === 0 ? (
-        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/30 p-6 text-sm text-muted-foreground">
-          No analyzed videos yet. Click <span className="font-medium text-foreground">Analyze top 5 ads</span>.
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {items.map((it) => {
-            const intel = it.asset.intelligence;
-            const isOpen = Boolean(open[it.asset.id]);
-            const status = (it.asset.intelligenceStatus ?? 'PENDING').toUpperCase();
-            return (
-              <li key={it.asset.id} className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
-                <div className="flex items-center gap-3 p-3">
-                  <div className="h-14 w-24 overflow-hidden rounded-lg bg-muted/40 shrink-0 flex items-center justify-center">
-                    {it.thumbnailUrl ? (
-                      <img src={it.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-[10px] text-muted-foreground">VIDEO</span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground truncate" title={it.asset.title}>
-                        {it.asset.title}
-                      </p>
-                      <Badge>{status}</Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate" title={it.asset.filename}>
-                      {it.asset.filename}
-                    </p>
-                    {it.metaVideoId && (
-                      <p className="text-[10px] text-muted-foreground mt-1 font-mono">metaVideoId: {it.metaVideoId}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/ingestion/asset/${it.asset.id}/description`}
-                      className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)]"
-                    >
-                      Open
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => setOpen((p) => ({ ...p, [it.asset.id]: !isOpen }))}
-                      className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)]"
-                    >
-                      {isOpen ? 'Hide' : 'View'} analysis
-                    </button>
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div className="border-t border-[var(--glass-border)] p-4 space-y-4">
-                    {!intel ? (
-                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-                        Intelligence data not available yet. This may still be processing.
+          {loading ? (
+            <p className="p-3 text-sm text-muted-foreground">Loading…</p>
+          ) : items.length === 0 ? (
+            <div className="p-3 text-sm text-muted-foreground">
+              No analyzed videos yet. Click <span className="font-medium text-foreground">Analyze top 5 ads</span>.
+            </div>
+          ) : (
+            <div className="max-h-[calc(100vh-260px)] overflow-auto p-3">
+              <ul className="space-y-3">
+                {items.map((it) => {
+                  const intel = it.asset.intelligence;
+                  const isOpen = Boolean(open[it.asset.id]);
+                  const status = (it.asset.intelligenceStatus ?? 'PENDING').toUpperCase();
+                  return (
+                    <li key={it.asset.id} className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/10">
+                      <div className="flex items-center gap-3 p-3">
+                        <div className="h-14 w-24 overflow-hidden rounded-lg bg-muted/40 shrink-0 flex items-center justify-center">
+                          {it.thumbnailUrl ? (
+                            <img src={it.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">VIDEO</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-foreground truncate" title={it.asset.title}>
+                              {it.asset.title}
+                            </p>
+                            <Badge>{status}</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate" title={it.asset.filename}>
+                            {it.asset.filename}
+                          </p>
+                          {it.metaVideoId && (
+                            <p className="text-[10px] text-muted-foreground mt-1 font-mono">metaVideoId: {it.metaVideoId}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/ingestion/asset/${it.asset.id}/description`}
+                            className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)]"
+                          >
+                            Open
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setOpen((p) => ({ ...p, [it.asset.id]: !isOpen }))}
+                            className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)]"
+                          >
+                            {isOpen ? 'Hide' : 'View'} analysis
+                          </button>
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                          <h4 className="text-xs font-semibold mb-2">Summary & description</h4>
-                          <div className="space-y-2 text-sm">
-                            {intel.titlePrimary && (
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Primary title</span>
-                                <p className="text-foreground">{intel.titlePrimary}</p>
-                              </div>
-                            )}
-                            {intel.shortSummary && (
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Short summary</span>
-                                <p className="text-foreground">{intel.shortSummary}</p>
-                              </div>
-                            )}
-                            {intel.longDescription && (
-                              <div>
-                                <span className="text-xs text-muted-foreground block">Long description</span>
-                                <p className="text-foreground whitespace-pre-wrap">{intel.longDescription}</p>
-                              </div>
-                            )}
-                          </div>
-                        </section>
 
-                        <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                          <h4 className="text-xs font-semibold mb-2">Meta</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                            {intel.theme && (
-                              <div>
-                                <span className="text-[10px] text-muted-foreground block">Theme</span>
-                                <p className="text-foreground">{intel.theme}</p>
-                              </div>
-                            )}
-                            {intel.sentiment && (
-                              <div>
-                                <span className="text-[10px] text-muted-foreground block">Sentiment</span>
-                                <p className="text-foreground">{intel.sentiment}</p>
-                              </div>
-                            )}
-                            {intel.contentType && (
-                              <div>
-                                <span className="text-[10px] text-muted-foreground block">Content type</span>
-                                <p className="text-foreground">{intel.contentType}</p>
-                              </div>
-                            )}
-                            {intel.language && (
-                              <div>
-                                <span className="text-[10px] text-muted-foreground block">Language</span>
-                                <p className="text-foreground">{intel.language}</p>
-                              </div>
-                            )}
-                            {intel.intensityScore != null && (
-                              <div>
-                                <span className="text-[10px] text-muted-foreground block">Intensity</span>
-                                <p className="text-foreground">{intel.intensityScore}</p>
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-[10px] text-muted-foreground block">Spiritual elements</span>
-                              <p className="text-foreground">{intel.spiritualElements ? 'Yes' : 'No'}</p>
+                      {isOpen && (
+                        <div className="border-t border-[var(--glass-border)] p-4 space-y-4">
+                          {!intel ? (
+                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                              Intelligence data not available yet. This may still be processing.
                             </div>
-                          </div>
-                        </section>
+                          ) : (
+                            <>
+                              <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                <h4 className="text-xs font-semibold mb-2">Summary & description</h4>
+                                <div className="space-y-2 text-sm">
+                                  {intel.titlePrimary && (
+                                    <div>
+                                      <span className="text-xs text-muted-foreground block">Primary title</span>
+                                      <p className="text-foreground">{intel.titlePrimary}</p>
+                                    </div>
+                                  )}
+                                  {intel.shortSummary && (
+                                    <div>
+                                      <span className="text-xs text-muted-foreground block">Short summary</span>
+                                      <p className="text-foreground">{intel.shortSummary}</p>
+                                    </div>
+                                  )}
+                                  {intel.longDescription && (
+                                    <div>
+                                      <span className="text-xs text-muted-foreground block">Long description</span>
+                                      <p className="text-foreground whitespace-pre-wrap">{intel.longDescription}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </section>
 
-                        {(intel.tags?.length || intel.topics?.length || intel.tone?.length) ? (
-                          <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                            <h4 className="text-xs font-semibold mb-2">Tags & topics</h4>
-                            <div className="space-y-3 text-sm">
-                              {Array.isArray(intel.tags) && intel.tags.length > 0 && (
-                                <div>
-                                  <span className="text-[10px] text-muted-foreground block mb-1">Tags</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {intel.tags.map((t) => (
-                                      <span key={t} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px]">
-                                        {t}
-                                      </span>
+                              <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                <h4 className="text-xs font-semibold mb-2">Meta</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                                  {intel.theme && (
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground block">Theme</span>
+                                      <p className="text-foreground">{intel.theme}</p>
+                                    </div>
+                                  )}
+                                  {intel.sentiment && (
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground block">Sentiment</span>
+                                      <p className="text-foreground">{intel.sentiment}</p>
+                                    </div>
+                                  )}
+                                  {intel.contentType && (
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground block">Content type</span>
+                                      <p className="text-foreground">{intel.contentType}</p>
+                                    </div>
+                                  )}
+                                  {intel.language && (
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground block">Language</span>
+                                      <p className="text-foreground">{intel.language}</p>
+                                    </div>
+                                  )}
+                                  {intel.intensityScore != null && (
+                                    <div>
+                                      <span className="text-[10px] text-muted-foreground block">Intensity</span>
+                                      <p className="text-foreground">{intel.intensityScore}</p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <span className="text-[10px] text-muted-foreground block">Spiritual elements</span>
+                                    <p className="text-foreground">{intel.spiritualElements ? 'Yes' : 'No'}</p>
+                                  </div>
+                                </div>
+                              </section>
+
+                              {(intel.tags?.length || intel.topics?.length || intel.tone?.length) ? (
+                                <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                  <h4 className="text-xs font-semibold mb-2">Tags & topics</h4>
+                                  <div className="space-y-3 text-sm">
+                                    {Array.isArray(intel.tags) && intel.tags.length > 0 && (
+                                      <div>
+                                        <span className="text-[10px] text-muted-foreground block mb-1">Tags</span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {intel.tags.map((t) => (
+                                            <span key={t} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px]">
+                                              {t}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {Array.isArray(intel.topics) && intel.topics.length > 0 && (
+                                      <div>
+                                        <span className="text-[10px] text-muted-foreground block mb-1">Topics</span>
+                                        <p className="text-foreground">{intel.topics.join(', ')}</p>
+                                      </div>
+                                    )}
+                                    {Array.isArray(intel.tone) && intel.tone.length > 0 && (
+                                      <div>
+                                        <span className="text-[10px] text-muted-foreground block mb-1">Tone</span>
+                                        <p className="text-foreground">{intel.tone.join(', ')}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </section>
+                              ) : null}
+
+                              {Array.isArray(intel.chapters) && intel.chapters.length > 0 && (
+                                <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                  <h4 className="text-xs font-semibold mb-2">Chapters</h4>
+                                  <ul className="space-y-2 text-sm">
+                                    {intel.chapters.map((ch, idx) => (
+                                      <li key={idx} className="flex gap-3 border-b border-[var(--glass-border)] pb-2 last:border-0">
+                                        {ch.timestamp != null && (
+                                          <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                                            {formatTime(ch.timestamp)}
+                                          </span>
+                                        )}
+                                        <div className="min-w-0">
+                                          {ch.title && <p className="font-medium text-foreground">{ch.title}</p>}
+                                          {ch.description && <p className="text-muted-foreground text-xs mt-0.5">{ch.description}</p>}
+                                        </div>
+                                      </li>
                                     ))}
-                                  </div>
-                                </div>
+                                  </ul>
+                                </section>
                               )}
-                              {Array.isArray(intel.topics) && intel.topics.length > 0 && (
-                                <div>
-                                  <span className="text-[10px] text-muted-foreground block mb-1">Topics</span>
-                                  <p className="text-foreground">{intel.topics.join(', ')}</p>
-                                </div>
+
+                              {Array.isArray(intel.shortsHooks) && intel.shortsHooks.length > 0 && (
+                                <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                  <h4 className="text-xs font-semibold mb-2">Shorts hooks</h4>
+                                  <ul className="space-y-2 text-sm">
+                                    {intel.shortsHooks.map((h, idx) => (
+                                      <li key={idx} className="border-b border-[var(--glass-border)] pb-2 last:border-0">
+                                        {h.start != null && h.end != null && (
+                                          <span className="text-muted-foreground text-xs font-mono">
+                                            {h.start}s – {h.end}s{h.hook_type ? ` · ${h.hook_type}` : ''}
+                                          </span>
+                                        )}
+                                        {h.description && <p className="text-foreground mt-0.5">{h.description}</p>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </section>
                               )}
-                              {Array.isArray(intel.tone) && intel.tone.length > 0 && (
-                                <div>
-                                  <span className="text-[10px] text-muted-foreground block mb-1">Tone</span>
-                                  <p className="text-foreground">{intel.tone.join(', ')}</p>
+
+                              <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
+                                <h4 className="text-xs font-semibold mb-2">Processing info</h4>
+                                <div className="flex flex-wrap gap-4 text-[10px] text-muted-foreground">
+                                  {intel.modelVersion && <span>Model: {intel.modelVersion}</span>}
+                                  {intel.confidence != null && <span>Confidence: {intel.confidence}</span>}
+                                  <span>Processed: {new Date(intel.processedAt).toLocaleString()}</span>
                                 </div>
-                              )}
-                            </div>
-                          </section>
-                        ) : null}
-
-                        {Array.isArray(intel.chapters) && intel.chapters.length > 0 && (
-                          <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                            <h4 className="text-xs font-semibold mb-2">Chapters</h4>
-                            <ul className="space-y-2 text-sm">
-                              {intel.chapters.map((ch, idx) => (
-                                <li key={idx} className="flex gap-3 border-b border-[var(--glass-border)] pb-2 last:border-0">
-                                  {ch.timestamp != null && (
-                                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
-                                      {formatTime(ch.timestamp)}
-                                    </span>
-                                  )}
-                                  <div className="min-w-0">
-                                    {ch.title && <p className="font-medium text-foreground">{ch.title}</p>}
-                                    {ch.description && <p className="text-muted-foreground text-xs mt-0.5">{ch.description}</p>}
-                                  </div>
-                                </li>
-                              ))}
-                            </ul>
-                          </section>
-                        )}
-
-                        {Array.isArray(intel.shortsHooks) && intel.shortsHooks.length > 0 && (
-                          <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                            <h4 className="text-xs font-semibold mb-2">Shorts hooks</h4>
-                            <ul className="space-y-2 text-sm">
-                              {intel.shortsHooks.map((h, idx) => (
-                                <li key={idx} className="border-b border-[var(--glass-border)] pb-2 last:border-0">
-                                  {h.start != null && h.end != null && (
-                                    <span className="text-muted-foreground text-xs font-mono">
-                                      {h.start}s – {h.end}s{h.hook_type ? ` · ${h.hook_type}` : ''}
-                                    </span>
-                                  )}
-                                  {h.description && <p className="text-foreground mt-0.5">{h.description}</p>}
-                                </li>
-                              ))}
-                            </ul>
-                          </section>
-                        )}
-
-                        <section className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-4">
-                          <h4 className="text-xs font-semibold mb-2">Processing info</h4>
-                          <div className="flex flex-wrap gap-4 text-[10px] text-muted-foreground">
-                            {intel.modelVersion && <span>Model: {intel.modelVersion}</span>}
-                            {intel.confidence != null && <span>Confidence: {intel.confidence}</span>}
-                            <span>Processed: {new Date(intel.processedAt).toLocaleString()}</span>
-                          </div>
-                        </section>
-                      </>
-                    )}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                              </section>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

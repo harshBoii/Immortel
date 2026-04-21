@@ -125,96 +125,109 @@ export function CreativesTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Media library</h3>
-        <button
-          type="button"
-          onClick={() => void syncFromMeta()}
-          disabled={syncing}
-          className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-        >
-          {syncing ? 'Syncing…' : 'Sync from Meta'}
-        </button>
-      </div>
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Media library</h3>
+            <button
+              type="button"
+              onClick={() => void syncFromMeta()}
+              disabled={syncing}
+              className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+            >
+              {syncing ? 'Syncing…' : 'Sync from Meta'}
+            </button>
+          </div>
 
-      <div
-        className="rounded-xl border-2 border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-4 py-8 text-center text-sm text-muted-foreground"
-        onDragOver={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          void onFiles(e.dataTransfer.files);
-        }}
-      >
-        <input
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          className="hidden"
-          id="meta-creative-files"
-          onChange={(e) => void onFiles(e.target.files)}
-        />
-        <label htmlFor="meta-creative-files" className="cursor-pointer text-[var(--sibling-primary)] font-medium">
-          Choose files
-        </label>
-        <span className="mx-1">or drag and drop images and videos here.</span>
-      </div>
-
-      {progress != null && (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--glass-border)]">
           <div
-            className="h-full bg-[var(--sibling-primary)] transition-all"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
-      )}
+            className="rounded-xl border-2 border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-4 py-8 text-center text-sm text-muted-foreground"
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              void onFiles(e.dataTransfer.files);
+            }}
+          >
+            <input
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="hidden"
+              id="meta-creative-files"
+              onChange={(e) => void onFiles(e.target.files)}
+            />
+            <label htmlFor="meta-creative-files" className="cursor-pointer text-[var(--sibling-primary)] font-medium">
+              Choose files
+            </label>
+            <span className="mx-1">or drag and drop images and videos here.</span>
+          </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
-          {error}
-        </div>
-      )}
+          {progress != null && (
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--glass-border)]">
+              <div
+                className="h-full bg-[var(--sibling-primary)] transition-all"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+          )}
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading gallery…</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {images.map((m) => (
-            <div
-              key={m.id}
-              className="relative aspect-square overflow-hidden rounded-lg border border-[var(--glass-border)] bg-black/5"
-            >
-              {m.imageUrl ? (
-                <Image src={m.imageUrl} alt="" fill className="object-cover" unoptimized />
-              ) : (
-                <span className="p-2 text-xs text-muted-foreground">Image</span>
-              )}
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
+              {error}
             </div>
-          ))}
-          {videos.map((m) => (
-            <div
-              key={m.id}
-              className="relative aspect-video overflow-hidden rounded-lg border border-[var(--glass-border)] bg-black/20"
-            >
-              {m.thumbnailUrl ? (
-                <Image src={m.thumbnailUrl} alt="" fill className="object-cover" unoptimized />
-              ) : m.videoUrl ? (
-                <video src={m.videoUrl} className="h-full w-full object-cover" controls muted playsInline />
-              ) : (
-                <span className="p-2 text-xs text-muted-foreground">Video</span>
-              )}
-              {m.status && m.status !== 'ready' && (
-                <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-white">
-                  {m.status}
-                </span>
-              )}
-            </div>
-          ))}
+          )}
         </div>
-      )}
+
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
+          <div className="border-b border-[var(--glass-border)] px-3 py-2">
+            <h3 className="text-sm font-semibold">Gallery</h3>
+          </div>
+          {loading ? (
+            <p className="p-3 text-sm text-muted-foreground">Loading gallery…</p>
+          ) : (
+            <div className="max-h-[calc(100vh-260px)] overflow-auto p-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {images.map((m) => (
+                  <div
+                    key={m.id}
+                    className="relative aspect-square overflow-hidden rounded-lg border border-[var(--glass-border)] bg-black/5"
+                  >
+                    {m.imageUrl ? (
+                      <Image src={m.imageUrl} alt="" fill className="object-cover" unoptimized />
+                    ) : (
+                      <span className="p-2 text-xs text-muted-foreground">Image</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {videos.map((m) => (
+                  <div
+                    key={m.id}
+                    className="relative aspect-video overflow-hidden rounded-lg border border-[var(--glass-border)] bg-black/20"
+                  >
+                    {m.thumbnailUrl ? (
+                      <Image src={m.thumbnailUrl} alt="" fill className="object-cover" unoptimized />
+                    ) : m.videoUrl ? (
+                      <video src={m.videoUrl} className="h-full w-full object-cover" controls muted playsInline />
+                    ) : (
+                      <span className="p-2 text-xs text-muted-foreground">Video</span>
+                    )}
+                    {m.status && m.status !== 'ready' && (
+                      <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-white">
+                        {m.status}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

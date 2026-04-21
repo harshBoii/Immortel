@@ -145,126 +145,134 @@ export function AdsTab() {
   if (!meta) return null;
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={create} className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-4 max-w-xl">
-        <h3 className="text-sm font-semibold">New ad</h3>
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Ad set</span>
-          <ViewMoreDropdown tooltipContent="Ad set" align="left">
-            {(close) => (
-              <div className="py-1 max-h-56 overflow-auto">
-                {adSets.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
-                    onClick={() => {
-                      setAdSetId(a.id);
-                      close();
-                    }}
-                  >
-                    {a.name ?? a.metaAdSetId}
-                  </button>
-                ))}
-              </div>
-            )}
-          </ViewMoreDropdown>
-        </div>
-        <div className="space-y-1">
-          <span className="text-xs text-muted-foreground">Creative</span>
-          <ViewMoreDropdown tooltipContent="Creative" align="left">
-            {(close) => (
-              <div className="py-1 max-h-56 overflow-auto">
-                {creatives.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
-                    onClick={() => {
-                      setCreativeId(c.id);
-                      close();
-                    }}
-                  >
-                    {c.headline}
-                  </button>
-                ))}
-              </div>
-            )}
-          </ViewMoreDropdown>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
-            placeholder="Ad name"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={saving || !adSetId || !creativeId}
-          className="rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          {saving ? 'Creating…' : 'Create ad (PAUSED)'}
-        </button>
-      </form>
+    <div className="mx-auto w-full max-w-6xl">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <form onSubmit={create} className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-4">
+            <h3 className="text-sm font-semibold">New ad</h3>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Ad set</span>
+              <ViewMoreDropdown tooltipContent="Ad set" align="left">
+                {(close) => (
+                  <div className="py-1 max-h-56 overflow-auto">
+                    {adSets.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
+                        onClick={() => {
+                          setAdSetId(a.id);
+                          close();
+                        }}
+                      >
+                        {a.name ?? a.metaAdSetId}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ViewMoreDropdown>
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground">Creative</span>
+              <ViewMoreDropdown tooltipContent="Creative" align="left">
+                {(close) => (
+                  <div className="py-1 max-h-56 overflow-auto">
+                    {creatives.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--glass-hover)]"
+                        onClick={() => {
+                          setCreativeId(c.id);
+                          close();
+                        }}
+                      >
+                        {c.headline}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ViewMoreDropdown>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-[var(--glass-border)] bg-background px-3 py-2 text-sm"
+                placeholder="Ad name"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={saving || !adSetId || !creativeId}
+              className="rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              {saving ? 'Creating…' : 'Create ad (PAUSED)'}
+            </button>
+          </form>
 
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Ads</h3>
-        <button
-          type="button"
-          onClick={() => void sync()}
-          disabled={syncing}
-          className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-        >
-          {syncing ? 'Syncing…' : 'Sync from Meta'}
-        </button>
+          {error && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
+            <h3 className="text-sm font-semibold">Ads</h3>
+            <button
+              type="button"
+              onClick={() => void sync()}
+              disabled={syncing}
+              className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+            >
+              {syncing ? 'Syncing…' : 'Sync from Meta'}
+            </button>
+          </div>
+
+          {loading ? (
+            <p className="p-3 text-sm text-muted-foreground">Loading…</p>
+          ) : (
+            <div className="max-h-[calc(100vh-260px)] overflow-auto">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 border-b border-[var(--glass-border)] bg-[var(--glass)]/70 backdrop-blur">
+                    <tr>
+                      <th className="p-2 font-medium">Name</th>
+                      <th className="p-2 font-medium">Ad set</th>
+                      <th className="p-2 font-medium">Creative</th>
+                      <th className="p-2 font-medium">Status</th>
+                      <th className="p-2 font-medium">Meta ID</th>
+                      <th className="p-2 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((a) => (
+                      <tr key={a.id} className="border-b border-[var(--glass-border)]/60">
+                        <td className="p-2">{a.name ?? '—'}</td>
+                        <td className="p-2">{a.adSet.name ?? '—'}</td>
+                        <td className="p-2">{a.creative?.headline ?? '—'}</td>
+                        <td className="p-2">{a.status ?? '—'}</td>
+                        <td className="p-2 font-mono text-[10px]">{a.metaAdId}</td>
+                        <td className="p-2">
+                          <button
+                            type="button"
+                            onClick={() => void activate(a.metaAdId)}
+                            disabled={activating === a.metaAdId}
+                            className="rounded border border-[var(--glass-border)] px-2 py-1 text-[10px] font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                          >
+                            {activating === a.metaAdId ? '…' : 'Activate'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">{error}</div>
-      )}
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--glass-border)]">
-          <table className="w-full text-left text-xs">
-            <thead className="border-b border-[var(--glass-border)] bg-[var(--glass)]/50">
-              <tr>
-                <th className="p-2 font-medium">Name</th>
-                <th className="p-2 font-medium">Ad set</th>
-                <th className="p-2 font-medium">Creative</th>
-                <th className="p-2 font-medium">Status</th>
-                <th className="p-2 font-medium">Meta ID</th>
-                <th className="p-2 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((a) => (
-                <tr key={a.id} className="border-b border-[var(--glass-border)]/60">
-                  <td className="p-2">{a.name ?? '—'}</td>
-                  <td className="p-2">{a.adSet.name ?? '—'}</td>
-                  <td className="p-2">{a.creative?.headline ?? '—'}</td>
-                  <td className="p-2">{a.status ?? '—'}</td>
-                  <td className="p-2 font-mono text-[10px]">{a.metaAdId}</td>
-                  <td className="p-2">
-                    <button
-                      type="button"
-                      onClick={() => void activate(a.metaAdId)}
-                      disabled={activating === a.metaAdId}
-                      className="rounded border border-[var(--glass-border)] px-2 py-1 text-[10px] font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-                    >
-                      {activating === a.metaAdId ? '…' : 'Activate'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </div>
   );
 }
