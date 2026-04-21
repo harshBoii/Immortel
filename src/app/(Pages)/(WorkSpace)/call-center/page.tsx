@@ -3,6 +3,82 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 
+/* ── Access gate ── */
+const CALL_CENTER_PASSWORD = 'Immortell';
+const CALL_CENTER_UNLOCK_KEY = 'call-center-unlocked';
+
+const IconLock = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+const PasswordGate = ({ onUnlock }: { onUnlock: () => void }) => {
+  const [pwd, setPwd] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pwd === CALL_CENTER_PASSWORD) {
+      try { sessionStorage.setItem(CALL_CENTER_UNLOCK_KEY, '1'); } catch { /* ignore */ }
+      onUnlock();
+    } else {
+      setErr('Try again — wrong password.');
+      setPwd('');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm px-4">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/90 backdrop-blur-md p-6 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--sibling-primary)]/12 text-[var(--sibling-primary)]">
+            <IconLock />
+          </span>
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground leading-tight">
+              Restricted area
+            </h2>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              Enter the password to access the Calling Agent.
+            </p>
+          </div>
+        </div>
+
+        <label htmlFor="cc-gate-pwd" className="block text-[11px] font-semibold uppercase tracking-wide text-foreground/70 mb-1.5">
+          Password
+        </label>
+        <input
+          id="cc-gate-pwd"
+          type="password"
+          autoFocus
+          autoComplete="off"
+          value={pwd}
+          onChange={(e) => { setPwd(e.target.value); if (err) setErr(null); }}
+          className="w-full px-3 py-2 rounded-lg text-sm bg-[var(--glass-hover)] border border-[var(--glass-border)] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)] placeholder:text-muted-foreground/35 transition-colors"
+          placeholder="••••••••"
+        />
+
+        {err && (
+          <p className="mt-2 text-[12px] text-destructive">{err}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={!pwd}
+          className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[13px] font-semibold bg-[var(--sibling-primary)] hover:opacity-90 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Unlock
+        </button>
+      </form>
+    </div>
+  );
+};
+
 /* ── types ── */
 type ProductItem = { id: string; title: string };
 
@@ -281,6 +357,13 @@ const InstructionRow = ({
 export default function CallCenterPage() {
   const { company, loading: contextLoading, error: contextError } = useCurrentContext();
 
+  const [unlocked, setUnlocked] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(CALL_CENTER_UNLOCK_KEY) === '1') setUnlocked(true);
+    } catch { /* ignore */ }
+  }, []);
+
   const [phone,                setPhone]                = useState('');
   const [contactName,          setContactName]          = useState('');
   const [companyName,          setCompanyName]          = useState('');
@@ -451,6 +534,10 @@ export default function CallCenterPage() {
   const previewReady = phone.trim() && contactName.trim() && resolvedProduct;
   const langLabel    = LANGUAGE_OPTIONS.find((l) => l.value === languageMode)?.label ?? languageMode;
   const autoCount    = [useAiSystemPrompt, useAiOpeningGreeting, useAiAgentName, useAiAgentRole, useAiQuestions].filter(Boolean).length;
+
+  if (!unlocked) {
+    return <PasswordGate onUnlock={() => setUnlocked(true)} />;
+  }
 
   return (
     <div className="min-h-[60vh] px-4 pb-12 pt-2 w-full">

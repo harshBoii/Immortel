@@ -135,8 +135,8 @@ const MAIN_SECTIONS: MainSection[] = [
   { id: 'calls',        label: 'Calls',    icon: PhoneCall,  hasSecondary: true, isAgent: true },
   // { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
   { id: 'adManagement', label: 'Ads',      icon: Megaphone,  hasSecondary: true, isAgent: true },
-  // Settings lives in the bottom utilities strip but still owns a secondary nav.
-  { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true, hidden: true },
+  // Workspace lives in the bottom utilities strip but still owns a secondary nav.
+  { id: 'Workspace',    label: 'Workspace', icon: Settings,  hasSecondary: true, hidden: true },
 ];
 
 /* ============================================
@@ -484,7 +484,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <DisabledSecondaryNavItem icon={SiGoogle} label="Google" badge="Coming Soon" />
         </>
       );
-    case 'Settings':
+    case 'Workspace':
       return (
         <>
           <SectionLabel label="Connection" />
@@ -544,7 +544,7 @@ export default function AppSidebar() {
       case 'calls':    return '/call-center';
       // case 'shop':     return '/shop/products';
       case 'adManagement': return '/ad-management/meta';
-      case 'Settings': return '/connection';
+      case 'Workspace': return '/connection';
       default:         return '/';
     }
   };
@@ -572,8 +572,8 @@ export default function AppSidebar() {
     else if (pathname?.startsWith('/call-center'))            setActiveSection('calls');
     else if (pathname?.startsWith('/shop'))                   setActiveSection('shop');
     else if (pathname?.startsWith('/ad-management'))            setActiveSection('adManagement');
-    else if (pathname?.startsWith('/connection'))             setActiveSection('Settings');
-    else if (pathname?.startsWith('/jobs'))                   setActiveSection('Settings');
+    else if (pathname?.startsWith('/connection'))             setActiveSection('Workspace');
+    else if (pathname?.startsWith('/jobs'))                   setActiveSection('Workspace');
     else                                                      setActiveSection('home');
   }, [pathname]);
 
@@ -685,10 +685,10 @@ export default function AppSidebar() {
 
           <button
             type="button"
-            onClick={() => handleSectionClick('Settings')}
-            title="Settings"
+            onClick={() => handleSectionClick('Workspace')}
+            title="Workspace"
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
-              activeSection === 'Settings'
+              activeSection === 'Workspace'
                 ? 'bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
                 : 'text-muted-foreground/60 hover:text-foreground hover:bg-[var(--glass-hover)]'
             }`}
@@ -697,12 +697,12 @@ export default function AppSidebar() {
           </button>
           <span
             className={`text-[9px] leading-none mb-1 transition-colors duration-200 ${
-              activeSection === 'Settings'
+              activeSection === 'Workspace'
                 ? 'text-[var(--sibling-primary)]/80 font-semibold'
                 : 'text-muted-foreground/40'
             }`}
           >
-            Settings
+            Workspace
           </span>
 
           <Link
