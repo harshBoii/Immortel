@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone } from 'lucide-react';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar } from 'lucide-react';
 import { SiMeta, SiGoogle } from 'react-icons/si';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
@@ -428,6 +428,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       return (
         <>
           <SectionLabel label="GEO" />
+          <SecondaryNavItem icon={Radar}         label="Geo Radar"              href="/geo/radar" />
           <SecondaryNavItem icon={IconKnight}    label="GeoKnight"              href="/geo/geoknight" />
           <SecondaryNavItem icon={IconChartBars} label="Intelligence Report"    href="/geo/report" />
           <SecondaryNavItem icon={IconTarget}    label="Bounty"                 href="/geo/bounty" />
@@ -503,7 +504,7 @@ export default function AppSidebar() {
     switch (sectionId) {
       case 'home':     return '/';
       case 'ingestion':return '/ingestion';
-      case 'geo':      return '/geo/geoknight';
+      case 'geo':      return '/geo/radar';
       case 'shop':     return '/shop/products';
       case 'adManagement': return '/ad-management/meta';
       case 'Settings': return '/connection';
