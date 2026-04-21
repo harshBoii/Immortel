@@ -133,7 +133,7 @@ const MAIN_SECTIONS: MainSection[] = [
   { id: 'calls',        label: 'Calls',    icon: PhoneCall,  hasSecondary: true, isAgent: true },
   // { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
   { id: 'adManagement', label: 'Ads',      icon: Megaphone,  hasSecondary: true, isAgent: true },
-  { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true },
+  // { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true },
 ];
 
 /* ============================================
@@ -144,20 +144,18 @@ const PrimarySidebarIcon = ({
   icon: Icon,
   label,
   isActive,
-  isAgent = false,
   onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   isActive: boolean;
-  isAgent?: boolean;
   onClick: () => void;
 }) => (
   <div className="w-full flex flex-col items-center select-none">
     <button
       type="button"
       onClick={onClick}
-      title={isAgent ? `${label} · Agent` : label}
+      title={label}
       className={`
         relative flex items-center justify-center w-10 h-10 rounded-xl
         transition-all duration-200
@@ -168,15 +166,6 @@ const PrimarySidebarIcon = ({
       `}
     >
       <Icon className="w-[18px] h-[18px]" />
-      {isAgent && (
-        <span
-          aria-hidden
-          className="absolute top-1 right-1 flex h-1.5 w-1.5"
-        >
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--alien-glow-green)] opacity-75" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--alien-glow-green)] shadow-[0_0_6px_color-mix(in_srgb,var(--alien-glow-green)_80%,transparent)]" />
-        </span>
-      )}
     </button>
     <span
       className={`mt-0.5 text-[9px] leading-none text-center transition-colors duration-200 ${
@@ -185,15 +174,19 @@ const PrimarySidebarIcon = ({
     >
       {label}
     </span>
-    {isAgent && (
-      <span
-        className="mt-0.5 inline-flex items-center gap-[3px] rounded-full border border-[color-mix(in_srgb,var(--alien-glow-green)_35%,transparent)] bg-[color-mix(in_srgb,var(--alien-glow-green)_14%,transparent)] px-1 py-[1px] text-[7.5px] font-bold uppercase leading-none tracking-[0.08em] text-[color-mix(in_srgb,var(--alien-glow-green)_80%,var(--foreground))]"
-        title="Autonomous agent"
-      >
-        <span className="w-1 h-1 rounded-full bg-[var(--alien-glow-green)]" />
-        Agent
-      </span>
-    )}
+  </div>
+);
+
+/* ============================================
+   PRIMARY SIDEBAR GROUP LABEL
+   — narrow uppercase label with divider rule for grouping icons
+============================================ */
+const PrimaryGroupLabel = ({ label }: { label: string }) => (
+  <div className="w-full flex flex-col items-center gap-1 pt-1.5 pb-0.5 select-none">
+    <div className="w-6 h-px bg-[var(--sidebar-glass-border)] opacity-60" />
+    <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-muted-foreground/45 leading-none">
+      {label}
+    </span>
   </div>
 );
 
@@ -657,13 +650,22 @@ export default function AppSidebar() {
 
         {/* Main nav */}
         <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-2">
-          {MAIN_SECTIONS.map((section) => (
+          {MAIN_SECTIONS.filter((s) => !s.isAgent).map((section) => (
             <PrimarySidebarIcon
               key={section.id}
               icon={section.icon}
               label={section.label}
               isActive={activeSection === section.id}
-              isAgent={section.isAgent}
+              onClick={() => handleSectionClick(section.id)}
+            />
+          ))}
+          {MAIN_SECTIONS.some((s) => s.isAgent) && <PrimaryGroupLabel label="Agents" />}
+          {MAIN_SECTIONS.filter((s) => s.isAgent).map((section) => (
+            <PrimarySidebarIcon
+              key={section.id}
+              icon={section.icon}
+              label={section.label}
+              isActive={activeSection === section.id}
               onClick={() => handleSectionClick(section.id)}
             />
           ))}
