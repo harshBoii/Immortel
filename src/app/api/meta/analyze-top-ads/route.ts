@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { graphGet } from "@/lib/meta/graph";
 import { loadIntegrationForSession } from "@/lib/meta/loadIntegration";
 import { hydrateImageHashes, hydrateVideoIds } from "@/lib/meta/mediaSync";
+import { syncMetaAdMetrics } from "@/lib/meta/metricsSync";
 import { createAssetFromMetaVideo, processAsset } from "@/lib/asset-processing";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+const METRICS_LIMIT = 50;
+const TOP_ADS_FOR_PROCESSING = 5;
+const DATE_PRESET = "last_7d";
 
 type LinkData = {
   image_hash?: string;
@@ -50,19 +54,6 @@ function collectMediaRefsFromCreative(c: CreativeRef | undefined): {
   return { hashes, videoIds };
 }
 
-async function impressionsLast7d(metaAdId: string, accessToken: string): Promise<number> {
-  const res = (await graphGet(
-    `${metaAdId}/insights`,
-    { fields: "impressions", date_preset: "last_7d", limit: 1 },
-    { accessToken }
-  )) as { data?: Array<{ impressions?: string | number }> };
-
-  const first = res.data?.[0];
-  const raw = first?.impressions ?? 0;
-  const n = typeof raw === "string" ? Number(raw) : Number(raw);
-  return Number.isFinite(n) ? n : 0;
-}
-
 async function creativeForAd(metaAdId: string, accessToken: string): Promise<CreativeRef | undefined> {
   const fields =
     "creative{id,image_hash,video_id,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}";
@@ -77,41 +68,39 @@ export async function POST() {
       return NextResponse.json({ success: false, error: "Meta not connected" }, { status: 401 });
     }
 
-    const activeAds = await prisma.metaAd.findMany({
-      where: {
-        metaIntegrationId: loaded.integrationId,
-        status: "ACTIVE",
-      },
-      select: { metaAdId: true, updatedAt: true },
-      take: 50,
-      orderBy: { updatedAt: "desc" },
+    // Step 1 — pull metrics from Meta for up to `METRICS_LIMIT` ads (union of
+    // top by impressions + most recent) and persist a snapshot into
+    // `meta_ad_metrics`.
+    const metrics = await syncMetaAdMetrics({
+      integrationId: loaded.integrationId,
+      accessToken: loaded.accessToken,
+      datePreset: DATE_PRESET,
+      limit: METRICS_LIMIT,
+      onlyActive: false,
     });
 
-    if (activeAds.length === 0) {
-      return NextResponse.json({ success: false, error: "No ACTIVE ads found" }, { status: 404 });
+    if (metrics.selected.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No ads found for this integration" },
+        { status: 404 },
+      );
     }
 
-    const scored = await Promise.all(
-      activeAds.map(async (a) => ({
-        metaAdId: a.metaAdId,
-        impressions: await impressionsLast7d(a.metaAdId, loaded.accessToken).catch(() => 0),
-      }))
-    );
-
-    const top = scored
+    // Step 2 — from the synced pool, pick the top ads by impressions for
+    // creative/media processing.
+    const top = metrics.selected
+      .slice()
       .sort((a, b) => b.impressions - a.impressions)
-      .slice(0, 5)
-      .filter((x) => x.metaAdId);
+      .slice(0, TOP_ADS_FOR_PROCESSING);
 
     const topAdIds = top.map((t) => t.metaAdId);
 
-    // Pull creatives for top ads and collect media refs
-    const hashes: string[] = [];
-    const videoIds: string[] = [];
     const creativeRefs = await Promise.all(
-      topAdIds.map(async (id) => ({ id, creative: await creativeForAd(id, loaded.accessToken) }))
+      topAdIds.map(async (id) => ({ id, creative: await creativeForAd(id, loaded.accessToken) })),
     );
 
+    const hashes: string[] = [];
+    const videoIds: string[] = [];
     for (const row of creativeRefs) {
       const refs = collectMediaRefsFromCreative(row.creative);
       hashes.push(...refs.hashes);
@@ -134,9 +123,8 @@ export async function POST() {
         });
         assetIds.push(assetId);
 
-        // fire-and-forget processing
         processAsset({ assetId, assetType: "VIDEO", scenePreset: "long_video" }).catch((e) =>
-          console.error("[meta/analyze-top-ads] processAsset failed", e)
+          console.error("[meta/analyze-top-ads] processAsset failed", e),
         );
       } catch (e) {
         errors.push({
@@ -148,6 +136,12 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
+      metrics: {
+        datePreset: metrics.datePreset,
+        candidatePoolSize: metrics.candidatePoolSize,
+        synced: metrics.syncedCount,
+        selectedAdIds: metrics.selectedMetaAdIds,
+      },
       topAdIds,
       media: {
         images: imageResult,
@@ -161,8 +155,7 @@ export async function POST() {
     console.error("[meta/analyze-top-ads]", e);
     return NextResponse.json(
       { success: false, error: e instanceof Error ? e.message : String(e) },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

@@ -126,7 +126,7 @@ export function AnalysisTab() {
           <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20 p-4">
             <h3 className="text-sm font-semibold">Ad creative analysis</h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Pulls media from your current top 5 ads (by last 7d impressions), mirrors it to R2, and sends videos for intelligence processing.
+              Syncs performance metrics for up to 50 ads (top impressions + most recent) into the company metrics table, then pulls media from the top 5 current ads, mirrors it to R2, and sends videos for intelligence processing.
             </p>
             <button
               type="button"
@@ -134,7 +134,7 @@ export function AnalysisTab() {
               disabled={running}
               className="mt-4 rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
             >
-              {running ? 'Analyzing…' : 'Analyze top 5 ads'}
+              {running ? 'Analyzing…' : 'Analyze ads'}
             </button>
           </div>
 
@@ -152,7 +152,7 @@ export function AnalysisTab() {
             <p className="p-3 text-sm text-muted-foreground">Loading…</p>
           ) : items.length === 0 ? (
             <div className="p-3 text-sm text-muted-foreground">
-              No analyzed videos yet. Click <span className="font-medium text-foreground">Analyze top 5 ads</span>.
+              No analyzed videos yet. Click <span className="font-medium text-foreground">Analyze ads</span>.
             </div>
           ) : (
             <div className="max-h-[calc(100vh-260px)] overflow-auto p-3">
