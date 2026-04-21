@@ -92,29 +92,33 @@ const AgentCard = ({
   ctaTone?: 'outline' | 'solid';
   wide?: boolean;
   rightSlot?: React.ReactNode;
-}) => (
-  wide ? (
-    <div className="glass-card relative flex flex-col gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5 md:flex-row md:items-center md:gap-6">
-      {/* Left: icon + pill + name + description */}
-      <div className="flex items-start gap-4 md:flex-1 md:min-w-0">
-        <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
-          <Icon className="w-5 h-5 text-foreground/80" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-heading text-lg font-semibold text-foreground leading-tight">
-              {name}
-            </h3>
-            <StatusPill tone={statusTone}>{status}</StatusPill>
+}) => {
+  if (wide) {
+    return (
+      <div className="glass-card relative flex flex-col gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5 md:flex-row md:items-center md:gap-6">
+        {/* Left: icon + pill + name + description */}
+        <div className="flex items-start gap-4 md:flex-1 md:min-w-0">
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+            <Icon className="w-5 h-5 text-foreground/80" />
           </div>
-          <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">{description}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-heading text-lg font-semibold text-foreground leading-tight">
+                {name}
+              </h3>
+              <StatusPill tone={statusTone}>{status}</StatusPill>
+            </div>
+            <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">{description}</p>
+          </div>
         </div>
-      </div>
 
-      {/* Right: custom slot */}
-      {rightSlot && <div className="md:flex-shrink-0">{rightSlot}</div>}
-    </div>
-  ) : (
+        {/* Right: custom slot */}
+        {rightSlot && <div className="md:flex-shrink-0">{rightSlot}</div>}
+      </div>
+    );
+  }
+
+  return (
     <div className="glass-card relative flex flex-col rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5">
       {/* Top: icon + status pill */}
       <div className="flex items-start justify-between gap-3">
@@ -156,6 +160,7 @@ const AgentCard = ({
       </Link>
     </div>
   );
+};
 
 /* ============================================
    INTEGRATION PILL
