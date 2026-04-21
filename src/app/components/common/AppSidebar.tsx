@@ -182,9 +182,9 @@ const PrimarySidebarIcon = ({
    — narrow uppercase label with divider rule for grouping icons
 ============================================ */
 const PrimaryGroupLabel = ({ label }: { label: string }) => (
-  <div className="w-full flex flex-col items-center gap-1 pt-1.5 pb-0.5 select-none">
+  <div className="w-full flex flex-col items-center gap-1.5 mt-4 mb-1 select-none">
     <div className="w-6 h-px bg-[var(--sidebar-glass-border)] opacity-60" />
-    <span className="text-[8px] font-bold uppercase tracking-[0.14em] text-muted-foreground/45 leading-none">
+    <span className="text-[8.5px] font-bold uppercase tracking-[0.16em] leading-none text-[var(--sibling-primary)]/80">
       {label}
     </span>
   </div>

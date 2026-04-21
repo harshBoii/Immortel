@@ -10,8 +10,9 @@ import {
   Copy,
   Check,
   Bot,
+  ArrowRight,
 } from 'lucide-react';
-import { SiShopify, SiMeta, SiWoocommerce, SiOpenai } from 'react-icons/si';
+import { SiShopify, SiMeta, SiWoocommerce, SiWordpress, SiOpenai } from 'react-icons/si';
 
 /* ============================================
    TYPES
@@ -26,6 +27,7 @@ export type WorkforceHomeProps = {
     meta: boolean;
     mcp: boolean;
     woocommerce: boolean;
+    wordpress: boolean;
   };
   mcpLink: string;
 };
@@ -51,12 +53,17 @@ const StatusPill = ({
   children: React.ReactNode;
 }) => (
   <span
-    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none ${
+    className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide leading-none ${
       tone === 'active'
-        ? 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25'
-        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25'
+        ? 'border-[var(--glass-border)] bg-[var(--glass-hover)]/70 text-foreground/80'
+        : 'border-[var(--sibling-primary)]/30 bg-[var(--sibling-primary)]/8 text-[var(--sibling-primary)]'
     }`}
   >
+    <span
+      className={`h-1.5 w-1.5 rounded-full ${
+        tone === 'active' ? 'bg-foreground/70' : 'bg-[var(--sibling-primary)]'
+      }`}
+    />
     {children}
   </span>
 );
@@ -140,8 +147,8 @@ const AgentCard = ({
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
             {statusLabel}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald-600 dark:text-emerald-400">
-            {StatusIcon && <StatusIcon className="w-3.5 h-3.5" />}
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+            {StatusIcon && <StatusIcon className="w-3.5 h-3.5 text-muted-foreground" />}
             {statusValue}
           </span>
         </div>
@@ -171,19 +178,19 @@ const IntegrationPill = ({
   connected,
   connectedLabel = 'Connected',
   disconnectedLabel = 'Not Connected',
-  dotTone = 'emerald',
+  fullWidth = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   name: string;
   connected: boolean;
   connectedLabel?: string;
   disconnectedLabel?: string;
-  dotTone?: 'emerald' | 'blue';
+  fullWidth?: boolean;
 }) => (
   <div
     className={`glass-card flex flex-col rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3 ${
       connected ? '' : 'opacity-70'
-    }`}
+    } ${fullWidth ? 'col-span-2' : ''}`}
   >
     <div className="flex items-start justify-between gap-2">
       <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
@@ -191,11 +198,7 @@ const IntegrationPill = ({
       </div>
       <span
         className={`mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0 ${
-          connected
-            ? dotTone === 'blue'
-              ? 'bg-blue-500'
-              : 'bg-emerald-500'
-            : 'bg-muted-foreground/30'
+          connected ? 'bg-foreground/70' : 'bg-muted-foreground/25'
         }`}
       />
     </div>
@@ -236,7 +239,7 @@ const McpLinkField = ({ link }: { link: string }) => {
         title={copied ? 'Copied!' : 'Copy link'}
       >
         {copied ? (
-          <Check className="w-3.5 h-3.5 text-emerald-500" />
+          <Check className="w-3.5 h-3.5 text-foreground" />
         ) : (
           <Copy className="w-3.5 h-3.5" />
         )}
@@ -250,21 +253,17 @@ const McpLinkField = ({ link }: { link: string }) => {
 ============================================ */
 const GuideBlock = ({
   icon: Icon,
-  iconBg,
   title,
   steps,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  iconBg: string;
   title: string;
   steps: React.ReactNode[];
 }) => (
   <div className="space-y-2">
     <div className="flex items-center gap-2">
-      <span
-        className={`flex items-center justify-center w-7 h-7 rounded-lg ${iconBg} flex-shrink-0`}
-      >
-        <Icon className="w-3.5 h-3.5 text-white" />
+      <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+        <Icon className="w-3.5 h-3.5 text-foreground/80" />
       </span>
       <h4 className="text-[14px] font-semibold text-foreground">{title}</h4>
     </div>
@@ -387,8 +386,8 @@ export default function WorkforceHome({
             <h2 className="font-heading text-xl font-semibold text-foreground">Integrations</h2>
           </div>
 
-          {/* Integration grid */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+          {/* Integration grid — space for up to 5 cards (5th spans full width) */}
+          <div className="grid grid-cols-2 gap-3">
             <IntegrationPill
               icon={SiShopify}
               name="Shopify"
@@ -404,14 +403,28 @@ export default function WorkforceHome({
               name="MCP"
               connected={integrations.mcp}
               connectedLabel="Active"
-              dotTone="blue"
             />
             <IntegrationPill
               icon={SiWoocommerce}
               name="WooCommerce"
               connected={integrations.woocommerce}
             />
+            <IntegrationPill
+              icon={SiWordpress}
+              name="WordPress"
+              connected={integrations.wordpress}
+              fullWidth
+            />
           </div>
+
+          {/* View more link */}
+          <Link
+            href="/connection"
+            className="group inline-flex items-center justify-between rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-3.5 py-2.5 text-[12.5px] font-medium text-muted-foreground transition-colors hover:border-[var(--glass-border)] hover:bg-[var(--glass-hover)] hover:text-foreground"
+          >
+            <span>View more integrations</span>
+            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Link>
 
           {/* Setup Guide card */}
           <div className="glass-card rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5 space-y-4">
@@ -434,7 +447,6 @@ export default function WorkforceHome({
 
             <GuideBlock
               icon={Bot}
-              iconBg="bg-orange-500"
               title="Claude Desktop"
               steps={[
                 'Open your Claude Desktop settings.',
@@ -450,7 +462,6 @@ export default function WorkforceHome({
 
             <GuideBlock
               icon={SiOpenai as unknown as React.ComponentType<{ className?: string }>}
-              iconBg="bg-emerald-600"
               title="ChatGPT"
               steps={[
                 <>

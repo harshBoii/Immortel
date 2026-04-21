@@ -28,38 +28,49 @@ export default async function HomePage() {
   if (!session?.companyId) redirect('/login');
   const companyId = session.companyId;
 
-  const [company, shopifyShop, metaIntegration, wooStore, latestRadar, pendingAdsCount] =
-    await Promise.all([
-      prisma.company.findUnique({
-        where: { id: companyId },
-        select: { name: true, email: true },
-      }),
-      prisma.shopifyShop.findFirst({
-        where: { companyId },
-        select: { id: true, status: true },
-        orderBy: { installedAt: 'desc' },
-      }),
-      prisma.metaIntegration.findUnique({
-        where: { companyId },
-        select: { id: true },
-      }),
-      prisma.wooCommerceStore.findFirst({
-        where: { companyId },
-        select: { id: true, status: true },
-        orderBy: { installedAt: 'desc' },
-      }),
-      prisma.llmRadarMetric.findFirst({
-        where: { companyId },
-        orderBy: { calculatedAt: 'desc' },
-        select: { shareOfVoice: true, top3Rate: true },
-      }),
-      prisma.metaCreative.count({
-        where: {
-          metaIntegration: { companyId },
-          approvedByUser: false,
-        },
-      }),
-    ]);
+  const [
+    company,
+    shopifyShop,
+    metaIntegration,
+    wooStore,
+    wordpressIntegration,
+    latestRadar,
+    pendingAdsCount,
+  ] = await Promise.all([
+    prisma.company.findUnique({
+      where: { id: companyId },
+      select: { name: true, email: true },
+    }),
+    prisma.shopifyShop.findFirst({
+      where: { companyId },
+      select: { id: true, status: true },
+      orderBy: { installedAt: 'desc' },
+    }),
+    prisma.metaIntegration.findUnique({
+      where: { companyId },
+      select: { id: true },
+    }),
+    prisma.wooCommerceStore.findFirst({
+      where: { companyId },
+      select: { id: true, status: true },
+      orderBy: { installedAt: 'desc' },
+    }),
+    prisma.wordPressIntegration.findUnique({
+      where: { tenantId: companyId },
+      select: { id: true },
+    }),
+    prisma.llmRadarMetric.findFirst({
+      where: { companyId },
+      orderBy: { calculatedAt: 'desc' },
+      select: { shareOfVoice: true, top3Rate: true },
+    }),
+    prisma.metaCreative.count({
+      where: {
+        metaIntegration: { companyId },
+        approvedByUser: false,
+      },
+    }),
+  ]);
 
   const firstName = deriveFirstName(company);
   const geoVisibilityPct =
@@ -76,6 +87,7 @@ export default async function HomePage() {
         meta: Boolean(metaIntegration),
         mcp: true,
         woocommerce: Boolean(wooStore),
+        wordpress: Boolean(wordpressIntegration),
       }}
       mcpLink={MCP_LINK}
     />
