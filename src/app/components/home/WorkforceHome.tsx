@@ -9,10 +9,19 @@ import {
   Link as LinkIcon,
   Copy,
   Check,
-  Bot,
+  ChevronLeft,
+  ChevronRight,
   ArrowRight,
 } from 'lucide-react';
-import { SiShopify, SiMeta, SiWoocommerce, SiWordpress, SiOpenai } from 'react-icons/si';
+import {
+  SiShopify,
+  SiMeta,
+  SiWoocommerce,
+  SiWordpress,
+  SiOpenai,
+  SiPerplexity,
+  SiGoogle,
+} from 'react-icons/si';
 
 /* ============================================
    TYPES
@@ -249,31 +258,157 @@ const McpLinkField = ({ link }: { link: string }) => {
 };
 
 /* ============================================
-   SETUP GUIDE BLOCK (Claude / ChatGPT)
+   MCP CONNECTOR — mini version of /connection/mcp
+   Platform switcher + per-step carousel with screenshot.
 ============================================ */
-const GuideBlock = ({
-  icon: Icon,
-  title,
-  steps,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  steps: React.ReactNode[];
-}) => (
-  <div className="space-y-2">
-    <div className="flex items-center gap-2">
-      <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-foreground/80" />
-      </span>
-      <h4 className="text-[14px] font-semibold text-foreground">{title}</h4>
+type McpPlatform = 'chatgpt' | 'perplexity' | 'claude';
+
+const MCP_PLATFORM_ICONS: Record<McpPlatform, React.ComponentType<{ className?: string }>> = {
+  chatgpt: SiOpenai as unknown as React.ComponentType<{ className?: string }>,
+  perplexity: SiPerplexity as unknown as React.ComponentType<{ className?: string }>,
+  claude: SiGoogle as unknown as React.ComponentType<{ className?: string }>,
+};
+
+const MCP_PLATFORM_LABEL: Record<McpPlatform, string> = {
+  chatgpt: 'ChatGPT',
+  perplexity: 'Perplexity',
+  claude: 'Claude',
+};
+
+function buildMcpInstructions(
+  mcpLink: string
+): Record<McpPlatform, { title: string; steps: string[] }> {
+  return {
+    chatgpt: {
+      title: 'Connect with ChatGPT',
+      steps: [
+        'Go to App store',
+        'Search The App',
+        'Open and Connect To The App',
+        'Tag The app and type the prompt',
+        'See In Action',
+      ],
+    },
+    perplexity: {
+      title: 'Connect with Perplexity',
+      steps: [
+        'Go To Settings → Connector',
+        'Tap On Custom Connector',
+        `Enter the link "${mcpLink}" in MCP Server Url, any desired name and Select Auth to None`,
+        'Connect To The Connector by tapping the plus icon, search for the saved connector, tick it.',
+        'Type Your Query and See in action',
+      ],
+    },
+    claude: {
+      title: 'Connect with Claude',
+      steps: [
+        'Tap on "Connect Your Tool to Claude"',
+        'Tap on Manage Connectors',
+        'Tap on the Plus Icon → Add Custom Connector',
+        `Enter any name and enter the link ${mcpLink}`,
+        'Type the query and see in action',
+      ],
+    },
+  };
+}
+
+const McpStepImage = ({ platform, stepNum }: { platform: McpPlatform; stepNum: number }) => {
+  const folder =
+    platform === 'chatgpt' ? 'ChatGpt' : platform === 'perplexity' ? 'Perplexity' : 'Claude';
+  const src = `/MCP_Tutorial/${folder}/Step-${stepNum}.png`;
+  return (
+    // Using native img to avoid next/image remote config concerns for local static assets.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={`${MCP_PLATFORM_LABEL[platform]} step ${stepNum}`}
+      className="aspect-video w-full rounded-lg object-contain bg-[var(--glass-hover)] border border-[var(--glass-border)]"
+    />
+  );
+};
+
+const McpConnectorMini = ({ mcpLink }: { mcpLink: string }) => {
+  const [platform, setPlatform] = useState<McpPlatform>('chatgpt');
+  const [stepIndex, setStepIndex] = useState(0);
+  const instructions = useMemo(() => buildMcpInstructions(mcpLink), [mcpLink]);
+  const { title, steps } = instructions[platform];
+
+  const goPrev = () => setStepIndex((i) => Math.max(0, i - 1));
+  const goNext = () => setStepIndex((i) => Math.min(steps.length - 1, i + 1));
+
+  return (
+    <div className="space-y-3">
+      {/* Platform switcher */}
+      <div className="flex flex-wrap gap-1.5">
+        {(Object.keys(MCP_PLATFORM_ICONS) as McpPlatform[]).map((p) => {
+          const Icon = MCP_PLATFORM_ICONS[p];
+          const active = platform === p;
+          return (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                setPlatform(p);
+                setStepIndex(0);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-medium transition-all duration-150 ${
+                active
+                  ? 'border-[var(--sibling-primary)]/40 bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
+                  : 'border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {MCP_PLATFORM_LABEL[p]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Step body */}
+      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-3">
+        <h4 className="text-[13px] font-semibold text-foreground mb-2.5">{title}</h4>
+
+        <div className="flex items-stretch gap-2">
+          <button
+            type="button"
+            onClick={goPrev}
+            disabled={stepIndex === 0}
+            aria-label="Previous step"
+            className="flex-shrink-0 flex items-center justify-center w-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-start gap-2">
+              <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)] text-[10.5px] font-semibold">
+                {stepIndex + 1}
+              </span>
+              <p className="text-[12px] text-foreground leading-snug min-w-0">
+                {steps[stepIndex]}
+              </p>
+            </div>
+            <McpStepImage platform={platform} stepNum={stepIndex + 1} />
+          </div>
+
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={stepIndex === steps.length - 1}
+            aria-label="Next step"
+            className="flex-shrink-0 flex items-center justify-center w-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="mt-2.5 text-center text-[10.5px] text-muted-foreground/70">
+          Step {stepIndex + 1} of {steps.length}
+        </p>
+      </div>
     </div>
-    <ol className="ml-1 list-decimal list-inside space-y-1 text-[12px] text-muted-foreground leading-relaxed marker:text-muted-foreground/60 marker:font-semibold">
-      {steps.map((s, i) => (
-        <li key={i}>{s}</li>
-      ))}
-    </ol>
-  </div>
-);
+  );
+};
 
 /* ============================================
    MAIN
@@ -445,34 +580,15 @@ export default function WorkforceHome({
 
             <div className="h-px bg-[var(--glass-border)]" />
 
-            <GuideBlock
-              icon={Bot}
-              title="Claude Desktop"
-              steps={[
-                'Open your Claude Desktop settings.',
-                <>
-                  Navigate to the <strong>Developer</strong> tab.
-                </>,
-                <>
-                  Click on <strong>Edit MCP Config</strong>.
-                </>,
-                'Paste your MCP connection link into the servers array and save.',
-              ]}
-            />
+            <McpConnectorMini mcpLink={mcpLink} />
 
-            <GuideBlock
-              icon={SiOpenai as unknown as React.ComponentType<{ className?: string }>}
-              title="ChatGPT"
-              steps={[
-                <>
-                  Go to <strong>My GPTs</strong> and click Create a GPT.
-                </>,
-                <>
-                  Under the <strong>Configure</strong> tab, scroll down and click Add Action.
-                </>,
-                'Select Import from URL and paste your MCP link.',
-              ]}
-            />
+            <Link
+              href="/connection/mcp"
+              className="group inline-flex items-center justify-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+            >
+              Open full setup guide
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
         </aside>
       </div>

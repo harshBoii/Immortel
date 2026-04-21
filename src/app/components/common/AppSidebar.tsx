@@ -125,6 +125,8 @@ type MainSection = {
   icon: React.ComponentType<{ className?: string }>;
   hasSecondary: boolean;
   isAgent?: boolean;
+  /** When true, section is excluded from the primary nav icons but still resolves secondary nav. */
+  hidden?: boolean;
 };
 
 const MAIN_SECTIONS: MainSection[] = [
@@ -133,7 +135,8 @@ const MAIN_SECTIONS: MainSection[] = [
   { id: 'calls',        label: 'Calls',    icon: PhoneCall,  hasSecondary: true, isAgent: true },
   // { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
   { id: 'adManagement', label: 'Ads',      icon: Megaphone,  hasSecondary: true, isAgent: true },
-  // { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true },
+  // Settings lives in the bottom utilities strip but still owns a secondary nav.
+  { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true, hidden: true },
 ];
 
 /* ============================================
@@ -650,7 +653,7 @@ export default function AppSidebar() {
 
         {/* Main nav */}
         <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-2">
-          {MAIN_SECTIONS.filter((s) => !s.isAgent).map((section) => (
+          {MAIN_SECTIONS.filter((s) => !s.isAgent && !s.hidden).map((section) => (
             <PrimarySidebarIcon
               key={section.id}
               icon={section.icon}
@@ -659,8 +662,8 @@ export default function AppSidebar() {
               onClick={() => handleSectionClick(section.id)}
             />
           ))}
-          {MAIN_SECTIONS.some((s) => s.isAgent) && <PrimaryGroupLabel label="Agents" />}
-          {MAIN_SECTIONS.filter((s) => s.isAgent).map((section) => (
+          {MAIN_SECTIONS.some((s) => s.isAgent && !s.hidden) && <PrimaryGroupLabel label="Agents" />}
+          {MAIN_SECTIONS.filter((s) => s.isAgent && !s.hidden).map((section) => (
             <PrimarySidebarIcon
               key={section.id}
               icon={section.icon}
@@ -680,14 +683,27 @@ export default function AppSidebar() {
             Theme
           </span>
 
-          <Link
-            href="/connection"
+          <button
+            type="button"
+            onClick={() => handleSectionClick('Settings')}
             title="Settings"
-            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground/60 hover:text-black dark:hover:text-[var(--alien-glow-green)] transition-colors"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              activeSection === 'Settings'
+                ? 'bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
+                : 'text-muted-foreground/60 hover:text-foreground hover:bg-[var(--glass-hover)]'
+            }`}
           >
             <Settings className="w-[18px] h-[18px]" />
-          </Link>
-          <span className="text-[9px] leading-none text-muted-foreground/40 mb-1">Settings</span>
+          </button>
+          <span
+            className={`text-[9px] leading-none mb-1 transition-colors duration-200 ${
+              activeSection === 'Settings'
+                ? 'text-[var(--sibling-primary)]/80 font-semibold'
+                : 'text-muted-foreground/40'
+            }`}
+          >
+            Settings
+          </span>
 
           <Link
             href="/help"
