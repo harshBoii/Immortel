@@ -111,22 +111,20 @@ const AgentCard = ({
 }) => {
   if (wide) {
     return (
-      <div className="glass-card relative flex flex-col gap-3 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3.5 md:flex-row md:items-center md:gap-4">
+      <div className="glass-card relative flex flex-col gap-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5 md:flex-row md:items-center md:gap-6">
         {/* Left: icon + pill + name + description */}
-        <div className="flex items-start gap-3 md:flex-1 md:min-w-0">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
-            <Icon className="w-4 h-4 text-foreground/80" />
+        <div className="flex items-start gap-4 md:flex-1 md:min-w-0">
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+            <Icon className="w-5 h-5 text-foreground/80" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-heading text-[15px] font-semibold text-foreground leading-tight">
+              <h3 className="font-heading text-lg font-semibold text-foreground leading-tight">
                 {name}
               </h3>
               <StatusPill tone={statusTone}>{status}</StatusPill>
             </div>
-            <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug line-clamp-1">
-              {description}
-            </p>
+            <p className="mt-1 text-[13px] text-muted-foreground leading-snug">{description}</p>
           </div>
         </div>
 
@@ -137,49 +135,47 @@ const AgentCard = ({
   }
 
   return (
-    <div className="glass-card relative flex flex-col rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3.5">
+    <div className="glass-card relative flex h-full flex-col rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5">
       {/* Top: icon + status pill */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
-          <Icon className="w-4 h-4 text-foreground/80" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+          <Icon className="w-5 h-5 text-foreground/80" />
         </div>
         <StatusPill tone={statusTone}>{status}</StatusPill>
       </div>
 
       {/* Center: name + description */}
-      <div className="mt-2.5">
-        <h3 className="font-heading text-[15px] font-semibold text-foreground leading-tight">
-          {name}
-        </h3>
-        <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug line-clamp-2">
-          {description}
-        </p>
+      <div className="mt-3.5">
+        <h3 className="font-heading text-lg font-semibold text-foreground leading-tight">{name}</h3>
+        <p className="mt-1 text-[13px] text-muted-foreground leading-snug">{description}</p>
       </div>
 
       {/* Status row */}
       {statusLabel && (
-        <div className="mt-2.5 flex items-center justify-between gap-2 rounded-lg bg-[var(--glass-hover)]/60 border border-[var(--glass-border)]/60 px-2.5 py-1.5">
-          <span className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+        <div className="mt-3.5 flex items-center justify-between gap-2 rounded-lg bg-[var(--glass-hover)]/60 border border-[var(--glass-border)]/60 px-3 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
             {statusLabel}
           </span>
-          <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-foreground">
-            {StatusIcon && <StatusIcon className="w-3 h-3 text-muted-foreground" />}
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-foreground">
+            {StatusIcon && <StatusIcon className="w-3.5 h-3.5 text-muted-foreground" />}
             {statusValue}
           </span>
         </div>
       )}
 
-      {/* CTA */}
-      <Link
-        href={ctaHref}
-        className={`mt-2.5 inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
-          ctaTone === 'solid'
-            ? 'bg-foreground text-background hover:opacity-90'
-            : 'border border-[var(--glass-border)] bg-[var(--glass)]/60 text-foreground hover:bg-[var(--glass-hover)]'
-        }`}
-      >
-        {ctaLabel}
-      </Link>
+      {/* CTA — pinned to bottom when card stretches */}
+      <div className="mt-auto pt-4">
+        <Link
+          href={ctaHref}
+          className={`flex w-full items-center justify-center rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
+            ctaTone === 'solid'
+              ? 'bg-foreground text-background hover:opacity-90'
+              : 'border border-[var(--glass-border)] bg-[var(--glass)]/60 text-foreground hover:bg-[var(--glass-hover)]'
+          }`}
+        >
+          {ctaLabel}
+        </Link>
+      </div>
     </div>
   );
 };
@@ -203,13 +199,13 @@ const IntegrationPill = ({
   fullWidth?: boolean;
 }) => (
   <div
-    className={`glass-card flex flex-col rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-2.5 ${
+    className={`glass-card flex h-full min-h-[110px] flex-col justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3.5 ${
       connected ? '' : 'opacity-70'
     } ${fullWidth ? 'col-span-2' : ''}`}
   >
     <div className="flex items-start justify-between gap-2">
-      <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
-        <Icon className="w-3.5 h-3.5 text-foreground/80" />
+      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+        <Icon className="w-4 h-4 text-foreground/80" />
       </div>
       <span
         className={`mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0 ${
@@ -217,12 +213,12 @@ const IntegrationPill = ({
         }`}
       />
     </div>
-    <p className="mt-1.5 text-[12px] font-semibold text-foreground leading-tight truncate">
-      {name}
-    </p>
-    <p className="mt-0.5 text-[10.5px] text-muted-foreground leading-tight truncate">
-      {connected ? connectedLabel : disconnectedLabel}
-    </p>
+    <div className="mt-2">
+      <p className="text-[13px] font-semibold text-foreground leading-tight truncate">{name}</p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground leading-tight truncate">
+        {connected ? connectedLabel : disconnectedLabel}
+      </p>
+    </div>
   </div>
 );
 
@@ -330,7 +326,7 @@ const McpStepImage = ({ platform, stepNum }: { platform: McpPlatform; stepNum: n
     <img
       src={src}
       alt={`${MCP_PLATFORM_LABEL[platform]} step ${stepNum}`}
-      className="aspect-[16/9] w-full max-h-28 rounded-md object-contain bg-[var(--glass-hover)] border border-[var(--glass-border)]"
+      className="w-full flex-1 min-h-0 rounded-md object-contain bg-[var(--glass-hover)] border border-[var(--glass-border)]"
     />
   );
 };
@@ -345,9 +341,9 @@ const McpConnectorMini = ({ mcpLink }: { mcpLink: string }) => {
   const goNext = () => setStepIndex((i) => Math.min(steps.length - 1, i + 1));
 
   return (
-    <div className="space-y-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Platform switcher */}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {(Object.keys(MCP_PLATFORM_ICONS) as McpPlatform[]).map((p) => {
           const Icon = MCP_PLATFORM_ICONS[p];
           const active = platform === p;
@@ -359,47 +355,45 @@ const McpConnectorMini = ({ mcpLink }: { mcpLink: string }) => {
                 setPlatform(p);
                 setStepIndex(0);
               }}
-              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-medium transition-all duration-150 ${
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-medium transition-all duration-150 ${
                 active
                   ? 'border-[var(--sibling-primary)]/40 bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
                   : 'border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)]'
               }`}
             >
-              <Icon className="w-3 h-3" />
+              <Icon className="w-3.5 h-3.5" />
               {MCP_PLATFORM_LABEL[p]}
             </button>
           );
         })}
       </div>
 
-      {/* Step body */}
-      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-2.5">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <h4 className="text-[12px] font-semibold text-foreground truncate">{title}</h4>
-          <span className="flex-shrink-0 text-[10px] text-muted-foreground/70">
-            {stepIndex + 1}/{steps.length}
+      {/* Step body — fills remaining vertical space */}
+      <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/40 p-3">
+        <div className="flex items-center justify-between gap-2 mb-2.5">
+          <h4 className="text-[13px] font-semibold text-foreground truncate">{title}</h4>
+          <span className="flex-shrink-0 text-[11px] text-muted-foreground/70">
+            Step {stepIndex + 1} / {steps.length}
           </span>
         </div>
 
-        <div className="flex items-stretch gap-1.5">
+        <div className="flex min-h-0 flex-1 items-stretch gap-2">
           <button
             type="button"
             onClick={goPrev}
             disabled={stepIndex === 0}
             aria-label="Previous step"
-            className="flex-shrink-0 flex items-center justify-center w-7 rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="flex-shrink-0 flex items-center justify-center w-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <div className="flex-1 min-w-0 space-y-1.5">
-            <div className="flex items-start gap-1.5">
-              <span className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded-full bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)] text-[9.5px] font-semibold">
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <div className="flex items-start gap-2">
+              <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-[var(--sibling-primary)]/15 text-[var(--sibling-primary)] text-[10.5px] font-semibold">
                 {stepIndex + 1}
               </span>
-              <p className="text-[11.5px] text-foreground leading-snug min-w-0 line-clamp-2">
-                {steps[stepIndex]}
-              </p>
+              <p className="text-[12px] text-foreground leading-snug min-w-0">{steps[stepIndex]}</p>
             </div>
             <McpStepImage platform={platform} stepNum={stepIndex + 1} />
           </div>
@@ -409,9 +403,9 @@ const McpConnectorMini = ({ mcpLink }: { mcpLink: string }) => {
             onClick={goNext}
             disabled={stepIndex === steps.length - 1}
             aria-label="Next step"
-            className="flex-shrink-0 flex items-center justify-center w-7 rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="flex-shrink-0 flex items-center justify-center w-8 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/60 text-muted-foreground hover:text-foreground hover:bg-[var(--glass-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -440,35 +434,35 @@ export default function WorkforceHome({
   const callsValue = `${callsToday} calls today`;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-4 pt-4 md:px-6">
+    <div className="flex min-h-screen w-full flex-col gap-6 px-5 py-6 md:px-8 md:py-7 lg:gap-7">
       {/* ── Greeting ───────────────────────────────────────────── */}
-      <header className="mb-4">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+      <header>
+        <h1 className="font-heading text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
           {hello}, {firstName}.
         </h1>
-        <p className="mt-0.5 font-heading text-base text-muted-foreground md:text-lg">
+        <p className="mt-1 font-heading text-lg text-muted-foreground md:text-xl">
           Your AI Workforce is active.
         </p>
       </header>
 
-      {/* ── Two-column layout ──────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
+      {/* ── Two-column layout — fills remaining viewport height ── */}
+      <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-7">
         {/* ═══════════════════ LEFT: Agents (top) + Integrations (bottom) ═══════════════════ */}
-        <div className="flex flex-col gap-5 min-w-0">
+        <div className="flex min-w-0 flex-col gap-6">
           {/* AGENTS */}
-          <section>
-            <div className="mb-2.5 flex items-center justify-between">
-              <h2 className="font-heading text-lg font-semibold text-foreground">Your AI Agents</h2>
+          <section className="flex flex-col">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-heading text-xl font-semibold text-foreground">Your AI Agents</h2>
               <Link
                 href="/connection"
-                className="text-[12px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+                className="text-[13px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
               >
                 Manage All →
               </Link>
             </div>
 
             {/* Top row: GEO + Calling */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-stretch">
               <AgentCard
                 icon={ScanSearch}
                 name="GEO Agent"
@@ -496,7 +490,7 @@ export default function WorkforceHome({
             </div>
 
             {/* Ad agent (wide) */}
-            <div className="mt-3">
+            <div className="mt-4">
               <AgentCard
                 icon={MousePointerClick}
                 name="Ad Agent"
@@ -507,8 +501,8 @@ export default function WorkforceHome({
                 ctaHref="/ad-management/meta"
                 wide
                 rightSlot={
-                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-                    <div className="flex items-center gap-2 text-[12.5px] text-foreground">
+                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+                    <div className="flex items-center gap-2 text-[13px] text-foreground">
                       <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
                       <span className="font-medium">
                         {adsPendingApproval} ads pending approval
@@ -516,7 +510,7 @@ export default function WorkforceHome({
                     </div>
                     <Link
                       href="/ad-management/meta"
-                      className="inline-flex items-center justify-center rounded-lg bg-foreground px-3.5 py-1.5 text-[12.5px] font-semibold text-background hover:opacity-90 transition-opacity"
+                      className="inline-flex items-center justify-center rounded-lg bg-foreground px-4 py-2 text-[13px] font-semibold text-background hover:opacity-90 transition-opacity"
                     >
                       Review Ads
                     </Link>
@@ -526,21 +520,21 @@ export default function WorkforceHome({
             </div>
           </section>
 
-          {/* INTEGRATIONS */}
-          <section>
-            <div className="mb-2.5 flex items-center justify-between">
-              <h2 className="font-heading text-lg font-semibold text-foreground">Integrations</h2>
+          {/* INTEGRATIONS — grows to fill remaining left-column height */}
+          <section className="flex min-h-0 flex-1 flex-col">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-heading text-xl font-semibold text-foreground">Integrations</h2>
               <Link
                 href="/connection"
-                className="group inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
+                className="group inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors"
               >
                 View more
-                <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
 
-            {/* 5-card grid (5th spans full width) */}
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            {/* 5-card grid — cards stretch to fill available height */}
+            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               <IntegrationPill
                 icon={SiShopify}
                 name="Shopify"
@@ -571,19 +565,19 @@ export default function WorkforceHome({
           </section>
         </div>
 
-        {/* ═══════════════════ RIGHT: Setup Guide (full column) ═══════════════════ */}
-        <aside className="min-w-0">
-          <div className="glass-card rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-4 space-y-3">
+        {/* ═══════════════════ RIGHT: Setup Guide — fills column ═══════════════════ */}
+        <aside className="flex min-w-0 flex-col">
+          <div className="glass-card flex flex-1 flex-col rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-5 gap-4">
             <div>
-              <h3 className="font-heading text-lg font-semibold text-foreground">Setup Guide</h3>
-              <p className="mt-0.5 text-[12px] text-muted-foreground leading-relaxed">
+              <h3 className="font-heading text-xl font-semibold text-foreground">Setup Guide</h3>
+              <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">
                 Connect your workspace to external AI assistants via the Model Context Protocol
                 (MCP).
               </p>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 Your MCP Link
               </p>
               <McpLinkField link={mcpLink} />
@@ -591,14 +585,17 @@ export default function WorkforceHome({
 
             <div className="h-px bg-[var(--glass-border)]" />
 
-            <McpConnectorMini mcpLink={mcpLink} />
+            {/* Connector grows to fill remaining card height */}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <McpConnectorMini mcpLink={mcpLink} />
+            </div>
 
             <Link
               href="/connection/mcp"
-              className="group inline-flex items-center justify-center gap-1.5 text-[11.5px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors w-full"
+              className="group inline-flex items-center justify-center gap-1.5 text-[12px] font-medium text-muted-foreground hover:text-[var(--sibling-primary)] transition-colors w-full"
             >
               Open full setup guide
-              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
         </aside>
