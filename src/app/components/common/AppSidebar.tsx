@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar } from 'lucide-react';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar, PhoneCall } from 'lucide-react';
 import { SiMeta, SiGoogle } from 'react-icons/si';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
@@ -119,12 +119,21 @@ const IconHelp = ({ className }: { className?: string }) => (
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
-const MAIN_SECTIONS = [
-  { id: 'home',     label: 'Home',       icon: IconHome,  hasSecondary: true },
-  { id: 'geo',      label: 'GEO',        icon: IconGlobe, hasSecondary: true },
-  { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
-  { id: 'adManagement', label: 'Ads',    icon: Megaphone,   hasSecondary: true },
-  { id: 'Settings', label: 'Settings',   icon: Settings,  hasSecondary: true },
+type MainSection = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  hasSecondary: boolean;
+  isAgent?: boolean;
+};
+
+const MAIN_SECTIONS: MainSection[] = [
+  { id: 'home',         label: 'Home',     icon: IconHome,   hasSecondary: true },
+  { id: 'geo',          label: 'GEO',      icon: IconGlobe,  hasSecondary: true, isAgent: true },
+  { id: 'calls',        label: 'Calls',    icon: PhoneCall,  hasSecondary: true, isAgent: true },
+  // { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
+  { id: 'adManagement', label: 'Ads',      icon: Megaphone,  hasSecondary: true, isAgent: true },
+  { id: 'Settings',     label: 'Settings', icon: Settings,   hasSecondary: true },
 ];
 
 /* ============================================
@@ -135,20 +144,22 @@ const PrimarySidebarIcon = ({
   icon: Icon,
   label,
   isActive,
+  isAgent = false,
   onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   isActive: boolean;
+  isAgent?: boolean;
   onClick: () => void;
 }) => (
   <div className="w-full flex flex-col items-center select-none">
     <button
       type="button"
       onClick={onClick}
-      title={label}
+      title={isAgent ? `${label} · Agent` : label}
       className={`
-        flex items-center justify-center w-10 h-10 rounded-xl
+        relative flex items-center justify-center w-10 h-10 rounded-xl
         transition-all duration-200
         ${isActive
           ? 'bg-[var(--sibling-primary)]/10 text-[var(--sibling-primary)]'
@@ -157,6 +168,15 @@ const PrimarySidebarIcon = ({
       `}
     >
       <Icon className="w-[18px] h-[18px]" />
+      {isAgent && (
+        <span
+          aria-hidden
+          className="absolute top-1 right-1 flex h-1.5 w-1.5"
+        >
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--alien-glow-green)] opacity-75" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--alien-glow-green)] shadow-[0_0_6px_color-mix(in_srgb,var(--alien-glow-green)_80%,transparent)]" />
+        </span>
+      )}
     </button>
     <span
       className={`mt-0.5 text-[9px] leading-none text-center transition-colors duration-200 ${
@@ -165,6 +185,15 @@ const PrimarySidebarIcon = ({
     >
       {label}
     </span>
+    {isAgent && (
+      <span
+        className="mt-0.5 inline-flex items-center gap-[3px] rounded-full border border-[color-mix(in_srgb,var(--alien-glow-green)_35%,transparent)] bg-[color-mix(in_srgb,var(--alien-glow-green)_14%,transparent)] px-1 py-[1px] text-[7.5px] font-bold uppercase leading-none tracking-[0.08em] text-[color-mix(in_srgb,var(--alien-glow-green)_80%,var(--foreground))]"
+        title="Autonomous agent"
+      >
+        <span className="w-1 h-1 rounded-full bg-[var(--alien-glow-green)]" />
+        Agent
+      </span>
+    )}
   </div>
 );
 
@@ -436,14 +465,21 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconDatabase}  label="Data Mine"              href="/geo/data-mine" />
         </>
       );
-    case 'shop':
+    case 'calls':
       return (
         <>
-          <SectionLabel label="Shop Intel" />
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify"     href="/shop/products" />
-          <SecondaryNavItem icon={ShoppingBag}         label="WooCommerce" href="/shop/woocommerce-products" />
+          <SectionLabel label="Call Center Agent" />
+          <SecondaryNavItem icon={PhoneCall} label="Outbound Console" href="/call-center" />
         </>
       );
+    // case 'shop':
+    //   return (
+    //     <>
+    //       <SectionLabel label="Shop Intel" />
+    //       <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify"     href="/shop/products" />
+    //       <SecondaryNavItem icon={ShoppingBag}         label="WooCommerce" href="/shop/woocommerce-products" />
+    //     </>
+    //   );
     case 'adManagement':
       return (
         <>
@@ -461,6 +497,10 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={Store} label="MCP"         href="/connection/mcp" />
           <SectionLabel label="Enrichment Services" />
           <SecondaryNavItem icon={Clock} label="Job Timing"  href="/jobs/time" />
+          <SectionLabel label="Shop Data" />
+          <SecondaryNavItem icon={ShoppingBag} label="WooCommerce" href="/shop/woocommerce-products" />
+          <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify"     href="/shop/products" />
+          <SecondaryNavItem icon={Globe}         label="WordPress" href="/shop/wordpress-products" />
         </>
       );
     default:
@@ -505,7 +545,8 @@ export default function AppSidebar() {
       case 'home':     return '/';
       case 'ingestion':return '/ingestion';
       case 'geo':      return '/geo/radar';
-      case 'shop':     return '/shop/products';
+      case 'calls':    return '/call-center';
+      // case 'shop':     return '/shop/products';
       case 'adManagement': return '/ad-management/meta';
       case 'Settings': return '/connection';
       default:         return '/';
@@ -532,6 +573,7 @@ export default function AppSidebar() {
     if      (pathname === '/' || pathname?.startsWith('/hq')) setActiveSection('home');
     else if (pathname?.startsWith('/ingestion'))              setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo'))                    setActiveSection('geo');
+    else if (pathname?.startsWith('/call-center'))            setActiveSection('calls');
     else if (pathname?.startsWith('/shop'))                   setActiveSection('shop');
     else if (pathname?.startsWith('/ad-management'))            setActiveSection('adManagement');
     else if (pathname?.startsWith('/connection'))             setActiveSection('Settings');
@@ -621,6 +663,7 @@ export default function AppSidebar() {
               icon={section.icon}
               label={section.label}
               isActive={activeSection === section.id}
+              isAgent={section.isAgent}
               onClick={() => handleSectionClick(section.id)}
             />
           ))}
@@ -634,6 +677,15 @@ export default function AppSidebar() {
           <span id="sidebar-theme-toggle-label" className="text-[9px] leading-none text-muted-foreground/50 mb-1 mt-1">
             Theme
           </span>
+
+          <Link
+            href="/connection"
+            title="Settings"
+            className="w-10 h-10 rounded-xl sidebar-icon flex items-center justify-center text-muted-foreground/60 hover:text-black dark:hover:text-[var(--alien-glow-green)] transition-colors"
+          >
+            <Settings className="w-[18px] h-[18px]" />
+          </Link>
+          <span className="text-[9px] leading-none text-muted-foreground/40 mb-1">Settings</span>
 
           <Link
             href="/help"
