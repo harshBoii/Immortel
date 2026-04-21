@@ -12,77 +12,77 @@ model Organization {
   name      String    @db.VarChar(255)
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt DateTime  @updatedAt @db.Timestamptz(3)
-  username  String    @unique 
-  password  String    
+  username  String    @unique
+  password  String
   companies Company[]
 
   @@map("organizations")
 }
 
 model Company {
-  id                    String                  @id @default(cuid())
-  name                  String                  @db.VarChar(255)
-  slug                  String                  @unique @db.VarChar(255)
-  description           String?
-  logoUrl               String?                 @db.VarChar(1000)
-  website               String?                 @db.VarChar(500)
+  id                        String        @id @default(cuid())
+  name                      String        @db.VarChar(255)
+  slug                      String        @unique @db.VarChar(255)
+  description               String?
+  logoUrl                   String?       @db.VarChar(1000)
+  website                   String?       @db.VarChar(500)
   /// Canonical domain (no scheme/path). Used for rival lookup / dedupe.
-  domain                String?                 @db.VarChar(255)
+  domain                    String?       @db.VarChar(255)
   /// Requested CMS integrations collected at onboarding (e.g. ["Webflow","Other: Custom"])
-  requestedCmsIntegrations String[]             @default([])
+  requestedCmsIntegrations  String[]      @default([])
   /// Captured during onboarding when WordPress is selected; later reconciled into `WordPressIntegration`.
-  wordpressRequestedSiteUrl String?             @db.VarChar(1000)
+  wordpressRequestedSiteUrl String?       @db.VarChar(1000)
   /// Auth fields are nullable to support “external” companies (e.g. rivals) that are not login accounts.
-  email                 String?                 @unique @db.VarChar(255)
-  userName              String?                 @unique @db.VarChar(255)
-  password              String?                 @db.VarChar(255)
-  isExternal            Boolean                 @default(false)
+  email                     String?       @unique @db.VarChar(255)
+  userName                  String?       @unique @db.VarChar(255)
+  password                  String?       @db.VarChar(255)
+  isExternal                Boolean       @default(false)
   /// When true, this company row is the HQ login for [`organizationId`] (org-wide dashboard + tenant switch).
-  isOrg                 Boolean                 @default(false) @map("is_org")
-  organizationId        String?                 @map("organization_id")
-  organization          Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime                @updatedAt @db.Timestamptz(3)
+  isOrg                     Boolean       @default(false) @map("is_org")
+  organizationId            String?       @map("organization_id")
+  organization              Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdAt                 DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime      @updatedAt @db.Timestamptz(3)
 
   // Background job fields
-  autoRefreshAt         DateTime?               @map("auto_refresh_at")
-  autoRefreshFrequency  Frequency?              @map("auto_refresh_frequency") @default(MONTHLY)
-  autoRefreshLastRunAt  DateTime?               @map("auto_refresh_last_run_at")
+  autoRefreshAt        DateTime?  @map("auto_refresh_at")
+  autoRefreshFrequency Frequency? @default(MONTHLY) @map("auto_refresh_frequency")
+  autoRefreshLastRunAt DateTime?  @map("auto_refresh_last_run_at")
 
   // Subscription fields
-  subscriptionId        String?                 @map("subscription_id")
-  subscriptionStatus    SubscriptionStatus      @map("subscription_status") @default(PENDING)
-  subscriptionCreatedAt DateTime?               @map("subscription_created_at")
-  subscriptionUpdatedAt DateTime?               @map("subscription_updated_at")
+  subscriptionId        String?            @map("subscription_id")
+  subscriptionStatus    SubscriptionStatus @default(PENDING) @map("subscription_status")
+  subscriptionCreatedAt DateTime?          @map("subscription_created_at")
+  subscriptionUpdatedAt DateTime?          @map("subscription_updated_at")
 
-  metaIntegration       MetaIntegration?
-  aeoGenerationProfiles AeoGenerationProfile[]
-  aeoPages              AeoPage[]
-  assetIntelligence     AssetIntelligence[]
-  assets                Asset[]
-  brandEntity           BrandEntity?
-  citationBounties      CitationBounty[]
-  branding              CompanyBranding?
-  integrationCms        CompanyIntegrationCms[]
-  contentClusters       ContentCluster[]
-  geoDataSources        GeoDataSource[]
-  Citations             Citation[]
-  LlmRadarMetrics       LlmRadarMetric[]
-  llmTopics             LlmTopic[]
-  microAssets           MicroAsset[]
-  shopifyProducts       ShopifyProduct[]
-  shopifyShops          ShopifyShop[]
-  shopifyBlogChannels   ShopifyBlogChannel[]
-  webinars              Webinar[]
-  radarAssumption       RadarAssumption?
-  llmPromptMetrics      LlmPromptMetric[]
-  wordpressIntegration  WordPressIntegration?
-  woocommerceStores     WooCommerceStore[]
+  metaIntegration         MetaIntegration?
+  aeoGenerationProfiles   AeoGenerationProfile[]
+  aeoPages                AeoPage[]
+  assetIntelligence       AssetIntelligence[]
+  assets                  Asset[]
+  brandEntity             BrandEntity?
+  citationBounties        CitationBounty[]
+  branding                CompanyBranding?
+  integrationCms          CompanyIntegrationCms[]
+  contentClusters         ContentCluster[]
+  geoDataSources          GeoDataSource[]
+  Citations               Citation[]
+  LlmRadarMetrics         LlmRadarMetric[]
+  llmTopics               LlmTopic[]
+  microAssets             MicroAsset[]
+  shopifyProducts         ShopifyProduct[]
+  shopifyShops            ShopifyShop[]
+  shopifyBlogChannels     ShopifyBlogChannel[]
+  webinars                Webinar[]
+  radarAssumption         RadarAssumption?
+  llmPromptMetrics        LlmPromptMetric[]
+  wordpressIntegration    WordPressIntegration?
+  woocommerceStores       WooCommerceStore[]
   woocommerceOAuthPending WooCommerceOAuthPending[]
-  woocommerceProducts   WooCommerceProduct[]
-  plan                  CompanyPlan?
-  rivals                CompanyRival[]          @relation("CompanyRivals")
-  rivaledBy             CompanyRival[]          @relation("CompanyRivalTargets")
+  woocommerceProducts     WooCommerceProduct[]
+  plan                    CompanyPlan?
+  rivals                  CompanyRival[]            @relation("CompanyRivals")
+  rivaledBy               CompanyRival[]            @relation("CompanyRivalTargets")
 
   @@index([slug])
   @@index([organizationId])
@@ -91,11 +91,11 @@ model Company {
 
 model CompanyPlan {
   id               String   @id @default(cuid())
-  companyId         String   @unique
-  maxRivalsAllowed  Int      @default(10)
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
-  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId        String   @unique
+  maxRivalsAllowed Int      @default(10)
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("company_plans")
@@ -103,11 +103,11 @@ model CompanyPlan {
 
 model CompanyRival {
   id             String   @id @default(cuid())
-  companyId       String
-  rivalCompanyId  String
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  company         Company  @relation("CompanyRivals", fields: [companyId], references: [id], onDelete: Cascade)
-  rivalCompany    Company  @relation("CompanyRivalTargets", fields: [rivalCompanyId], references: [id], onDelete: Cascade)
+  companyId      String
+  rivalCompanyId String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  company        Company  @relation("CompanyRivals", fields: [companyId], references: [id], onDelete: Cascade)
+  rivalCompany   Company  @relation("CompanyRivalTargets", fields: [rivalCompanyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, rivalCompanyId])
   @@index([companyId])
@@ -116,19 +116,19 @@ model CompanyRival {
 }
 
 model CompanyIntegrationCms {
-  id        String              @id @default(cuid())
-  companyId String
-  provider  IntegrationProvider @default(Shopify)
-  apiKey     String?             @db.VarChar(500)
-  apiSecret  String?             @db.VarChar(500)
-  scopes     String?
-  appUrl     String?             @db.VarChar(2000)
-  connectUrl String?             @db.VarChar(2000)
+  id                 String              @id @default(cuid())
+  companyId          String
+  provider           IntegrationProvider @default(Shopify)
+  apiKey             String?             @db.VarChar(500)
+  apiSecret          String?             @db.VarChar(500)
+  scopes             String?
+  appUrl             String?             @db.VarChar(2000)
+  connectUrl         String?             @db.VarChar(2000)
   /// Normalized *.myshopify.com — used to resolve company + CMS credentials before shop is installed
-  expectedShopDomain String?     @unique @db.VarChar(255)
-  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime            @updatedAt @db.Timestamptz(3)
-  company   Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  expectedShopDomain String?             @unique @db.VarChar(255)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime            @updatedAt @db.Timestamptz(3)
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, provider])
   @@index([companyId])
@@ -284,6 +284,7 @@ model Asset {
   microAssets        MicroAsset[]
   streamQueueItems   StreamQueue[]
   webinars           Webinar[]
+  metaMedia          MetaMedia?
 
   @@index([companyId])
   @@index([assetType])
@@ -476,37 +477,34 @@ model ContentCluster {
 }
 
 model AeoPage {
-  id                 String                 @id @default(cuid())
-  companyId          String
-  slug               String                 @db.VarChar(255)
-  locale             String                 @default("en") @db.VarChar(10)
-  pageType           AeoPageType            @default(DEFINITION)
-  status             AeoPageStatus          @default(DRAFT)
-  title              String                 @db.VarChar(500)
-  description        String
-  facts              Json                   @default("[]")
-  faq                Json                   @default("[]")
-  claims             Json                   @default("[]")
-  summary            Json                   @default("{}")
-  knowledgeGraph     Json                   @default("{}")
-  seoTitle           String?                @db.VarChar(500)
-  seoDescription     String?
-  canonicalUrl       String?                @db.VarChar(1000)
+  id                String        @id @default(cuid())
+  companyId         String
+  slug              String        @db.VarChar(255)
+  locale            String        @default("en") @db.VarChar(10)
+  pageType          AeoPageType   @default(DEFINITION)
+  status            AeoPageStatus @default(DRAFT)
+  title             String        @db.VarChar(500)
+  description       String
+  facts             Json          @default("[]")
+  faq               Json          @default("[]")
+  claims            Json          @default("[]")
+  summary           Json          @default("{}")
+  knowledgeGraph    Json          @default("{}")
+  seoTitle          String?       @db.VarChar(500)
+  seoDescription    String?
+  canonicalUrl      String?       @db.VarChar(1000)
   /// Shopify Admin API GID for the blog article when published via approve-shopify
-  shopifyArticleGid  String?                @db.VarChar(255)
-  clusterId          String?
-  publishedAt        DateTime?              @db.Timestamptz(3)
-  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  shopifyArticleGid String?       @db.VarChar(255)
+  clusterId         String?
+  publishedAt       DateTime?     @db.Timestamptz(3)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(3)
 
+  llm_prompt_id String?
+  llm_prompt    Prompt? @relation(fields: [llm_prompt_id], references: [id])
 
-
-  llm_prompt_id      String?
-  llm_prompt         Prompt?                @relation(fields: [llm_prompt_id], references: [id])
-
-  llm_topic_id       String?
-  llm_topic         LlmTopic?              @relation(fields: [llm_topic_id], references: [id])
-
+  llm_topic_id String?
+  llm_topic    LlmTopic? @relation(fields: [llm_topic_id], references: [id])
 
   generationProfiles AeoGenerationProfile[]
   sources            AeoPageSource[]
@@ -625,26 +623,26 @@ model GeoDataSource {
 }
 
 model Prompt {
-  id         String            @id @default(cuid())
-  query      String
-  topic      String?           @db.VarChar(255)
-  topicId    String?
-  reason     String?
+  id              String   @id @default(cuid())
+  query           String
+  topic           String?  @db.VarChar(255)
+  topicId         String?
+  reason          String?
   expectedRevenue Float?
-  intent     String?           @db.VarChar(100)
-  isActive   Boolean           @default(true)
-  createdAt  DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt  DateTime          @updatedAt @db.Timestamptz(3)
-  ishunted   Boolean           @default(false)
+  intent          String?  @db.VarChar(100)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  ishunted        Boolean  @default(false)
 
   aeo_pages AeoPage[]
 
-  executions PromptExecution[]
-  llmTopic   LlmTopic?         @relation("LlmTopicPrompts", fields: [topicId], references: [id])
+  executions       PromptExecution[]
+  llmTopic         LlmTopic?              @relation("LlmTopicPrompts", fields: [topicId], references: [id])
   llmPromptMetrics LlmPromptMetric[]
-  revenue PromptRevenue?
-  rivalByModel PromptRivalByModel[]
-  rivalConsensus PromptRivalConsensus[]
+  revenue          PromptRevenue?
+  rivalByModel     PromptRivalByModel[]
+  rivalConsensus   PromptRivalConsensus[]
 
   @@index([intent])
   @@index([topic])
@@ -684,7 +682,7 @@ model PromptExecution {
   @@map("llm_prompt_executions")
 }
 
-  model Citation {
+model Citation {
   id            String          @id @default(cuid())
   executionId   String
   companyId     String?
@@ -703,17 +701,17 @@ model PromptExecution {
 }
 
 model LlmTopic {
-  id          String     @id @default(cuid())
-  name        String     @db.VarChar(255)
-  description String?
-  reason      String?
-  createdAt   DateTime   @default(now()) @db.Timestamptz(3)
-  difficulty  Difficulty @default(MEDIUM)
-  companyId   String
-  prompts     Prompt[]   @relation("LlmTopicPrompts")
+  id               String            @id @default(cuid())
+  name             String            @db.VarChar(255)
+  description      String?
+  reason           String?
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  difficulty       Difficulty        @default(MEDIUM)
+  companyId        String
+  prompts          Prompt[]          @relation("LlmTopicPrompts")
   llmPromptMetrics LlmPromptMetric[]
-  aeo_pages AeoPage[]
-  company     Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aeo_pages        AeoPage[]
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, name])
   @@index([companyId])
@@ -772,44 +770,44 @@ model LlmRadarMetric {
 
 /// Company-level CTR/CVR assumptions for prompt revenue estimates (edit UI later)
 model RadarAssumption {
-  id              String   @id @default(cuid())
-  companyId       String   @unique
+  id             String   @id @default(cuid())
+  companyId      String   @unique
   /// Click-through from impression to site (ratio 0–1)
-  ctr             Float    @default(0.02)
+  ctr            Float    @default(0.02)
   /// Conversion to order (ratio 0–1), aligned with D2C defaults when unset on bounties
-  cvr             Float    @default(0.025)
-  aovMultiplier   Float    @default(1)
-  industryPreset  String?  @db.VarChar(50)
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  cvr            Float    @default(0.025)
+  aovMultiplier  Float    @default(1)
+  industryPreset String?  @db.VarChar(50)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("radar_assumptions")
 }
 
 /// Latest snapshot per prompt × model after a radar run (upserted on POST /api/geo/radar)
 model LlmPromptMetric {
-  id               String     @id @default(cuid())
+  id               String      @id @default(cuid())
   companyId        String
   promptId         String
   topicId          String?
-  model            String     @db.VarChar(100)
+  model            String      @db.VarChar(100)
   latestRank       Int?
-  isMentioned      Boolean    @default(false)
+  isMentioned      Boolean     @default(false)
   estimatedReach   Int?
   confidence       Float?
   difficulty       Difficulty?
   businessFit      Float?
   opportunityScore Float?
   estimatedRevenue Float?
-  actionType       String?    @db.VarChar(32)
+  actionType       String?     @db.VarChar(32)
   rankTrend7d      Float?
   rankTrend30d     Float?
-  modelGapFlag     Boolean    @default(false)
-  calculatedAt     DateTime   @default(now()) @db.Timestamptz(3)
-  company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  prompt           Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  llmTopic         LlmTopic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  modelGapFlag     Boolean     @default(false)
+  calculatedAt     DateTime    @default(now()) @db.Timestamptz(3)
+  company          Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  prompt           Prompt      @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  llmTopic         LlmTopic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
 
   @@unique([companyId, promptId, model])
   @@index([companyId])
@@ -819,42 +817,42 @@ model LlmPromptMetric {
 }
 
 model ShopifyShop {
-  id            String           @id @default(cuid())
-  companyId     String
-  shopDomain    String           @unique @db.VarChar(255)
-  accessToken   String           @db.VarChar(500)
-  scopes        String[]         @default([])
-  status        String           @default("installed") @db.VarChar(50)
-  installedAt   DateTime         @default(now()) @db.Timestamptz(3)
-  uninstalledAt DateTime?        @db.Timestamptz(3)
+  id                                  String               @id @default(cuid())
+  companyId                           String
+  shopDomain                          String               @unique @db.VarChar(255)
+  accessToken                         String               @db.VarChar(500)
+  scopes                              String[]             @default([])
+  status                              String               @default("installed") @db.VarChar(50)
+  installedAt                         DateTime             @default(now()) @db.Timestamptz(3)
+  uninstalledAt                       DateTime?            @db.Timestamptz(3)
   /// Shopify GID for metafield definition `custom.json_ld` on ARTICLE owner type
-  articleJsonLdMetafieldDefinitionGid String? @db.VarChar(255)
+  articleJsonLdMetafieldDefinitionGid String?              @db.VarChar(255)
   /// Main theme ID last patched for JSON-LD injection
-  mainThemeId String? @db.VarChar(255)
+  mainThemeId                         String?              @db.VarChar(255)
   /// Timestamp when the main theme was patched for JSON-LD injection
-  articleJsonLdThemePatchedAt DateTime? @db.Timestamptz(3)
-  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime         @updatedAt @db.Timestamptz(3)
-  products      ShopifyProduct[]
-  blogChannels  ShopifyBlogChannel[]
-  company       Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  articleJsonLdThemePatchedAt         DateTime?            @db.Timestamptz(3)
+  createdAt                           DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt                           DateTime             @updatedAt @db.Timestamptz(3)
+  products                            ShopifyProduct[]
+  blogChannels                        ShopifyBlogChannel[]
+  company                             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
   @@map("shopify_shops")
 }
 
 model ShopifyBlogChannel {
-  id            String     @id @default(cuid())
-  shopId        String
-  companyId     String
-  handle        String     @db.VarChar(255)
-  title         String     @db.VarChar(255)
-  shopifyBlogGid String    @unique @db.VarChar(255)
-  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+  id             String   @id @default(cuid())
+  shopId         String
+  companyId      String
+  handle         String   @db.VarChar(255)
+  title          String   @db.VarChar(255)
+  shopifyBlogGid String   @unique @db.VarChar(255)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
 
-  shop          ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  company       Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  shop    ShopifyShop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  company Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([shopId, handle])
   @@index([shopId])
@@ -926,49 +924,52 @@ model MetaIntegration {
   lastRefreshed DateTime @updatedAt @map("last_refreshed") @db.Timestamptz(3)
 
   // ── Ad Context (from best performing ads analysis) ──────────────
-  brandVoice       Json?    // extracted tone, style, hook patterns
-  topAdExamples    Json?    // top 5 ad copy + why they worked
-  audienceInsights Json?    // what targeting/demographics performed best
-  avgWinningCtr    Float?   // benchmark CTR for this account
+  brandVoice       Json? // extracted tone, style, hook patterns
+  topAdExamples    Json? // top 5 ad copy + why they worked
+  audienceInsights Json? // what targeting/demographics performed best
+  avgWinningCtr    Float? // benchmark CTR for this account
   contextBuiltAt   DateTime? // when the context was last analysed
 
   // ── Relations ───────────────────────────────────────────────────
-  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  campaigns  MetaCampaign[]
-  creatives  MetaCreative[]
-  media      MetaMedia[]
-  adSets     MetaAdSet[]
-  ads        MetaAd[]
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  campaigns MetaCampaign[]
+  creatives MetaCreative[]
+  media     MetaMedia[]
+  adSets    MetaAdSet[]
+  ads       MetaAd[]
 
   @@index([companyId])
   @@map("meta_integrations")
 }
 
 model MetaMedia {
-  id                String   @id @default(uuid())
+  id                String @id @default(uuid())
   metaIntegrationId String
-  kind              String   @db.VarChar(10) // "image" | "video"
+  kind              String @db.VarChar(10) // "image" | "video"
 
-  imageHash         String?  @db.VarChar(200)
-  videoId           String?  @db.VarChar(100)
+  imageHash String? @db.VarChar(200)
+  videoId   String? @db.VarChar(100)
 
-  imageUrl          String?  @db.VarChar(1000)
-  videoUrl          String?  @db.VarChar(1000)
-  videoStreamId     String?  @db.VarChar(100)
-  thumbnailUrl      String?  @db.VarChar(1000)
-  r2Key             String?  @db.VarChar(500)
+  assetId String? @unique
 
-  filename   String?  @db.VarChar(500)
-  mimeType   String?  @db.VarChar(200)
+  imageUrl      String? @db.VarChar(1000)
+  videoUrl      String? @db.VarChar(1000)
+  videoStreamId String? @db.VarChar(100)
+  thumbnailUrl  String? @db.VarChar(1000)
+  r2Key         String? @db.VarChar(500)
+
+  filename   String? @db.VarChar(500)
+  mimeType   String? @db.VarChar(200)
   bytes      Int?
   width      Int?
   height     Int?
   durationMs Int?
 
-  status     String   @default("ready") @db.VarChar(20) // uploading|processing|ready|error
+  status String @default("ready") @db.VarChar(20) // uploading|processing|ready|error
 
-  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
+  asset           Asset?          @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
   @@unique([metaIntegrationId, imageHash])
   @@unique([metaIntegrationId, videoId])
@@ -981,22 +982,22 @@ model MetaMedia {
 
 // ── Campaigns ────────────────────────────────────────────────────────
 model MetaCampaign {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   metaIntegrationId String
   /// Returned by Meta API after creation
-  metaCampaignId    String   @db.VarChar(100)
+  metaCampaignId    String    @db.VarChar(100)
   name              String
-  objective         String   // OUTCOME_TRAFFIC, OUTCOME_SALES etc.
-  status            String   // PAUSED, ACTIVE, ARCHIVED
-  dailyBudget       Int      @default(0) // in smallest currency unit (paise); 0 when budget lives on ad set
-  specialAdCategory String?  // HOUSING, CREDIT etc. null if none
-  metaAdSetId       String?  @db.VarChar(100) // legacy / last-created ad set id
-  metaAdId          String?  @db.VarChar(100) // legacy / last-created ad id
-  targeting         Json     // age, geo, interests, placements
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  objective         String // OUTCOME_TRAFFIC, OUTCOME_SALES etc.
+  status            String // PAUSED, ACTIVE, ARCHIVED
+  dailyBudget       Int       @default(0) // in smallest currency unit (paise); 0 when budget lives on ad set
+  specialAdCategory String? // HOUSING, CREDIT etc. null if none
+  metaAdSetId       String?   @db.VarChar(100) // legacy / last-created ad set id
+  metaAdId          String?   @db.VarChar(100) // legacy / last-created ad id
+  targeting         Json // age, geo, interests, placements
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
   publishedAt       DateTime? // when status flipped to ACTIVE
-  reviewStatus      String?  // IN_REVIEW, ACTIVE, DISAPPROVED
-  reviewFeedback    String?  // rejection reason from Meta if disapproved
+  reviewStatus      String? // IN_REVIEW, ACTIVE, DISAPPROVED
+  reviewFeedback    String? // rejection reason from Meta if disapproved
 
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
   creative        MetaCreative?
@@ -1010,38 +1011,37 @@ model MetaCampaign {
 
 // ── Creatives ─────────────────────────────────────────────────────────
 model MetaCreative {
-  id                String   @id @default(uuid())
+  id                String  @id @default(uuid())
   metaIntegrationId String
-  metaCampaignId    String?  @unique // one creative per campaign
+  metaCampaignId    String? @unique // one creative per campaign
   /// Returned by Meta after adcreatives POST
-  metaCreativeId    String?  @db.VarChar(100)
+  metaCreativeId    String? @db.VarChar(100)
   /// Returned after adimages POST
-  imageHash         String?  @db.VarChar(200)
-  videoId           String?  @db.VarChar(100) // if video ad
+  imageHash         String? @db.VarChar(200)
+  videoId           String? @db.VarChar(100) // if video ad
   headline          String
-  primaryText       String   @db.Text
+  primaryText       String  @db.Text
   description       String?
-  ctaType           String   // LEARN_MORE, SHOP_NOW etc.
+  ctaType           String // LEARN_MORE, SHOP_NOW etc.
   landingUrl        String
 
-  imageUrl          String?  // stored URL of generated image
-  imagePrompt       String?  @db.Text // prompt used to generate image
+  imageUrl    String? // stored URL of generated image
+  imagePrompt String? @db.Text // prompt used to generate image
 
-  videoUrl          String?  // stored URL of generated video
-  videoPrompt       String?  @db.Text // prompt used to generate video
-  videoStreamId     String?   // Stream video ID for management
-  thumbnailUrl      String?   // Stream auto-generated thumbnail
+  videoUrl      String? // stored URL of generated video
+  videoPrompt   String? @db.Text // prompt used to generate video
+  videoStreamId String? // Stream video ID for management
+  thumbnailUrl  String? // Stream auto-generated thumbnail
 
-
-  aiGenerated       Boolean  @default(true) // always true for your pipeline
+  aiGenerated         Boolean   @default(true) // always true for your pipeline
   // Compliance
-  compliancePassed  Boolean  @default(false)
-  complianceFlags   Json?    // array of violation strings if any
+  compliancePassed    Boolean   @default(false)
+  complianceFlags     Json? // array of violation strings if any
   complianceCheckedAt DateTime?
   // Approval
-  approvedByUser    Boolean  @default(false)
-  approvedAt        DateTime?
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  approvedByUser      Boolean   @default(false)
+  approvedAt          DateTime?
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
 
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
   campaign        MetaCampaign?   @relation(fields: [metaCampaignId], references: [id])
@@ -1054,21 +1054,21 @@ model MetaCreative {
 }
 
 model MetaAdSet {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   metaIntegrationId String
   campaignId        String
-  metaAdSetId       String   @db.VarChar(100)
+  metaAdSetId       String    @db.VarChar(100)
   name              String?
-  status            String?  @db.VarChar(50)
+  status            String?   @db.VarChar(50)
   dailyBudget       Int?
-  optimizationGoal  String?  @db.VarChar(100)
-  billingEvent      String?  @db.VarChar(50)
-  bidStrategy       String?  @db.VarChar(50)
+  optimizationGoal  String?   @db.VarChar(100)
+  billingEvent      String?   @db.VarChar(50)
+  bidStrategy       String?   @db.VarChar(50)
   targeting         Json?
   startTime         DateTime? @db.Timestamptz(3)
   endTime           DateTime? @db.Timestamptz(3)
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
 
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
   campaign        MetaCampaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -1081,18 +1081,18 @@ model MetaAdSet {
 }
 
 model MetaAd {
-  id                String   @id @default(uuid())
+  id                String    @id @default(uuid())
   metaIntegrationId String
   adSetId           String
   metaCreativeDbId  String?
-  metaAdId          String   @db.VarChar(100)
+  metaAdId          String    @db.VarChar(100)
   name              String?
-  status            String?  @db.VarChar(50)
+  status            String?   @db.VarChar(50)
   publishedAt       DateTime? @db.Timestamptz(3)
-  reviewStatus      String?  @db.VarChar(50)
-  reviewFeedback    String?  @db.Text
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+  reviewStatus      String?   @db.VarChar(50)
+  reviewFeedback    String?   @db.Text
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @updatedAt @db.Timestamptz(3)
 
   metaIntegration MetaIntegration @relation(fields: [metaIntegrationId], references: [id], onDelete: Cascade)
   adSet           MetaAdSet       @relation(fields: [adSetId], references: [id], onDelete: Cascade)
@@ -1107,16 +1107,16 @@ model MetaAd {
 // ── Performance Metrics (polled every 6h) ────────────────────────────
 model MetaAdMetrics {
   id             String   @id @default(uuid())
-  metaCampaignId String   // references MetaCampaign.id (your DB id)
+  metaCampaignId String // references MetaCampaign.id (your DB id)
   metaAdId       String   @db.VarChar(100)
   impressions    Int
   clicks         Int
   ctr            Float
-  spend          Float    // in account currency
+  spend          Float // in account currency
   cpc            Float?
   roas           Float?
-  actions        Json?    // full actions array from Meta
-  datePreset     String   // e.g. "last_7d", "last_30d"
+  actions        Json? // full actions array from Meta
+  datePreset     String // e.g. "last_7d", "last_30d"
   recordedAt     DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([metaCampaignId])
@@ -1130,20 +1130,20 @@ model MetaAdMetrics {
 
 /// WooCommerce REST API keys after wc-auth/v1/authorize (or manual dev entry).
 model WooCommerceStore {
-  id                String   @id @default(cuid())
+  id                String               @id @default(cuid())
   companyId         String
-  storeUrl          String   @db.VarChar(1000)
-  consumerKeyEnc    String   @db.Text
-  consumerSecretEnc String   @db.Text
+  storeUrl          String               @db.VarChar(1000)
+  consumerKeyEnc    String               @db.Text
+  consumerSecretEnc String               @db.Text
   wcKeyId           Int?
-  keyPermissions    String?  @db.VarChar(50)
-  status            String   @default("installed") @db.VarChar(50)
+  keyPermissions    String?              @db.VarChar(50)
+  status            String               @default("installed") @db.VarChar(50)
   /// Encrypted secret used to verify X-WC-Webhook-Signature when webhooks are registered for this store.
-  webhookSecretEnc  String?  @db.Text
-  installedAt       DateTime @default(now()) @db.Timestamptz(3)
-  createdAt         DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
-  company           Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  webhookSecretEnc  String?              @db.Text
+  installedAt       DateTime             @default(now()) @db.Timestamptz(3)
+  createdAt         DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime             @updatedAt @db.Timestamptz(3)
+  company           Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   products          WooCommerceProduct[]
 
   @@unique([companyId, storeUrl])
@@ -1153,29 +1153,29 @@ model WooCommerceStore {
 
 /// Cached WooCommerce REST catalog row for Shop Intel + Elasticsearch (MCP search).
 model WooCommerceProduct {
-  id                   String   @id @default(cuid())
+  id                   String           @id @default(cuid())
   wooCommerceStoreId   String
   companyId            String
   wcProductId          Int
-  title                String   @db.VarChar(500)
+  title                String           @db.VarChar(500)
   /// Normalized for UI parity with Shopify: ACTIVE | DRAFT | ARCHIVED
-  status               String   @db.VarChar(50)
-  wcStatusRaw          String?  @db.VarChar(50)
-  handle               String   @db.VarChar(255)
-  totalInventory       Int      @default(0)
-  onlineStoreUrl       String?  @db.VarChar(1000)
-  priceMinAmount       String?  @db.VarChar(64)
-  priceMaxAmount       String?  @db.VarChar(64)
-  currencyCode         String?  @db.VarChar(10)
-  wcCreatedAt          DateTime @db.Timestamptz(3)
-  wcUpdatedAt          DateTime @db.Timestamptz(3)
-  featuredImageAltText String?  @db.VarChar(500)
+  status               String           @db.VarChar(50)
+  wcStatusRaw          String?          @db.VarChar(50)
+  handle               String           @db.VarChar(255)
+  totalInventory       Int              @default(0)
+  onlineStoreUrl       String?          @db.VarChar(1000)
+  priceMinAmount       String?          @db.VarChar(64)
+  priceMaxAmount       String?          @db.VarChar(64)
+  currencyCode         String?          @db.VarChar(10)
+  wcCreatedAt          DateTime         @db.Timestamptz(3)
+  wcUpdatedAt          DateTime         @db.Timestamptz(3)
+  featuredImageAltText String?          @db.VarChar(500)
   featuredImageHeight  Int?
-  featuredImageUrl     String?  @db.VarChar(2000)
+  featuredImageUrl     String?          @db.VarChar(2000)
   featuredImageWidth   Int?
   description          String?
-  createdAt            DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+  createdAt            DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime         @updatedAt @db.Timestamptz(3)
   store                WooCommerceStore @relation(fields: [wooCommerceStoreId], references: [id], onDelete: Cascade)
   company              Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
 

@@ -11,6 +11,7 @@ import { CampaignsTab } from './components/CampaignsTab';
 import { AdSetsTab } from './components/AdSetsTab';
 import { AdCreativesTab } from './components/AdCreativesTab';
 import { AdsTab } from './components/AdsTab';
+import { AnalysisTab } from './components/AnalysisTab';
 
 const TABS: MetaTabId[] = [
   'profile',
@@ -19,6 +20,7 @@ const TABS: MetaTabId[] = [
   'adsets',
   'adcreatives',
   'ads',
+  'analysis',
 ];
 
 function isTab(s: string | null): s is MetaTabId {
@@ -72,6 +74,7 @@ function MetaAdManagementInner() {
       {activeTab === 'adsets' && <AdSetsTab />}
       {activeTab === 'adcreatives' && <AdCreativesTab />}
       {activeTab === 'ads' && <AdsTab />}
+      {activeTab === 'analysis' && <AnalysisTab />}
     </div>
   );
 }

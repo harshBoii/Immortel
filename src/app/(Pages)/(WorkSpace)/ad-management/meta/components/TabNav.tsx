@@ -7,6 +7,7 @@ const TABS = [
   { id: 'adsets', label: 'Ad Sets' },
   { id: 'adcreatives', label: 'Ad Creatives' },
   { id: 'ads', label: 'Ads' },
+  { id: 'analysis', label: 'Analysis' },
 ] as const;
 
 export type MetaTabId = (typeof TABS)[number]['id'];
