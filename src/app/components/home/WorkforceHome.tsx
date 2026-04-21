@@ -199,12 +199,12 @@ const IntegrationPill = ({
   fullWidth?: boolean;
 }) => (
   <div
-    className={`glass-card flex h-full min-h-[110px] flex-col justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3.5 ${
+    className={`glass-card flex flex-col rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/70 p-3 ${
       connected ? '' : 'opacity-70'
     } ${fullWidth ? 'col-span-2' : ''}`}
   >
     <div className="flex items-start justify-between gap-2">
-      <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
+      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--glass-hover)] border border-[var(--glass-border)] flex-shrink-0">
         <Icon className="w-4 h-4 text-foreground/80" />
       </div>
       <span
@@ -213,8 +213,8 @@ const IntegrationPill = ({
         }`}
       />
     </div>
-    <div className="mt-2">
-      <p className="text-[13px] font-semibold text-foreground leading-tight truncate">{name}</p>
+    <div className="mt-1.5">
+      <p className="text-[12.5px] font-semibold text-foreground leading-tight truncate">{name}</p>
       <p className="mt-0.5 text-[11px] text-muted-foreground leading-tight truncate">
         {connected ? connectedLabel : disconnectedLabel}
       </p>
@@ -533,8 +533,8 @@ export default function WorkforceHome({
               </Link>
             </div>
 
-            {/* 5-card grid — cards stretch to fill available height */}
-            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {/* 5-card grid — cards stay compact, section claims vertical space via its own flex-1 */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 items-start">
               <IntegrationPill
                 icon={SiShopify}
                 name="Shopify"
