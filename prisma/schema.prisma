@@ -1223,6 +1223,12 @@ model Lead {
   city          String?   @db.VarChar(120)
   industry      String?   @db.VarChar(120)
   source        String?   @db.VarChar(120)
+  /// Optional product context to personalize outbound calls (Shopify/WooCommerce catalog).
+  productProvider   IntegrationProvider?
+  /// Shopify uses `shopifyGid` (e.g. gid://shopify/Product/123); Woo uses numeric `wcProductId` (stored as string here).
+  productExternalId String?              @db.VarChar(255)
+  /// Human-friendly product name (used for lookup if no external id is provided).
+  productName       String?              @db.VarChar(500)
   /// 0-100 heuristic score used to rank leads in the AI pick panel.
   intentScore   Int       @default(0)
   stage         LeadStage @default(NEW)

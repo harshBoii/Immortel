@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCallsSession } from "@/lib/calls/session";
-import { LeadStage } from "@prisma/client";
+import { IntegrationProvider, LeadStage } from "@prisma/client";
 
 /**
  * CSV importer for Leads. Accepts either:
@@ -9,7 +9,8 @@ import { LeadStage } from "@prisma/client";
  *   - `text/csv` raw body.
  *
  * CSV header is required. Recognised columns (case-insensitive):
- *   name, phone, email, city, industry, source, intentScore, tags, notes, timezone.
+ *   name, phone, email, city, industry, source, intentScore, tags, notes, timezone,
+ *   product_id, product_name.
  * `tags` may be pipe-separated (`retail|fashion`).
  */
 
@@ -101,6 +102,8 @@ export async function POST(request: Request) {
   const iTags = idx("tags");
   const iNotes = idx("notes");
   const iTz = idx("timezone");
+  const iProductId = idx("product_id");
+  const iProductName = idx("product_name");
 
   const created: string[] = [];
   const skipped: { row: number; reason: string }[] = [];
@@ -122,9 +125,20 @@ export async function POST(request: Request) {
             .filter(Boolean)
         : [];
 
+    const productExternalId =
+      iProductId >= 0 ? row[iProductId]?.trim() || null : null;
+    const productName =
+      iProductName >= 0 ? row[iProductName]?.trim() || null : null;
+    const productProvider: IntegrationProvider | null =
+      productExternalId && productExternalId.startsWith("gid://")
+        ? IntegrationProvider.Shopify
+        : productExternalId && /^\d+$/.test(productExternalId)
+          ? IntegrationProvider.WooCommerce
+          : null;
+
     try {
       const lead = await prisma.lead.create({
-        data: {
+        data: ({
           companyId: session.companyId,
           name: name.slice(0, 255),
           phone: phone.slice(0, 32),
@@ -137,8 +151,11 @@ export async function POST(request: Request) {
           tags,
           notes: iNotes >= 0 ? row[iNotes] || null : null,
           timezone: iTz >= 0 ? row[iTz]?.trim() || null : null,
+          productProvider,
+          productExternalId,
+          productName: productName ? productName.slice(0, 500) : null,
           stage: LeadStage.NEW,
-        },
+        } as unknown as Parameters<typeof prisma.lead.create>[0]["data"]),
       });
       created.push(lead.id);
     } catch (err) {

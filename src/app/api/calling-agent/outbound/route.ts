@@ -140,6 +140,7 @@ export async function POST(request: Request) {
       { status: 401 }
     );
   }
+  const companyId = session.companyId;
 
   let body: Record<string, unknown>;
   try {
@@ -166,6 +167,21 @@ export async function POST(request: Request) {
   const leadIdInput = typeof body.leadId === "string" ? body.leadId.trim() : "";
   const campaignIdInput =
     typeof body.campaignId === "string" ? body.campaignId.trim() : "";
+
+  const productExternalIdInput =
+    typeof body.productExternalId === "string"
+      ? body.productExternalId.trim()
+      : typeof body.product_id === "string"
+        ? body.product_id.trim()
+        : typeof body.productId === "string"
+          ? body.productId.trim()
+          : "";
+  const productNameInput =
+    typeof body.productName === "string"
+      ? body.productName.trim()
+      : typeof body.product_name === "string"
+        ? body.product_name.trim()
+        : "";
 
   // Tenant ownership checks — never trust IDs from the client until verified.
   let resolvedLeadId: string | null = null;
@@ -234,7 +250,65 @@ export async function POST(request: Request) {
       .catch(() => undefined)) ||
     "Your company";
 
-  const effectiveProduct = product || "Outbound Call";
+  // Product context is optional. If not provided by the UI, we try to resolve it:
+  // - from the Lead's saved productExternalId/productName
+  // - from cached Shopify/WooCommerce product tables
+  type ResolvedProduct = { title: string; description: string | null };
+  async function resolveProductContext(args: {
+    productExternalId?: string;
+    productName?: string;
+    leadId?: string | null;
+  }): Promise<ResolvedProduct | null> {
+    let externalId = (args.productExternalId ?? "").trim();
+    let nameQuery = (args.productName ?? "").trim();
+
+    if ((!externalId || !nameQuery) && args.leadId) {
+      const lead = (await prisma.lead.findFirst({
+        where: { id: args.leadId, companyId },
+        // Note: these fields are added via a Prisma migration; cast keeps TS compiling
+        // until the user runs prisma migrate+generate.
+        select: { id: true } as unknown as { id: true; productExternalId: true; productName: true },
+      })) as unknown as { productExternalId?: string | null; productName?: string | null } | null;
+      if (!externalId) externalId = lead?.productExternalId ?? "";
+      if (!nameQuery) nameQuery = lead?.productName ?? "";
+    }
+
+    // 1) Exact ID match
+    if (externalId) {
+      if (externalId.startsWith("gid://")) {
+        const p = await prisma.shopifyProduct.findFirst({
+          where: { companyId, shopifyGid: externalId },
+          select: { title: true, description: true },
+        });
+        if (p) return { title: p.title, description: p.description ?? null };
+      }
+      if (/^\\d+$/.test(externalId)) {
+        const wcId = parseInt(externalId, 10);
+        const p = await prisma.wooCommerceProduct.findFirst({
+          where: { companyId, wcProductId: wcId },
+          select: { title: true, description: true },
+        });
+        if (p) return { title: p.title, description: p.description ?? null };
+      }
+    }
+
+    // 2) Fuzzy name match (cached catalog)
+    if (nameQuery) {
+      const shopify = await prisma.shopifyProduct.findFirst({
+        where: { companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { title: true, description: true },
+      });
+      if (shopify) return { title: shopify.title, description: shopify.description ?? null };
+
+      const woo = await prisma.wooCommerceProduct.findFirst({
+        where: { companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { title: true, description: true },
+      });
+      if (woo) return { title: woo.title, description: woo.description ?? null };
+    }
+
+    return null;
+  }
 
   if (!to || !name) {
     return NextResponse.json(
@@ -255,6 +329,19 @@ export async function POST(request: Request) {
     if (match) resolvedLeadId = match.id;
   }
 
+  const resolvedProduct =
+    !product || !perks_of_product || productExternalIdInput || productNameInput
+      ? await resolveProductContext({
+          productExternalId: productExternalIdInput || undefined,
+          productName: productNameInput || undefined,
+          leadId: resolvedLeadId,
+        })
+      : null;
+
+  const effectiveProduct = product || resolvedProduct?.title || "Outbound Call";
+  const effectivePerks =
+    perks_of_product || resolvedProduct?.description || "—";
+
   const elevenlabs_model = mapElevenlabsModel(voiceMode);
 
   const payload: Record<string, unknown> = {
@@ -265,7 +352,7 @@ export async function POST(request: Request) {
     name,
     company: effectiveCompany,
     product: effectiveProduct,
-    perks_of_product: perks_of_product || "—",
+    perks_of_product: effectivePerks,
     info_about_lead: info_about_lead || "—",
     voiceId,
     llm_provider,
@@ -291,7 +378,7 @@ export async function POST(request: Request) {
     name,
     company: effectiveCompany,
     product: effectiveProduct,
-    perks_of_product: perks_of_product || "—",
+    perks_of_product: effectivePerks,
     info_about_lead: info_about_lead || "—",
     languageMode,
     voiceMode,

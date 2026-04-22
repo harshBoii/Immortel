@@ -30,6 +30,9 @@ type LeadRow = {
   city: string | null;
   industry: string | null;
   source: string | null;
+  productProvider?: "Shopify" | "WooCommerce" | null;
+  productExternalId?: string | null;
+  productName?: string | null;
   intentScore: number;
   stage: LeadStage;
   tags: string[];

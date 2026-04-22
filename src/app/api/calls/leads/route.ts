@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma, LeadStage } from "@prisma/client";
+import { IntegrationProvider, Prisma, LeadStage } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCallsSession } from "@/lib/calls/session";
 
@@ -17,6 +17,9 @@ const CreateLeadSchema = z.object({
   tags: z.array(z.string().max(60)).optional(),
   notes: z.string().optional().nullable(),
   timezone: z.string().max(64).optional().nullable(),
+  productProvider: z.nativeEnum(IntegrationProvider).optional().nullable(),
+  productExternalId: z.string().max(255).optional().nullable(),
+  productName: z.string().max(500).optional().nullable(),
 });
 
 export async function GET(request: Request) {
