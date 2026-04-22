@@ -200,7 +200,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
             />
           </Field>
 
-          <Field label="System prompt" hint="Optional override (advanced)">
+          {/* <Field label="System prompt" hint="Optional override (advanced)">
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
@@ -208,7 +208,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
               rows={5}
               placeholder="Agent persona, guardrails, and conversation policy…"
             />
-          </Field>
+          </Field> */}
         </Card>
       </div>
 
