@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -373,6 +373,17 @@ function AddLeadDrawer({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [productName, setProductName] = useState("");
+  const [productExternalId, setProductExternalId] = useState("");
+  const [productProvider, setProductProvider] = useState<"Shopify" | "WooCommerce" | null>(
+    null
+  );
+  const [productHits, setProductHits] = useState<
+    { provider: "Shopify" | "WooCommerce"; externalId: string; title: string }[]
+  >([]);
+  const [searchingProducts, setSearchingProducts] = useState(false);
+  const [showProductMenu, setShowProductMenu] = useState(false);
+  const lastQueryRef = useRef<string>("");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -384,15 +395,8 @@ function AddLeadDrawer({
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const productExternalIdRaw = String(fd.get("productExternalId") ?? "").trim();
-    const productNameRaw = String(fd.get("productName") ?? "").trim();
-
-    const productProvider =
-      productExternalIdRaw.startsWith("gid://")
-        ? "Shopify"
-        : /^\d+$/.test(productExternalIdRaw)
-          ? "WooCommerce"
-          : null;
+    const productExternalIdRaw = productExternalId.trim();
+    const productNameRaw = productName.trim();
 
     const body: Record<string, unknown> = {
       name: fd.get("name"),
@@ -422,6 +426,33 @@ function AddLeadDrawer({
     onCreated();
   }
 
+  useEffect(() => {
+    const q = productName.trim();
+    lastQueryRef.current = q;
+
+    if (q.length < 2) {
+      setProductHits([]);
+      setSearchingProducts(false);
+      return;
+    }
+
+    const t = window.setTimeout(async () => {
+      setSearchingProducts(true);
+      const r = await fetch(
+        `/api/calls/products/search?q=${encodeURIComponent(q)}&limit=8`,
+        { cache: "no-store" }
+      );
+      const j = (await r.json().catch(() => ({}))) as {
+        items?: { provider: "Shopify" | "WooCommerce"; externalId: string; title: string }[];
+      };
+      if (lastQueryRef.current !== q) return;
+      setSearchingProducts(false);
+      setProductHits(r.ok ? (j.items ?? []) : []);
+    }, 250);
+
+    return () => window.clearTimeout(t);
+  }, [productName]);
+
   return (
     <DetailDrawer open={open} title="Add Lead" onClose={onClose}>
       <form onSubmit={onSubmit} className="flex flex-col gap-3 text-[13px]">
@@ -437,12 +468,85 @@ function AddLeadDrawer({
           <Field label="Intent (0–100)" name="intentScore" type="number" defaultValue="0" />
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field
-            label="Product ID (Shopify GID / Woo ID)"
-            name="productExternalId"
-            placeholder="gid://shopify/Product/... or 1234"
-          />
-          <Field label="Product name" name="productName" placeholder="Fallback for lookup" />
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Product ID (Shopify GID / Woo ID)
+            </span>
+            <input
+              value={productExternalId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setProductExternalId(v);
+                const inferred =
+                  v.trim().startsWith("gid://")
+                    ? "Shopify"
+                    : /^\d+$/.test(v.trim())
+                      ? "WooCommerce"
+                      : null;
+                setProductProvider(inferred);
+              }}
+              placeholder="gid://shopify/Product/... or 1234"
+              className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)]/40"
+            />
+          </label>
+
+          <div className="relative">
+            <label className="flex flex-col gap-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+                Product name
+              </span>
+              <input
+                value={productName}
+                onChange={(e) => {
+                  setProductName(e.target.value);
+                  setShowProductMenu(true);
+                }}
+                onFocus={() => setShowProductMenu(true)}
+                onBlur={() => {
+                  // allow click selection
+                  window.setTimeout(() => setShowProductMenu(false), 150);
+                }}
+                placeholder="Search products…"
+                className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)]/40"
+              />
+            </label>
+
+            {showProductMenu && productName.trim().length >= 2 && (
+              <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--glass)] shadow-xl">
+                {searchingProducts ? (
+                  <div className="px-3 py-2 text-[12px] text-muted-foreground">
+                    Searching…
+                  </div>
+                ) : productHits.length === 0 ? (
+                  <div className="px-3 py-2 text-[12px] text-muted-foreground">
+                    No matches.
+                  </div>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto">
+                    {productHits.map((p) => (
+                      <button
+                        key={`${p.provider}:${p.externalId}`}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setProductName(p.title);
+                          setProductExternalId(p.externalId);
+                          setProductProvider(p.provider);
+                          setShowProductMenu(false);
+                        }}
+                        className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left text-[12px] hover:bg-[var(--glass-hover)]"
+                      >
+                        <span className="font-medium text-foreground">{p.title}</span>
+                        <span className="shrink-0 rounded-full border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-0.5 text-[10px] text-muted-foreground">
+                          {p.provider}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <Field label="Tags (comma separated)" name="tags" />
         <label className="flex flex-col gap-1">
