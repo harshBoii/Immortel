@@ -333,6 +333,8 @@ export async function POST(request: Request) {
         const summary =
           typeof transcript.summary === "string" ? transcript.summary : null;
         const turns = transcript.turns ?? null;
+        const qa =
+          transcript.qa && typeof transcript.qa === "object" ? transcript.qa : null;
         const objections = Array.isArray(transcript.objections)
           ? (transcript.objections as unknown[])
               .filter((x): x is string => typeof x === "string")
@@ -348,21 +350,23 @@ export async function POST(request: Request) {
 
         await tx.callTranscript.upsert({
           where: { callId: callRecord.id },
-          create: {
+          create: ({
             callId: callRecord.id,
             summary,
             ...(turns !== null && { turns: turns as object }),
+            ...(qa !== null && { qa: qa as object }),
             objections,
             aiConfidence,
             suggestedNextMove,
-          },
-          update: {
+          } as unknown as Parameters<typeof tx.callTranscript.upsert>[0]["create"]),
+          update: ({
             ...(summary !== null && { summary }),
             ...(turns !== null && { turns: turns as object }),
+            ...(qa !== null && { qa: qa as object }),
             ...(objections.length > 0 && { objections }),
             ...(aiConfidence !== null && { aiConfidence }),
             ...(suggestedNextMove !== null && { suggestedNextMove }),
-          },
+          } as unknown as Parameters<typeof tx.callTranscript.upsert>[0]["update"]),
         });
       }
 

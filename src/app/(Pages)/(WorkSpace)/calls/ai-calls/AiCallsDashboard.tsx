@@ -385,6 +385,7 @@ type TranscriptBlob = {
   transcript?: {
     summary?: string | null;
     turns?: unknown;
+    qa?: unknown;
     objections?: string[];
     aiConfidence?: number | null;
     suggestedNextMove?: string | null;
@@ -429,6 +430,26 @@ function TranscriptBlock({ detail }: { detail: Record<string, unknown> }) {
               >
                 {o}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {!!t.qa && typeof t.qa === "object" && Object.keys(t.qa as object).length > 0 && (
+        <div>
+          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+            Q&amp;A
+          </h4>
+          <div className="mt-2 space-y-2">
+            {Object.entries(t.qa as Record<string, unknown>).map(([q, a]) => (
+              <div
+                key={q}
+                className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/50 px-3 py-2"
+              >
+                <div className="text-[12px] font-semibold text-foreground">{q}</div>
+                <div className="mt-0.5 text-[12px] text-muted-foreground">
+                  {typeof a === "string" && a.trim() ? a : "—"}
+                </div>
+              </div>
             ))}
           </div>
         </div>

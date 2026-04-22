@@ -1361,6 +1361,8 @@ model CallTranscript {
   callId            String   @unique
   summary           String?
   turns             Json?
+  /// Question → answer map extracted from transcript turns (keys are agent questions).
+  qa                Json?
   objections        String[] @default([])
   aiConfidence      Float?
   suggestedNextMove String?

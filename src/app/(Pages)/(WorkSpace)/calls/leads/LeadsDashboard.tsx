@@ -95,6 +95,8 @@ export default function LeadsDashboard({
   const [openAdd, setOpenAdd] = useState(false);
   const [openImport, setOpenImport] = useState(false);
   const [activeLead, setActiveLead] = useState<LeadRow | null>(null);
+  const [leadDetail, setLeadDetail] = useState<Record<string, unknown> | null>(null);
+  const [loadingLeadDetail, setLoadingLeadDetail] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -320,7 +322,17 @@ export default function LeadsDashboard({
         columns={columns}
         rows={filtered}
         getRowKey={(r) => r.id}
-        onRowClick={(r) => setActiveLead(r)}
+        onRowClick={(r) => {
+          setActiveLead(r);
+          setLeadDetail(null);
+          setLoadingLeadDetail(true);
+          void fetch(`/api/calls/leads/${r.id}`, { cache: "no-store" })
+            .then(async (res) => {
+              const j = await res.json().catch(() => ({}));
+              if (res.ok) setLeadDetail(j.lead ?? null);
+            })
+            .finally(() => setLoadingLeadDetail(false));
+        }}
         empty={
           <div className="text-sm text-muted-foreground">
             No leads yet. <button onClick={() => setOpenAdd(true)} className="text-[var(--sibling-primary)] hover:underline">Add your first lead</button> or import a CSV.
@@ -348,6 +360,8 @@ export default function LeadsDashboard({
       />
       <LeadDetailDrawer
         lead={activeLead}
+        detail={leadDetail}
+        loading={loadingLeadDetail}
         onClose={() => setActiveLead(null)}
         onAction={(action) => {
           if (!activeLead) return;
@@ -764,13 +778,38 @@ function ImportDrawer({
 
 function LeadDetailDrawer({
   lead,
+  detail,
+  loading,
   onClose,
   onAction,
 }: {
   lead: LeadRow | null;
+  detail: Record<string, unknown> | null;
+  loading: boolean;
   onClose: () => void;
   onAction: (a: "call") => void;
 }) {
+  const latestQa = (() => {
+    const l = detail as
+      | {
+          calls?: Array<{
+            createdAt?: string | Date;
+            transcript?: { summary?: string | null; qa?: unknown } | null;
+          }>;
+        }
+      | null;
+    const call = l?.calls?.[0];
+    const qa = call?.transcript?.qa;
+    return qa && typeof qa === "object" ? (qa as Record<string, unknown>) : null;
+  })();
+
+  const latestSummary = (() => {
+    const l = detail as
+      | { calls?: Array<{ transcript?: { summary?: string | null } | null }> }
+      | null;
+    return l?.calls?.[0]?.transcript?.summary ?? null;
+  })();
+
   return (
     <DetailDrawer
       open={!!lead}
@@ -798,35 +837,68 @@ function LeadDetailDrawer({
       }
     >
       {lead && (
-        <dl className="grid grid-cols-1 gap-3 text-[13px]">
-          <Def label="Stage" value={stageBadge(lead.stage)} />
-          <Def label="Intent" value={`${lead.intentScore} / 100`} />
-          <Def label="Email" value={lead.email ?? "—"} />
-          <Def label="City" value={lead.city ?? "—"} />
-          <Def label="Industry" value={lead.industry ?? "—"} />
-          <Def label="Source" value={lead.source ?? "—"} />
-          <Def label="Last Contact" value={formatRelative(lead.lastContactAt)} />
-          <Def
-            label="Tags"
-            value={
-              lead.tags.length > 0 ? (
-                <div className="flex flex-wrap gap-1">
-                  {lead.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-0.5 text-[10.5px]"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                "—"
-              )
-            }
-          />
-          <Def label="Notes" value={lead.notes ?? "—"} />
-        </dl>
+        <div className="flex flex-col gap-4">
+          <dl className="grid grid-cols-1 gap-3 text-[13px]">
+            <Def label="Stage" value={stageBadge(lead.stage)} />
+            <Def label="Intent" value={`${lead.intentScore} / 100`} />
+            <Def label="Email" value={lead.email ?? "—"} />
+            <Def label="City" value={lead.city ?? "—"} />
+            <Def label="Industry" value={lead.industry ?? "—"} />
+            <Def label="Source" value={lead.source ?? "—"} />
+            <Def label="Last Contact" value={formatRelative(lead.lastContactAt)} />
+            <Def
+              label="Tags"
+              value={
+                lead.tags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {lead.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-0.5 text-[10.5px]"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  "—"
+                )
+              }
+            />
+            <Def label="Notes" value={lead.notes ?? "—"} />
+          </dl>
+
+          <section className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/50 p-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Latest call Q&amp;A
+            </h3>
+            {loading ? (
+              <div className="mt-2 text-[12px] text-muted-foreground">Loading…</div>
+            ) : latestSummary || (latestQa && Object.keys(latestQa).length > 0) ? (
+              <div className="mt-2 flex flex-col gap-3">
+                {latestSummary && (
+                  <div className="text-[13px] text-foreground">{latestSummary}</div>
+                )}
+                {latestQa && Object.keys(latestQa).length > 0 && (
+                  <div className="space-y-2">
+                    {Object.entries(latestQa).map(([q, a]) => (
+                      <div key={q} className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/40 px-3 py-2">
+                        <div className="text-[12px] font-semibold text-foreground">{q}</div>
+                        <div className="mt-0.5 text-[12px] text-muted-foreground">
+                          {typeof a === "string" && a.trim() ? a : "—"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="mt-2 text-[12px] text-muted-foreground">
+                No call transcript Q&amp;A yet.
+              </div>
+            )}
+          </section>
+        </div>
       )}
     </DetailDrawer>
   );
