@@ -383,6 +383,17 @@ function AddLeadDrawer({
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
+
+    const productExternalIdRaw = String(fd.get("productExternalId") ?? "").trim();
+    const productNameRaw = String(fd.get("productName") ?? "").trim();
+
+    const productProvider =
+      productExternalIdRaw.startsWith("gid://")
+        ? "Shopify"
+        : /^\d+$/.test(productExternalIdRaw)
+          ? "WooCommerce"
+          : null;
+
     const body: Record<string, unknown> = {
       name: fd.get("name"),
       phone: fd.get("phone"),
@@ -393,6 +404,9 @@ function AddLeadDrawer({
       intentScore: Number(fd.get("intentScore") ?? 0),
       notes: fd.get("notes") || null,
       tags,
+      productProvider,
+      productExternalId: productExternalIdRaw || null,
+      productName: productNameRaw || null,
     };
     const res = await fetch("/api/calls/leads", {
       method: "POST",
@@ -421,6 +435,14 @@ function AddLeadDrawer({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Source" name="source" placeholder="Meta Ads, Website, etc." />
           <Field label="Intent (0–100)" name="intentScore" type="number" defaultValue="0" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Product ID (Shopify GID / Woo ID)"
+            name="productExternalId"
+            placeholder="gid://shopify/Product/... or 1234"
+          />
+          <Field label="Product name" name="productName" placeholder="Fallback for lookup" />
         </div>
         <Field label="Tags (comma separated)" name="tags" />
         <label className="flex flex-col gap-1">
@@ -515,7 +537,11 @@ function ImportDrawer({
       <div className="flex flex-col gap-3 text-[13px]">
         <p className="text-muted-foreground/80">
           Required columns: <code>name</code>, <code>phone</code>. Optional:{" "}
-          <code>email, city, industry, source, intentScore, tags, notes, timezone</code>.
+          <code>
+            email, city, industry, source, intentScore, tags, notes, timezone, product_id,
+            product_name
+          </code>
+          .
           Tags may be pipe-separated (<code>a|b|c</code>).
         </p>
         <input
