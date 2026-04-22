@@ -65,8 +65,10 @@ const STATUS_CHIPS = [
   { id: "QUEUED", label: "Queued" },
   { id: "RINGING", label: "Ringing" },
   { id: "IN_PROGRESS", label: "In-progress" },
+  { id: "NO_ANSWER", label: "No answer" },
   { id: "DROPPED", label: "Dropped" },
   { id: "FAILED", label: "Failed" },
+  { id: "CANCELLED", label: "Cancelled" },
 ];
 
 function statusBadge(s: CallStatus) {
@@ -75,8 +77,10 @@ function statusBadge(s: CallStatus) {
     QUEUED: "bg-sky-500/10 text-sky-500 border-sky-500/20",
     RINGING: "bg-sky-400/10 text-sky-400 border-sky-400/20",
     IN_PROGRESS: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    NO_ANSWER: "bg-slate-500/10 text-slate-400 border-slate-500/20",
     DROPPED: "bg-rose-500/10 text-rose-500 border-rose-500/20",
     FAILED: "bg-rose-600/10 text-rose-600 border-rose-600/20",
+    CANCELLED: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
   };
   return (
     <span
@@ -201,7 +205,11 @@ export default function AiCallsDashboard({
       align: "right",
       cell: (r) => (
         <div className="flex items-center justify-end gap-1">
-          {(r.status === "DROPPED" || r.status === "FAILED") && r.lead && (
+          {(r.status === "DROPPED" ||
+            r.status === "FAILED" ||
+            r.status === "NO_ANSWER" ||
+            r.status === "CANCELLED") &&
+            r.lead && (
               <button
                 type="button"
                 onClick={(e) => {

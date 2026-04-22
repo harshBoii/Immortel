@@ -14,8 +14,24 @@ export default async function CampaignsPage() {
   const [active, paused, drafts, ended, rows] = await Promise.all([
     prisma.campaign.count({ where: { companyId, status: CampaignStatus.RUNNING } }),
     prisma.campaign.count({ where: { companyId, status: CampaignStatus.PAUSED } }),
-    prisma.campaign.count({ where: { companyId, status: CampaignStatus.DRAFT } }),
-    prisma.campaign.count({ where: { companyId, status: CampaignStatus.COMPLETED } }),
+    prisma.campaign.count({
+      where: {
+        companyId,
+        status: { in: [CampaignStatus.DRAFT, CampaignStatus.SCHEDULED] },
+      },
+    }),
+    prisma.campaign.count({
+      where: {
+        companyId,
+        status: {
+          in: [
+            CampaignStatus.COMPLETED,
+            CampaignStatus.ENDED,
+            CampaignStatus.FAILED,
+          ],
+        },
+      },
+    }),
     prisma.campaign.findMany({
       where: { companyId },
       orderBy: { createdAt: "desc" },

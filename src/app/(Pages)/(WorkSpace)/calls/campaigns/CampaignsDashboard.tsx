@@ -61,9 +61,12 @@ const TYPE_ICONS: Record<CampaignType, React.ComponentType<{ className?: string 
 function statusBadge(s: CampaignStatus) {
   const map: Record<CampaignStatus, string> = {
     DRAFT: "bg-slate-500/10 text-slate-400 border-slate-500/20",
+    SCHEDULED: "bg-sky-500/10 text-sky-500 border-sky-500/20",
     RUNNING: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     PAUSED: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     COMPLETED: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
+    ENDED: "bg-neutral-500/10 text-neutral-400 border-neutral-500/20",
+    FAILED: "bg-rose-600/10 text-rose-500 border-rose-600/20",
   };
   return (
     <span
@@ -194,7 +197,10 @@ export default function CampaignsDashboard({
       align: "right",
       cell: (r) => (
         <div className="flex items-center justify-end gap-1">
-          {r.type === "VOICE" && (r.status === "DRAFT" || r.status === "PAUSED") && (
+          {r.type === "VOICE" &&
+            (r.status === "DRAFT" ||
+              r.status === "PAUSED" ||
+              r.status === "SCHEDULED") && (
             <button
               type="button"
               onClick={(e) => {

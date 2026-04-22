@@ -15,7 +15,11 @@ export default async function DroppedPage() {
   const where: Prisma.CallWhereInput = {
     companyId,
     OR: [
-      { status: { in: [CallStatus.DROPPED, CallStatus.FAILED] } },
+      {
+        status: {
+          in: [CallStatus.DROPPED, CallStatus.FAILED, CallStatus.NO_ANSWER],
+        },
+      },
       { outcome: CallOutcome.NO_ANSWER },
     ],
   };
@@ -25,7 +29,13 @@ export default async function DroppedPage() {
     prisma.call.count({ where: { ...where, createdAt: { gte: since24h } } }),
     prisma.call.count({ where: { ...where, durationSec: { lt: 10 } } }),
     prisma.call.count({
-      where: { companyId, outcome: CallOutcome.NO_ANSWER },
+      where: {
+        companyId,
+        OR: [
+          { status: CallStatus.NO_ANSWER },
+          { outcome: CallOutcome.NO_ANSWER },
+        ],
+      },
     }),
     prisma.call.count({
       where: { ...where, dropReason: { contains: "network", mode: "insensitive" } },

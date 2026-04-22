@@ -223,11 +223,24 @@ export async function POST(request: Request) {
   const use_sarvam_tts = optionalBoolean(body.use_sarvam_tts) ?? false;
   const sarvam_speaker = normalizeSarvamSpeaker(body.sarvam_speaker);
 
-  if (!to || !name || !company || !product) {
+  const effectiveCompany =
+    company ||
+    (await prisma.company
+      .findUnique({
+        where: { id: session.companyId },
+        select: { name: true },
+      })
+      .then((c) => c?.name?.trim())
+      .catch(() => undefined)) ||
+    "Your company";
+
+  const effectiveProduct = product || "Outbound Call";
+
+  if (!to || !name) {
     return NextResponse.json(
       {
         success: false,
-        error: "Missing required fields: to, name, company, product",
+        error: "Missing required fields: to, name",
       },
       { status: 400 }
     );
@@ -250,8 +263,8 @@ export async function POST(request: Request) {
     deepgram_language,
     elevenlabs_model,
     name,
-    company,
-    product,
+    company: effectiveCompany,
+    product: effectiveProduct,
     perks_of_product: perks_of_product || "—",
     info_about_lead: info_about_lead || "—",
     voiceId,
@@ -276,8 +289,8 @@ export async function POST(request: Request) {
   const responseFields: OutboundForwardedPayload = {
     to,
     name,
-    company,
-    product,
+    company: effectiveCompany,
+    product: effectiveProduct,
     perks_of_product: perks_of_product || "—",
     info_about_lead: info_about_lead || "—",
     languageMode,
@@ -327,8 +340,8 @@ export async function POST(request: Request) {
             llm_provider,
             voiceMode,
             voiceId,
-            product,
-            company,
+            product: effectiveProduct,
+            company: effectiveCompany,
             upstreamStatus: res.status,
           },
         },

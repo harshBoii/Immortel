@@ -62,7 +62,8 @@ export async function POST(_request: Request, ctx: RouteContext) {
 
   if (
     campaign.status !== CampaignStatus.DRAFT &&
-    campaign.status !== CampaignStatus.PAUSED
+    campaign.status !== CampaignStatus.PAUSED &&
+    campaign.status !== CampaignStatus.SCHEDULED
   ) {
     return NextResponse.json(
       { error: `Cannot start a campaign in status ${campaign.status}` },

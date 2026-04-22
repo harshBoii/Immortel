@@ -19,14 +19,24 @@ export async function GET(request: Request) {
   const baseWhere: Prisma.CallWhereInput = {
     companyId: session.companyId,
     OR: [
-      { status: { in: [CallStatus.DROPPED, CallStatus.FAILED] } },
+      {
+        status: {
+          in: [CallStatus.DROPPED, CallStatus.FAILED, CallStatus.NO_ANSWER],
+        },
+      },
       { outcome: CallOutcome.NO_ANSWER },
     ],
   };
 
   const where: Prisma.CallWhereInput =
     filter === "noanswer"
-      ? { companyId: session.companyId, outcome: CallOutcome.NO_ANSWER }
+      ? {
+          companyId: session.companyId,
+          OR: [
+            { status: CallStatus.NO_ANSWER },
+            { outcome: CallOutcome.NO_ANSWER },
+          ],
+        }
       : {
           ...baseWhere,
           ...(filter === "short" && { durationSec: { lt: 10 } }),

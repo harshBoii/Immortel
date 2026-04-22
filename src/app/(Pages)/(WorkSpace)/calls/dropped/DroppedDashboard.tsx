@@ -53,7 +53,11 @@ export default function DroppedDashboard({
     return items.filter((r) => {
       if (filter === "short") return (r.durationSec ?? 0) < 10;
       if (filter === "noanswer")
-        return r.outcome === "NO_ANSWER" || (r.durationSec ?? 0) === 0;
+        return (
+          r.status === "NO_ANSWER" ||
+          r.outcome === "NO_ANSWER" ||
+          (r.durationSec ?? 0) === 0
+        );
       if (filter === "network")
         return (r.dropReason ?? "").toLowerCase().includes("network");
       return true;

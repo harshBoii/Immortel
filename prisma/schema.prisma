@@ -1596,7 +1596,9 @@ enum CallStatus {
   IN_PROGRESS
   COMPLETED
   DROPPED
+  NO_ANSWER
   FAILED
+  CANCELLED
 }
 
 enum CallOutcome {
@@ -1630,9 +1632,12 @@ enum CampaignType {
 
 enum CampaignStatus {
   DRAFT
+  SCHEDULED
   RUNNING
   PAUSED
   COMPLETED
+  ENDED
+  FAILED
 }
 
 enum CampaignMessageStatus {
@@ -1656,6 +1661,7 @@ enum FollowUpPriority {
   LOW
   MEDIUM
   HIGH
+  URGENT
 }
 
 enum FollowUpStatus {

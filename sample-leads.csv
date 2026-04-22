@@ -1,0 +1,21 @@
+name,phone,email,city,industry,source,intentScore,tags,notes,timezone
+Aarav Sharma,+919812345001,aarav.sharma@example.com,Mumbai,Retail,Shopify,82,retail|fashion|premium,"Abandoned cart on kurta collection, responds in Hindi",Asia/Kolkata
+Priya Patel,+919812345002,priya.patel@example.com,Ahmedabad,D2C Beauty,Meta Lead Ads,74,beauty|skincare,"Clicked ad twice, asked about pricing",Asia/Kolkata
+Rohan Mehta,+919812345003,rohan.mehta@example.com,Bengaluru,SaaS,Website,68,saas|b2b,Downloaded pricing PDF on 12 Apr,Asia/Kolkata
+Neha Verma,+919812345004,neha.verma@example.com,Delhi,Education,Referral,91,high-intent|edtech,Booked a demo but didn't attend,Asia/Kolkata
+Arjun Kapoor,+919812345005,arjun.kapoor@example.com,Pune,Fitness,Instagram,55,fitness|wellness,Interested in 3-month plan,Asia/Kolkata
+Kavya Reddy,+919812345006,kavya.reddy@example.com,Hyderabad,Healthcare,Google Ads,77,healthcare|urgent,"Asked for callback next week",Asia/Kolkata
+Vikram Singh,+919812345007,vikram.singh@example.com,Jaipur,Real Estate,Walk-in,42,realestate,"Budget 80L-1.2Cr, 3BHK",Asia/Kolkata
+Ananya Iyer,+919812345008,ananya.iyer@example.com,Chennai,Fashion,Shopify,88,fashion|repeat-customer,Repeat buyer - upsell opportunity,Asia/Kolkata
+Rahul Joshi,+919812345009,rahul.joshi@example.com,Kolkata,Finance,LinkedIn,63,finance|wealth,Wants SIP consultation,Asia/Kolkata
+Sneha Das,+919812345010,sneha.das@example.com,Gurgaon,Retail,Shopify,70,retail|gifting,Diwali hamper inquiry,Asia/Kolkata
+Karan Malhotra,+919812345011,karan.malhotra@example.com,Noida,Automotive,Website,48,auto|test-drive,Scheduled test drive for next Sat,Asia/Kolkata
+Isha Nair,+919812345012,isha.nair@example.com,Kochi,Travel,Meta Lead Ads,60,travel|honeymoon,Maldives package - 7D/6N,Asia/Kolkata
+Devansh Gupta,+919812345013,devansh.gupta@example.com,Lucknow,Electronics,WhatsApp,35,electronics,Asked about laptop EMI,Asia/Kolkata
+Meera Menon,+919812345014,meera.menon@example.com,Thiruvananthapuram,Jewelry,Referral,85,jewelry|premium,Custom bridal order inquiry,Asia/Kolkata
+Siddharth Rao,+919812345015,siddharth.rao@example.com,Mumbai,Fintech,Website,72,fintech|b2b,Evaluating payroll integration,Asia/Kolkata
+Tanvi Shah,+919812345016,tanvi.shah@example.com,Surat,Textile,Trade Show,58,textile|b2b,Bulk order potential - 2000 units,Asia/Kolkata
+Harsh Agarwal,+919812345017,,Indore,Logistics,Cold Call,30,logistics,No email - phone only,Asia/Kolkata
+Pooja Bhatt,+919812345018,pooja.bhatt@example.com,Bhopal,Home Decor,Instagram,65,decor|home,Liked 4 posts in last week,Asia/Kolkata
+Yash Chauhan,+919812345019,yash.chauhan@example.com,Chandigarh,Agritech,Referral,45,agritech,Small-farm owner - interested in demo,Asia/Kolkata
+Diya Khanna,+919812345020,diya.khanna@example.com,Dehradun,Wellness,Shopify,80,wellness|subscription,"Wants monthly subscription, price-sensitive",Asia/Kolkata

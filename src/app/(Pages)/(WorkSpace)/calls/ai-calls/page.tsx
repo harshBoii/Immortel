@@ -24,7 +24,7 @@ export default async function AiCallsPage() {
     prisma.call.count({
       where: {
         companyId,
-        status: { in: [CallStatus.DROPPED, CallStatus.FAILED] },
+        status: { in: [CallStatus.DROPPED, CallStatus.FAILED, CallStatus.NO_ANSWER] },
         createdAt: { gte: since24h },
       },
     }),

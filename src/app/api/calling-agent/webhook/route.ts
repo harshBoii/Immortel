@@ -378,13 +378,20 @@ export async function POST(request: Request) {
           select: { id: true },
         });
         if (!exists) {
+          const leadForPriority = await tx.lead.findUnique({
+            where: { id: leadId },
+            select: { intentScore: true, stage: true },
+          });
+          const isHotLead =
+            leadForPriority?.stage === LeadStage.HOT ||
+            (leadForPriority?.intentScore ?? 0) >= 75;
           await tx.followUp.create({
             data: {
               companyId,
               leadId,
               reason: FollowUpReason.CALL_LATER,
               dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-              priority: FollowUpPriority.HIGH,
+              priority: isHotLead ? FollowUpPriority.URGENT : FollowUpPriority.HIGH,
               status: FollowUpStatus.PENDING,
               lastInteractionAt: endedAt ?? new Date(),
             },
@@ -397,7 +404,10 @@ export async function POST(request: Request) {
         const msgStatus =
           status === CallStatus.COMPLETED || outcome === CallOutcome.CONVERTED
             ? "DELIVERED"
-            : status === CallStatus.FAILED || status === CallStatus.DROPPED
+            : status === CallStatus.FAILED ||
+                status === CallStatus.DROPPED ||
+                status === CallStatus.NO_ANSWER ||
+                status === CallStatus.CANCELLED
               ? "FAILED"
               : "SENT";
 
@@ -440,7 +450,12 @@ export async function POST(request: Request) {
       }
 
       // 5) Lead.lastContactAt + stage advancement
-      if (leadId && (status === CallStatus.COMPLETED || status === CallStatus.DROPPED)) {
+      if (
+        leadId &&
+        (status === CallStatus.COMPLETED ||
+          status === CallStatus.DROPPED ||
+          status === CallStatus.NO_ANSWER)
+      ) {
         const lead = await tx.lead.findUnique({
           where: { id: leadId },
           select: { stage: true },

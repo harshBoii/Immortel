@@ -108,14 +108,20 @@ export async function POST(request: Request) {
     script: script ?? {},
   };
 
+  const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+  const isFutureScheduled =
+    !!scheduledDate && scheduledDate.getTime() > Date.now();
+
   const campaign = await prisma.campaign.create({
     data: {
       companyId: session.companyId,
       name,
       type,
       audience: audiencePayload,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      status: CampaignStatus.DRAFT,
+      scheduledAt: scheduledDate,
+      status: isFutureScheduled
+        ? CampaignStatus.SCHEDULED
+        : CampaignStatus.DRAFT,
     },
   });
 

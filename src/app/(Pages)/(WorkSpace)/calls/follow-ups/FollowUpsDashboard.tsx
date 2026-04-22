@@ -47,6 +47,7 @@ function priorityBadge(p: FollowUpPriority) {
     LOW: "bg-slate-500/10 text-slate-400 border-slate-500/20",
     MEDIUM: "bg-sky-500/10 text-sky-500 border-sky-500/20",
     HIGH: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+    URGENT: "bg-rose-600/15 text-rose-600 border-rose-600/30",
   };
   return (
     <span
