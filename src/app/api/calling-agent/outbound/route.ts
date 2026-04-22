@@ -374,7 +374,14 @@ export async function POST(request: Request) {
         })
       : null;
 
-  const effectiveProduct = product || resolvedProduct?.title || "Outbound Call";
+  const isPlaceholderProduct =
+    !product ||
+    product.trim().toLowerCase() === "our product" ||
+    product.trim().toLowerCase() === "follow-up";
+
+  const effectiveProduct = isPlaceholderProduct
+    ? resolvedProduct?.title || "Outbound Call"
+    : product;
   const effectivePerks =
     perks_of_product || resolvedProduct?.description || "—";
 

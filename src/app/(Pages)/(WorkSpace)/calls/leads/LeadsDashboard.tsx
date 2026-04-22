@@ -134,12 +134,15 @@ export default function LeadsDashboard({
       to: lead.phone,
       name: lead.name,
       company: "",
-      product: "Our Product",
+      // Let the server resolve product + perks from Lead.productExternalId/productName
+      product: "",
       perks_of_product: "",
       info_about_lead: lead.notes ?? "",
       languageMode: "english",
       voiceMode: "speed",
       llm_provider: "groq",
+      productExternalId: lead.productExternalId ?? undefined,
+      productName: lead.productName ?? undefined,
       leadId: lead.id,
     };
     const res = await fetch("/api/calling-agent/outbound", {

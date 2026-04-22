@@ -115,7 +115,8 @@ export default function FollowUpsDashboard({
       to: row.lead.phone,
       name: row.lead.name,
       company: "",
-      product: "Follow-up",
+      // Let the server resolve product + perks from the Lead (by leadId)
+      product: "",
       perks_of_product: "",
       info_about_lead: "",
       languageMode: "english",
