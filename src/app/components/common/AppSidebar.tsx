@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar, PhoneCall } from 'lucide-react';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar, PhoneCall, Users, BellRing, PhoneOff, MessagesSquare, BarChart3 } from 'lucide-react';
 import { SiMeta, SiGoogle } from 'react-icons/si';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
@@ -464,8 +464,14 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
     case 'calls':
       return (
         <>
-          <SectionLabel label="Call Center Agent" />
-          <SecondaryNavItem icon={PhoneCall} label="Outbound Console" href="/call-center" />
+          <SectionLabel label="Calling Agent" />
+          <SecondaryNavItem icon={Users}           label="Leads"          href="/calls/leads" />
+          <SecondaryNavItem icon={PhoneCall}       label="AI Calls"       href="/calls/ai-calls" />
+          <SecondaryNavItem icon={Megaphone}       label="Campaigns"      href="/calls/campaigns" />
+          <SecondaryNavItem icon={BellRing}        label="Follow-ups"     href="/calls/follow-ups" />
+          <SecondaryNavItem icon={PhoneOff}        label="Dropped Calls"  href="/calls/dropped" />
+          <SecondaryNavItem icon={MessagesSquare}  label="Conversations"  href="/calls/conversations" />
+          <SecondaryNavItem icon={BarChart3}       label="Reports"        href="/calls/reports" />
         </>
       );
     // case 'shop':
@@ -541,7 +547,7 @@ export default function AppSidebar() {
       case 'home':     return '/';
       case 'ingestion':return '/ingestion';
       case 'geo':      return '/geo/radar';
-      case 'calls':    return '/call-center';
+      case 'calls':    return '/calls/leads';
       // case 'shop':     return '/shop/products';
       case 'adManagement': return '/ad-management/meta';
       case 'Workspace': return '/connection';
@@ -569,7 +575,7 @@ export default function AppSidebar() {
     if      (pathname === '/' || pathname?.startsWith('/hq')) setActiveSection('home');
     else if (pathname?.startsWith('/ingestion'))              setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo'))                    setActiveSection('geo');
-    else if (pathname?.startsWith('/call-center'))            setActiveSection('calls');
+    else if (pathname?.startsWith('/calls') || pathname?.startsWith('/call-center')) setActiveSection('calls');
     else if (pathname?.startsWith('/shop'))                   setActiveSection('shop');
     else if (pathname?.startsWith('/ad-management'))            setActiveSection('adManagement');
     else if (pathname?.startsWith('/connection'))             setActiveSection('Workspace');

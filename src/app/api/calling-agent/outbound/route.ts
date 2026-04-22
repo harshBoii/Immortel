@@ -1,8 +1,27 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { CallDirection, CallStatus } from "@prisma/client";
 
 const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
 const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
+
+function extractExternalCallId(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const d = data as Record<string, unknown>;
+  const candidates = [
+    d.call_id,
+    d.callId,
+    d.external_call_id,
+    d.externalCallId,
+    d.id,
+    d.sid,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  return null;
+}
 
 type VoiceMode = "quality" | "speed" | "eleven_v3";
 type LlmProvider = "gemini" | "openai" | "claude" | "groq" | "sarvam";
@@ -144,6 +163,41 @@ export async function POST(request: Request) {
     typeof body.voiceId === "string" ? body.voiceId.trim() : "";
   const voiceId = voiceIdRaw || DEFAULT_VOICE_ID;
 
+  const leadIdInput = typeof body.leadId === "string" ? body.leadId.trim() : "";
+  const campaignIdInput =
+    typeof body.campaignId === "string" ? body.campaignId.trim() : "";
+
+  // Tenant ownership checks — never trust IDs from the client until verified.
+  let resolvedLeadId: string | null = null;
+  if (leadIdInput) {
+    const lead = await prisma.lead.findFirst({
+      where: { id: leadIdInput, companyId: session.companyId },
+      select: { id: true },
+    });
+    if (!lead) {
+      return NextResponse.json(
+        { success: false, error: "Lead not found or not accessible" },
+        { status: 403 }
+      );
+    }
+    resolvedLeadId = lead.id;
+  }
+
+  let resolvedCampaignId: string | null = null;
+  if (campaignIdInput) {
+    const campaign = await prisma.campaign.findFirst({
+      where: { id: campaignIdInput, companyId: session.companyId },
+      select: { id: true },
+    });
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: "Campaign not found or not accessible" },
+        { status: 403 }
+      );
+    }
+    resolvedCampaignId = campaign.id;
+  }
+
   const languageMode = normalizeLanguageSlug(
     body.languageMode ?? body.language
   );
@@ -179,6 +233,15 @@ export async function POST(request: Request) {
     );
   }
 
+  // If no leadId was provided but we can match by phone, auto-attach it.
+  if (!resolvedLeadId) {
+    const match = await prisma.lead.findFirst({
+      where: { companyId: session.companyId, phone: to },
+      select: { id: true },
+    });
+    if (match) resolvedLeadId = match.id;
+  }
+
   const elevenlabs_model = mapElevenlabsModel(voiceMode);
 
   const payload: Record<string, unknown> = {
@@ -193,6 +256,10 @@ export async function POST(request: Request) {
     info_about_lead: info_about_lead || "—",
     voiceId,
     llm_provider,
+    // Tenancy / linking IDs echoed back on webhook events
+    companyId: session.companyId,
+    leadId: resolvedLeadId,
+    campaignId: resolvedCampaignId,
   };
 
   payload.use_sarvam_tts = use_sarvam_tts;
@@ -240,21 +307,102 @@ export async function POST(request: Request) {
     });
 
     const data = await res.json().catch(() => null);
+    const externalCallId = extractExternalCallId(data);
+
+    // Persist a Call row so the webhook can later upsert it by externalCallId.
+    try {
+      await prisma.call.create({
+        data: {
+          companyId: session.companyId,
+          leadId: resolvedLeadId,
+          campaignId: resolvedCampaignId,
+          direction: CallDirection.OUTBOUND,
+          status: res.ok ? CallStatus.QUEUED : CallStatus.FAILED,
+          externalCallId,
+          failureReason: res.ok
+            ? null
+            : `Upstream responded with HTTP ${res.status}`,
+          metadata: {
+            language,
+            llm_provider,
+            voiceMode,
+            voiceId,
+            product,
+            company,
+            upstreamStatus: res.status,
+          },
+        },
+      });
+
+      // Mark the matching CampaignMessage as SENT (or FAILED) if this call is part of a campaign run.
+      if (resolvedCampaignId && resolvedLeadId) {
+        await prisma.campaignMessage.upsert({
+          where: {
+            campaignId_leadId: {
+              campaignId: resolvedCampaignId,
+              leadId: resolvedLeadId,
+            },
+          },
+          create: {
+            campaignId: resolvedCampaignId,
+            leadId: resolvedLeadId,
+            channel: "VOICE",
+            status: res.ok ? "SENT" : "FAILED",
+            sentAt: res.ok ? new Date() : null,
+          },
+          update: {
+            status: res.ok ? "SENT" : "FAILED",
+            sentAt: res.ok ? new Date() : undefined,
+          },
+        });
+
+        if (res.ok) {
+          await prisma.campaign.update({
+            where: { id: resolvedCampaignId },
+            data: { sentCount: { increment: 1 } },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("outbound: failed to persist Call row", err);
+    }
 
     return NextResponse.json(
       {
         success: res.ok,
         status: res.status,
         data,
+        externalCallId,
+        leadId: resolvedLeadId,
+        campaignId: resolvedCampaignId,
         ...responseFields,
       },
       { status: res.ok ? 200 : 502 }
     );
   } catch {
+    // Network error reaching upstream — still record the FAILED call.
+    try {
+      await prisma.call.create({
+        data: {
+          companyId: session.companyId,
+          leadId: resolvedLeadId,
+          campaignId: resolvedCampaignId,
+          direction: CallDirection.OUTBOUND,
+          status: CallStatus.FAILED,
+          failureReason: "Failed to reach calling agent service",
+          metadata: { language, llm_provider, voiceMode },
+        },
+      });
+    } catch (err) {
+      console.error("outbound: failed to persist FAILED Call row", err);
+    }
+
     return NextResponse.json(
       {
         success: false,
         error: "Failed to reach calling agent service",
+        leadId: resolvedLeadId,
+        campaignId: resolvedCampaignId,
         ...responseFields,
       },
       { status: 502 }

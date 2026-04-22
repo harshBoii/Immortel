@@ -84,6 +84,14 @@ model Company {
   rivals                  CompanyRival[]            @relation("CompanyRivals")
   rivaledBy               CompanyRival[]            @relation("CompanyRivalTargets")
 
+  // Calls domain
+  leads         Lead[]
+  calls         Call[]
+  campaigns     Campaign[]
+  followUps     FollowUp[]
+  conversations Conversation[]
+  webhookEvents WebhookEvent[]
+
   @@index([slug])
   @@index([organizationId])
   @@map("companies")
@@ -1199,6 +1207,238 @@ model WooCommerceOAuthPending {
   @@map("woocommerce_oauth_pending")
 }
 
+/**
+ * ========================================================================
+ * CALLS DOMAIN — Leads, Calls, Campaigns, Follow-ups, Conversations
+ * ========================================================================
+ */
+
+/// A person we might call / message. Manually entered or CSV-imported.
+model Lead {
+  id            String    @id @default(cuid())
+  companyId     String
+  name          String    @db.VarChar(255)
+  phone         String    @db.VarChar(32)
+  email         String?   @db.VarChar(255)
+  city          String?   @db.VarChar(120)
+  industry      String?   @db.VarChar(120)
+  source        String?   @db.VarChar(120)
+  /// 0-100 heuristic score used to rank leads in the AI pick panel.
+  intentScore   Int       @default(0)
+  stage         LeadStage @default(NEW)
+  /// Loose pointer to a user identifier; no FK yet (user model TBD).
+  ownerUserId   String?   @db.VarChar(255)
+  campaignId    String?
+  tags          String[]  @default([])
+  notes         String?
+  lastContactAt DateTime?
+  timezone      String?   @db.VarChar(64)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sourceCampaign   Campaign?         @relation("LeadSourceCampaign", fields: [campaignId], references: [id], onDelete: SetNull)
+  calls            Call[]
+  followUps        FollowUp[]
+  conversations    Conversation[]
+  campaignMessages CampaignMessage[]
+
+  @@index([companyId])
+  @@index([companyId, stage])
+  @@index([companyId, phone])
+  @@index([companyId, createdAt])
+  @@map("leads")
+}
+
+/// One phone call. QUEUED rows are created on outbound dispatch; webhook upserts the rest.
+model Call {
+  id             String        @id @default(cuid())
+  companyId      String
+  leadId         String?
+  campaignId     String?
+  direction      CallDirection @default(OUTBOUND)
+  status         CallStatus    @default(QUEUED)
+  startedAt      DateTime?
+  endedAt        DateTime?
+  durationSec    Int?
+  connected      Boolean       @default(false)
+  outcome        CallOutcome?
+  sentiment      Sentiment?
+  costCents      Int?
+  recordingUrl   String?       @db.VarChar(1000)
+  externalCallId String?       @unique @db.VarChar(255)
+  dropReason     String?       @db.VarChar(64)
+  failureReason  String?       @db.VarChar(500)
+  metadata       Json?
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  company    Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead       Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  campaign   Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  transcript CallTranscript?
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, outcome])
+  @@index([companyId, startedAt])
+  @@index([leadId])
+  @@index([campaignId])
+  @@map("calls")
+}
+
+/// Post-call AI analysis — summary, turns, objections, next move.
+model CallTranscript {
+  id                String   @id @default(cuid())
+  callId            String   @unique
+  summary           String?
+  turns             Json?
+  objections        String[] @default([])
+  aiConfidence      Float?
+  suggestedNextMove String?
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@map("call_transcripts")
+}
+
+/// Outbound campaign. VOICE is fully wired; SMS/WHATSAPP/EMAIL schema-only for now.
+model Campaign {
+  id              String         @id @default(cuid())
+  companyId       String
+  name            String         @db.VarChar(255)
+  type            CampaignType
+  status          CampaignStatus @default(DRAFT)
+  /// JSON filter spec evaluated against Lead fields when starting the run.
+  audience        Json?
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  endedAt         DateTime?
+  sentCount       Int            @default(0)
+  deliveredCount  Int            @default(0)
+  replyCount      Int            @default(0)
+  conversionCount Int            @default(0)
+  createdByUserId String?        @db.VarChar(255)
+  createdAt       DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime       @updatedAt @db.Timestamptz(3)
+
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  calls        Call[]
+  messages     CampaignMessage[]
+  sourcedLeads Lead[]            @relation("LeadSourceCampaign")
+
+  @@index([companyId])
+  @@index([companyId, status])
+  @@index([companyId, type])
+  @@map("campaigns")
+}
+
+/// Per-lead row inside a campaign run. Unified across channels.
+model CampaignMessage {
+  id          String                @id @default(cuid())
+  campaignId  String
+  leadId      String
+  channel     Channel
+  status      CampaignMessageStatus @default(QUEUED)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+  replyAt     DateTime?
+  metadata    Json?
+  createdAt   DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime              @updatedAt @db.Timestamptz(3)
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, leadId])
+  @@index([campaignId])
+  @@index([leadId])
+  @@map("campaign_messages")
+}
+
+/// Scheduled re-engagement reminder.
+model FollowUp {
+  id                String           @id @default(cuid())
+  companyId         String
+  leadId            String
+  reason            FollowUpReason   @default(OTHER)
+  customReason      String?          @db.VarChar(255)
+  dueAt             DateTime
+  priority          FollowUpPriority @default(MEDIUM)
+  status            FollowUpStatus   @default(PENDING)
+  lastInteractionAt DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime         @updatedAt @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead    Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, status, dueAt])
+  @@index([companyId, priority])
+  @@index([leadId])
+  @@map("follow_ups")
+}
+
+/// A per-lead interaction thread (v1: one row per VOICE call; other channels reuse the model later).
+model Conversation {
+  id            String     @id @default(cuid())
+  companyId     String
+  leadId        String
+  channel       Channel    @default(VOICE)
+  summary       String?
+  sentiment     Sentiment?
+  intent        String?    @db.VarChar(120)
+  keywords      String[]   @default([])
+  lastMessageAt DateTime?
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+
+  company  Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead     Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  messages ConversationMessage[]
+
+  @@unique([companyId, leadId, channel])
+  @@index([companyId])
+  @@index([companyId, lastMessageAt])
+  @@index([leadId])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  direction      MessageDirection
+  text           String
+  metadata       Json?
+  createdAt      DateTime         @default(now()) @db.Timestamptz(3)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("conversation_messages")
+}
+
+/// Idempotency record for calling-agent webhook deliveries.
+model WebhookEvent {
+  id         String   @id @default(cuid())
+  eventId    String   @unique @db.VarChar(128)
+  source     String   @db.VarChar(64)
+  companyId  String?
+  eventType  String   @db.VarChar(64)
+  receivedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([source, eventType])
+  @@map("webhook_events")
+}
+
 enum AssetType {
   VIDEO
   IMAGE
@@ -1326,4 +1566,106 @@ enum Frequency {
   MID_MONTHLY
   MID_WEEKLY
   MONTHLY
+}
+
+/**
+ * ========================================================================
+ * CALLS DOMAIN — enums
+ * ========================================================================
+ */
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  WARM
+  HOT
+  COLD
+  QUALIFIED
+  CLOSED
+  LOST
+}
+
+enum CallDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum CallStatus {
+  QUEUED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+  FAILED
+}
+
+enum CallOutcome {
+  INTERESTED
+  CALL_BACK_LATER
+  NO_ANSWER
+  WRONG_NUMBER
+  CONVERTED
+  NOT_INTERESTED
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum Channel {
+  VOICE
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum CampaignType {
+  VOICE
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum CampaignStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum CampaignMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  REPLIED
+  FAILED
+}
+
+enum FollowUpReason {
+  ASKED_PRICING
+  CALL_LATER
+  VIEWED_BROCHURE
+  NO_REPLY_QUOTE
+  OTHER
+}
+
+enum FollowUpPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum FollowUpStatus {
+  PENDING
+  DONE
+  MISSED
+  SNOOZED
+}
+
+enum MessageDirection {
+  IN
+  OUT
 }

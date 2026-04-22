@@ -485,7 +485,7 @@ export default function WorkforceHome({
                 statusValue={callsValue}
                 statusIcon={PhoneCall}
                 ctaLabel="Manage Scripts"
-                ctaHref="/call-center"
+                ctaHref="/calls/ai-calls"
               />
             </div>
 
