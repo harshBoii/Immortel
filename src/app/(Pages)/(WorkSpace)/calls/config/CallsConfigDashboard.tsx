@@ -19,6 +19,19 @@ type CallConfig = {
 
 const VOICE_MODES = ["speed", "quality", "eleven_v3"] as const;
 const LLM_PROVIDERS = ["groq", "openai", "gemini", "claude", "sarvam"] as const;
+const LANGUAGE_OPTIONS = [
+  { value: "english", label: "English", deepgram: "en" },
+  { value: "hindi", label: "Hindi", deepgram: "hi" },
+  { value: "marathi", label: "Marathi", deepgram: "mr" },
+  { value: "kannada", label: "Kannada", deepgram: "kn" },
+  { value: "telugu", label: "Telugu", deepgram: "te" },
+  { value: "tamil", label: "Tamil", deepgram: "ta" },
+  { value: "malayalam", label: "Malayalam", deepgram: "ml" },
+  { value: "punjabi", label: "Punjabi", deepgram: "pa" },
+  { value: "bengali", label: "Bengali", deepgram: "bn" },
+  { value: "gujarati", label: "Gujarati", deepgram: "gu" },
+  { value: "odia", label: "Odia", deepgram: "or" },
+] as const;
 
 export default function CallsConfigDashboard({ initial }: { initial: CallConfig | null }) {
   const [saving, setSaving] = useState(false);
@@ -35,6 +48,9 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
   const [systemPrompt, setSystemPrompt] = useState(initial?.systemPrompt ?? "");
   const [useSarvamTts, setUseSarvamTts] = useState(!!initial?.useSarvamTts);
   const [sarvamSpeaker, setSarvamSpeaker] = useState(initial?.sarvamSpeaker ?? "rohan");
+
+  const deepgramLanguage =
+    LANGUAGE_OPTIONS.find((l) => l.value === languageMode)?.deepgram ?? "en";
 
   const payload = useMemo(
     () => ({
@@ -100,13 +116,18 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Voice defaults" icon={Settings2}>
-          <Field label="Language mode" hint='Example: "english", "hindi"'>
-            <input
+          <Field label="Language mode" hint={`Deepgram language: ${deepgramLanguage}`}>
+            <select
               value={languageMode}
               onChange={(e) => setLanguageMode(e.target.value)}
               className={inputCls}
-              placeholder="english"
-            />
+            >
+              {LANGUAGE_OPTIONS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Voice mode">
