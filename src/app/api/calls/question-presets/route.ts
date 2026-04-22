@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const CreatePresetSchema = z.object({
   name: z.string().min(1).max(120),
   isDefault: z.boolean().optional(),
-  questions: z.array(z.string().min(1).max(400)).default([]),
+  questions: z.array(z.string().min(1).max(400)).max(4).default([]),
 });
 
 export async function GET() {

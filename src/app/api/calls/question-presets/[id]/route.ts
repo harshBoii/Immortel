@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 const PatchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   isDefault: z.boolean().optional(),
-  questions: z.array(z.string().min(1).max(400)).optional(),
+  questions: z.array(z.string().min(1).max(400)).max(4).optional(),
 });
 
 export async function PATCH(

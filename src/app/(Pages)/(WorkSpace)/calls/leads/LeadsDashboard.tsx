@@ -433,6 +433,7 @@ function AddLeadDrawer({
       .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
+    const clampedQuestionsToAsk = questionsToAsk.slice(0, 4);
 
     const body: Record<string, unknown> = {
       name: fd.get("name"),
@@ -448,7 +449,7 @@ function AddLeadDrawer({
       productExternalId: productExternalIdRaw || null,
       productName: productNameRaw || null,
       questionPresetId: presetId || null,
-      questionsToAsk,
+      questionsToAsk: clampedQuestionsToAsk,
     };
     const res = await fetch("/api/calls/leads", {
       method: "POST",
