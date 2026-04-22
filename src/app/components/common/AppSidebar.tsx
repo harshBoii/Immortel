@@ -472,6 +472,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={PhoneOff}        label="Dropped Calls"  href="/calls/dropped" />
           <SecondaryNavItem icon={MessagesSquare}  label="Conversations"  href="/calls/conversations" />
           <SecondaryNavItem icon={BarChart3}       label="Reports"        href="/calls/reports" />
+          <SecondaryNavItem icon={Settings}        label="Config"         href="/calls/config" />
         </>
       );
     // case 'shop':

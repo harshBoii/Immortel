@@ -385,6 +385,37 @@ function AddLeadDrawer({
   const [showProductMenu, setShowProductMenu] = useState(false);
   const lastQueryRef = useRef<string>("");
 
+  const [presets, setPresets] = useState<
+    { id: string; name: string; isDefault: boolean; questions: string[] }[]
+  >([]);
+  const [presetId, setPresetId] = useState<string>("");
+  const [questionsText, setQuestionsText] = useState<string>("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const r = await fetch("/api/calls/question-presets", { cache: "no-store" });
+      const j = (await r.json().catch(() => ({}))) as {
+        items?: { id: string; name: string; isDefault: boolean; questions: string[] }[];
+      };
+      if (cancelled) return;
+      const items = r.ok ? (j.items ?? []) : [];
+      setPresets(items);
+      const def = items.find((p) => p.isDefault) ?? items[0];
+      if (def) {
+        setPresetId(def.id);
+        setQuestionsText((def.questions ?? []).join("\n"));
+      } else {
+        setPresetId("");
+        setQuestionsText("");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitting(true);
@@ -397,6 +428,11 @@ function AddLeadDrawer({
 
     const productExternalIdRaw = productExternalId.trim();
     const productNameRaw = productName.trim();
+
+    const questionsToAsk = questionsText
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     const body: Record<string, unknown> = {
       name: fd.get("name"),
@@ -411,6 +447,8 @@ function AddLeadDrawer({
       productProvider,
       productExternalId: productExternalIdRaw || null,
       productName: productNameRaw || null,
+      questionPresetId: presetId || null,
+      questionsToAsk,
     };
     const res = await fetch("/api/calls/leads", {
       method: "POST",
@@ -467,6 +505,53 @@ function AddLeadDrawer({
           <Field label="Source" name="source" placeholder="Meta Ads, Website, etc." />
           <Field label="Intent (0–100)" name="intentScore" type="number" defaultValue="0" />
         </div>
+
+        <fieldset className="rounded-lg border border-[var(--glass-border)] p-3">
+          <legend className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+            Call questions
+          </legend>
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Preset
+            </span>
+            <select
+              value={presetId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPresetId(id);
+                const p = presets.find((x) => x.id === id);
+                if (p) setQuestionsText((p.questions ?? []).join("\n"));
+              }}
+              className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px]"
+            >
+              <option value="" disabled>
+                {presets.length === 0 ? "No presets yet" : "Select a preset"}
+              </option>
+              {presets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.isDefault ? " (Default)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="mt-2 flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Questions (one per line)
+            </span>
+            <textarea
+              value={questionsText}
+              onChange={(e) => setQuestionsText(e.target.value)}
+              rows={4}
+              placeholder={"What is your main goal?\nWhat budget are you considering?\nWhen do you want to start?"}
+              className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)]/40"
+            />
+          </label>
+          <p className="mt-1 text-[11px] text-muted-foreground/70">
+            These questions will be sent to the calling agent as <code>questions_to_ask</code>.
+          </p>
+        </fieldset>
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">

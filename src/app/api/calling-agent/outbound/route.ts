@@ -162,7 +162,6 @@ export async function POST(request: Request) {
     typeof body.info_about_lead === "string" ? body.info_about_lead.trim() : "";
   const voiceIdRaw =
     typeof body.voiceId === "string" ? body.voiceId.trim() : "";
-  const voiceId = voiceIdRaw || DEFAULT_VOICE_ID;
 
   const leadIdInput = typeof body.leadId === "string" ? body.leadId.trim() : "";
   const campaignIdInput =
@@ -214,30 +213,67 @@ export async function POST(request: Request) {
     resolvedCampaignId = campaign.id;
   }
 
+  const callConfig = (await (prisma as any).callConfig
+    .findUnique({ where: { companyId } })
+    .catch(() => null)) as
+    | {
+        languageMode?: string | null;
+        voiceMode?: string | null;
+        voiceId?: string | null;
+        llmProvider?: string | null;
+        agentName?: string | null;
+        agentTone?: string | null;
+        systemPrompt?: string | null;
+        openingGreeting?: string | null;
+        useSarvamTts?: boolean | null;
+        sarvamSpeaker?: string | null;
+      }
+    | null;
+
   const languageMode = normalizeLanguageSlug(
-    body.languageMode ?? body.language
+    body.languageMode ?? body.language ?? callConfig?.languageMode
   );
 
-  const voiceRaw = body.voiceMode;
+  const voiceRaw = body.voiceMode ?? callConfig?.voiceMode;
   const voiceMode: VoiceMode =
     voiceRaw === "speed" || voiceRaw === "quality" || voiceRaw === "eleven_v3"
       ? voiceRaw
       : "speed";
 
-  const llm_provider = normalizeLlmProvider(body.llm_provider);
+  const llm_provider = normalizeLlmProvider(body.llm_provider ?? callConfig?.llmProvider);
 
   const mapped = LANGUAGE_BY_SLUG[languageMode];
   const clientDg = optionalTrimmedString(body.deepgram_language);
   const deepgram_language = clientDg ?? mapped.deepgram_language;
   const language = mapped.language;
 
-  const system_prompt = optionalTrimmedString(body.system_prompt);
-  const opening_greeting = optionalTrimmedString(body.opening_greeting);
-  const agent_name = optionalTrimmedString(body.agent_name);
-  const agent_role = optionalTrimmedString(body.agent_role);
+  const system_prompt =
+    optionalTrimmedString(body.system_prompt) ??
+    optionalTrimmedString(callConfig?.systemPrompt);
+  const opening_greeting =
+    optionalTrimmedString(body.opening_greeting) ??
+    optionalTrimmedString(callConfig?.openingGreeting);
+  const agent_name =
+    optionalTrimmedString(body.agent_name) ??
+    optionalTrimmedString(callConfig?.agentName);
+  const agent_role =
+    optionalTrimmedString(body.agent_role) ??
+    optionalTrimmedString(callConfig?.agentTone);
   const questions_to_ask = optionalTrimmedString(body.questions_to_ask);
-  const use_sarvam_tts = optionalBoolean(body.use_sarvam_tts) ?? false;
-  const sarvam_speaker = normalizeSarvamSpeaker(body.sarvam_speaker);
+  const questionsToAskList =
+    Array.isArray((body as any).questionsToAsk) && (body as any).questionsToAsk.length > 0
+      ? ((body as any).questionsToAsk as unknown[])
+          .filter((x): x is string => typeof x === "string")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+  const use_sarvam_tts =
+    optionalBoolean(body.use_sarvam_tts) ??
+    (typeof callConfig?.useSarvamTts === "boolean" ? callConfig.useSarvamTts : undefined) ??
+    false;
+  const sarvam_speaker = normalizeSarvamSpeaker(
+    body.sarvam_speaker ?? callConfig?.sarvamSpeaker
+  );
 
   const effectiveCompany =
     company ||
@@ -342,6 +378,52 @@ export async function POST(request: Request) {
   const effectivePerks =
     perks_of_product || resolvedProduct?.description || "—";
 
+  async function resolveQuestionsToAsk(): Promise<string | undefined> {
+    if (questionsToAskList.length > 0) return questionsToAskList.join("\n");
+    if (questions_to_ask) return questions_to_ask;
+    if (!resolvedLeadId) return undefined;
+
+    const lead = (await prisma.lead.findFirst({
+      where: { id: resolvedLeadId, companyId },
+      // Cast: new fields exist after migration+generate.
+      select: { id: true } as unknown as {
+        id: true;
+        questionsToAsk: true;
+        questionPresetId: true;
+      },
+    })) as unknown as
+      | { questionsToAsk?: string[]; questionPresetId?: string | null }
+      | null;
+
+    const leadOverride =
+      Array.isArray(lead?.questionsToAsk) && lead!.questionsToAsk.length > 0
+        ? lead!.questionsToAsk.filter((s) => typeof s === "string" && s.trim()).map((s) => s.trim())
+        : [];
+    if (leadOverride.length > 0) return leadOverride.join("\n");
+
+    const presetId = lead?.questionPresetId ?? null;
+    if (presetId) {
+      const preset = await (prisma as any).callQuestionPreset.findFirst({
+        where: { id: presetId, companyId },
+        select: { questions: true },
+      });
+      const qs = (preset?.questions ?? []).map((s) => s.trim()).filter(Boolean);
+      if (qs.length > 0) return qs.join("\n");
+    }
+
+    const def = await (prisma as any).callQuestionPreset.findFirst({
+      where: { companyId, isDefault: true },
+      orderBy: { updatedAt: "desc" },
+      select: { questions: true },
+    });
+    const qs = (def?.questions ?? []).map((s) => s.trim()).filter(Boolean);
+    return qs.length > 0 ? qs.join("\n") : undefined;
+  }
+
+  const effectiveQuestionsToAsk = await resolveQuestionsToAsk();
+
+  const voiceId = voiceIdRaw || callConfig?.voiceId || DEFAULT_VOICE_ID;
+
   const elevenlabs_model = mapElevenlabsModel(voiceMode);
 
   const payload: Record<string, unknown> = {
@@ -371,7 +453,8 @@ export async function POST(request: Request) {
   if (opening_greeting !== undefined) payload.opening_greeting = opening_greeting;
   if (agent_name !== undefined) payload.agent_name = agent_name;
   if (agent_role !== undefined) payload.agent_role = agent_role;
-  if (questions_to_ask !== undefined) payload.questions_to_ask = questions_to_ask;
+  if (effectiveQuestionsToAsk !== undefined)
+    payload.questions_to_ask = effectiveQuestionsToAsk;
 
   const responseFields: OutboundForwardedPayload = {
     to,
@@ -393,7 +476,7 @@ export async function POST(request: Request) {
     ...(opening_greeting !== undefined && { opening_greeting }),
     ...(agent_name !== undefined && { agent_name }),
     ...(agent_role !== undefined && { agent_role }),
-    ...(questions_to_ask !== undefined && { questions_to_ask }),
+    ...(effectiveQuestionsToAsk !== undefined && { questions_to_ask: effectiveQuestionsToAsk }),
   };
 
   try {

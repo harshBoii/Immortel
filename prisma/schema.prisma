@@ -91,6 +91,8 @@ model Company {
   followUps     FollowUp[]
   conversations Conversation[]
   webhookEvents WebhookEvent[]
+  callQuestionPresets CallQuestionPreset[]
+  callConfig CallConfig?
 
   @@index([slug])
   @@index([organizationId])
@@ -107,6 +109,60 @@ model CompanyPlan {
 
   @@index([companyId])
   @@map("company_plans")
+}
+
+/// Per-company preset question lists used to guide AI calls.
+model CallQuestionPreset {
+  id        String   @id @default(cuid())
+  companyId String
+  name      String   @db.VarChar(120)
+  /// One default preset per company (enforced by app logic).
+  isDefault Boolean  @default(false)
+  questions String[] @default([])
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  leads   Lead[]
+
+  @@index([companyId])
+  @@index([companyId, isDefault])
+  @@map("call_question_presets")
+}
+
+/// Per-company defaults for outbound AI calls (used when UI omits fields).
+model CallConfig {
+  id        String   @id @default(cuid())
+  companyId String   @unique
+
+  /// Default language slug (matches the calling-agent contract, e.g. "english").
+  languageMode String  @default("english") @db.VarChar(32)
+  /// Default voice mode: "speed" | "quality" | "eleven_v3".
+  voiceMode    String  @default("speed")   @db.VarChar(32)
+  /// Default ElevenLabs voice ID (or compatible provider voice id).
+  voiceId      String? @db.VarChar(255)
+
+  /// Default LLM provider (e.g. "groq", "openai", "gemini"...).
+  llmProvider String @default("groq") @db.VarChar(32)
+
+  /// Optional persona overrides (if null, calling-agent chooses its defaults).
+  agentName       String? @db.VarChar(120)
+  /// "Tone" / persona / role text.
+  agentTone       String? @db.VarChar(500)
+  systemPrompt    String?
+  openingGreeting String? @db.VarChar(500)
+
+  /// Optional TTS provider toggle.
+  useSarvamTts  Boolean @default(false)
+  sarvamSpeaker String? @db.VarChar(32)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("call_configs")
 }
 
 model CompanyRival {
@@ -1229,6 +1285,10 @@ model Lead {
   productExternalId String?              @db.VarChar(255)
   /// Human-friendly product name (used for lookup if no external id is provided).
   productName       String?              @db.VarChar(500)
+  /// Optional per-lead question preset for AI calls.
+  questionPresetId  String?
+  /// Optional per-lead questions override. If non-empty, overrides the preset.
+  questionsToAsk    String[]             @default([])
   /// 0-100 heuristic score used to rank leads in the AI pick panel.
   intentScore   Int       @default(0)
   stage         LeadStage @default(NEW)
@@ -1244,6 +1304,7 @@ model Lead {
 
   company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   sourceCampaign   Campaign?         @relation("LeadSourceCampaign", fields: [campaignId], references: [id], onDelete: SetNull)
+  questionPreset   CallQuestionPreset? @relation(fields: [questionPresetId], references: [id], onDelete: SetNull)
   calls            Call[]
   followUps        FollowUp[]
   conversations    Conversation[]
@@ -1253,6 +1314,7 @@ model Lead {
   @@index([companyId, stage])
   @@index([companyId, phone])
   @@index([companyId, createdAt])
+  @@index([companyId, questionPresetId])
   @@map("leads")
 }
 

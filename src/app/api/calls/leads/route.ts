@@ -20,6 +20,8 @@ const CreateLeadSchema = z.object({
   productProvider: z.nativeEnum(IntegrationProvider).optional().nullable(),
   productExternalId: z.string().max(255).optional().nullable(),
   productName: z.string().max(500).optional().nullable(),
+  questionPresetId: z.string().max(255).optional().nullable(),
+  questionsToAsk: z.array(z.string().min(1).max(400)).optional(),
 });
 
 export async function GET(request: Request) {
@@ -91,11 +93,12 @@ export async function POST(request: Request) {
   }
 
   const lead = await prisma.lead.create({
-    data: {
+    data: ({
       companyId: session.companyId,
       ...parsed.data,
       tags: parsed.data.tags ?? [],
-    },
+      questionsToAsk: parsed.data.questionsToAsk ?? [],
+    } as unknown as Parameters<typeof prisma.lead.create>[0]["data"]),
   });
 
   return NextResponse.json({ lead }, { status: 201 });
