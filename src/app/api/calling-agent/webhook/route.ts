@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
   CallDirection,
@@ -12,6 +12,8 @@ import {
   LeadStage,
   Sentiment,
 } from "@prisma/client";
+
+const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
 
 /**
  * External calling-agent webhook delivery endpoint.
@@ -69,6 +71,78 @@ function toDate(input: unknown): Date | null {
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function buildPublicBaseUrl(request: Request): string {
+  const configured = process.env.APP_PUBLIC_BASE_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, "");
+
+  // Best-effort fallback; in prod this should be configured.
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  return host ? `${proto}://${host}` : new URL(request.url).origin;
+}
+
+function pickGreeting(now: Date): string {
+  const h = now.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+async function resolvePurchaseLink(args: {
+  companyId: string;
+  lead: { productProvider?: string | null; productExternalId?: string | null; productName?: string | null };
+}): Promise<string | null> {
+  const provider = (args.lead.productProvider ?? "").toLowerCase();
+  const externalId = (args.lead.productExternalId ?? "").trim();
+  const nameQuery = (args.lead.productName ?? "").trim();
+
+  if (provider === "shopify" || externalId.startsWith("gid://")) {
+    // Try direct external id match first.
+    if (externalId) {
+      const p = await prisma.shopifyProduct.findFirst({
+        where: { companyId: args.companyId, shopifyGid: externalId },
+        select: { onlineStoreUrl: true, handle: true, shop: { select: { shopDomain: true } } },
+      });
+      if (p?.onlineStoreUrl) return p.onlineStoreUrl;
+      if (p?.handle && p.shop?.shopDomain) return `https://${p.shop.shopDomain}/products/${p.handle}`;
+    }
+
+    if (nameQuery) {
+      const p = await prisma.shopifyProduct.findFirst({
+        where: { companyId: args.companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { onlineStoreUrl: true, handle: true, shop: { select: { shopDomain: true } } },
+      });
+      if (p?.onlineStoreUrl) return p.onlineStoreUrl;
+      if (p?.handle && p.shop?.shopDomain) return `https://${p.shop.shopDomain}/products/${p.handle}`;
+    }
+  }
+
+  if (provider === "woocommerce" || /^\d+$/.test(externalId)) {
+    const wcId = externalId && /^\d+$/.test(externalId) ? parseInt(externalId, 10) : null;
+    if (wcId !== null) {
+      const p = await prisma.wooCommerceProduct.findFirst({
+        where: { companyId: args.companyId, wcProductId: wcId },
+        select: { onlineStoreUrl: true, handle: true, store: { select: { storeUrl: true } } },
+      });
+      if (p?.onlineStoreUrl) return p.onlineStoreUrl;
+      if (p?.handle && p.store?.storeUrl)
+        return `${p.store.storeUrl.replace(/\/+$/, "")}/product/${p.handle}`;
+    }
+
+    if (nameQuery) {
+      const p = await prisma.wooCommerceProduct.findFirst({
+        where: { companyId: args.companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { onlineStoreUrl: true, handle: true, store: { select: { storeUrl: true } } },
+      });
+      if (p?.onlineStoreUrl) return p.onlineStoreUrl;
+      if (p?.handle && p.store?.storeUrl)
+        return `${p.store.storeUrl.replace(/\/+$/, "")}/product/${p.handle}`;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Picks a follow-up due time from analysis output:
@@ -562,6 +636,121 @@ export async function POST(request: Request) {
       { success: false, error: "Internal error processing webhook" },
       { status: 500 }
     );
+  }
+
+  // Auto end-of-call SMS (more secure: feedback link is one-time per call)
+  if (event === "transcript.ready") {
+    try {
+      const callRow = await prisma.call.findFirst({
+        where: { companyId, externalCallId },
+        include: {
+          lead: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              productProvider: true,
+              productExternalId: true,
+              productName: true,
+            },
+          },
+          transcript: { select: { summary: true } },
+        },
+      });
+
+      const lead = callRow?.lead;
+      if (callRow && lead) {
+        // Duplicate protection: if we already logged an auto_end_of_call message for this call, skip.
+        const existingAuto = await prisma.conversationMessage.findFirst({
+          where: {
+            conversation: {
+              companyId,
+              leadId: lead.id,
+              channel: Channel.SMS,
+            },
+            metadata: { path: ["kind"], equals: "auto_end_of_call" },
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        const alreadyForThisCall =
+          !!existingAuto &&
+          (existingAuto.metadata as { callId?: string } | null)?.callId === callRow.id;
+
+        if (!alreadyForThisCall) {
+          const now = new Date();
+          const token = randomBytes(32).toString("base64url");
+          const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const tokenRow = await (prisma as any).callFeedbackToken.create({
+            data: {
+              token,
+              companyId,
+              leadId: lead.id,
+              callId: callRow.id,
+              expiresAt,
+            },
+            select: { id: true, token: true },
+          });
+
+          const baseUrl = buildPublicBaseUrl(request);
+          const feedbackUrl = `${baseUrl}/feedback/${encodeURIComponent(tokenRow.token)}`;
+          const purchaseUrl =
+            (await resolvePurchaseLink({
+              companyId,
+              lead: {
+                productProvider: lead.productProvider,
+                productExternalId: lead.productExternalId,
+                productName: lead.productName,
+              },
+            })) || "";
+
+          const greeting = pickGreeting(now);
+          const productLabel = lead.productName?.trim() || "the product";
+          const msg = `${greeting} ${lead.name}, here is the product regarding which we called you: ${productLabel}. ${
+            purchaseUrl ? `If you are interested, you can use this link to make the purchase: ${purchaseUrl}. ` : ""
+          }For any feedback use this link: ${feedbackUrl}. Thank you, Team Immortell.`;
+
+          const upstream = await fetch(`${CALLING_AGENT_BASE}/sms/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ to: lead.phone, message: msg }),
+          });
+          const upstreamData = await upstream.json().catch(() => null);
+
+          // Log into SMS conversation regardless of upstream response (best-effort, but shows operator intent).
+          const convo = await prisma.conversation.upsert({
+            where: {
+              companyId_leadId_channel: { companyId, leadId: lead.id, channel: Channel.SMS },
+            },
+            create: {
+              companyId,
+              leadId: lead.id,
+              channel: Channel.SMS,
+              summary: null,
+              lastMessageAt: now,
+            },
+            update: { lastMessageAt: now },
+          });
+
+          await prisma.conversationMessage.create({
+            data: {
+              conversationId: convo.id,
+              direction: "OUT",
+              text: msg,
+              metadata: {
+                kind: "auto_end_of_call",
+                callId: callRow.id,
+                feedbackTokenId: tokenRow.id,
+                upstreamStatus: upstream.status,
+                upstream: upstreamData,
+              },
+            },
+          });
+        }
+      }
+    } catch (err) {
+      console.error("calling-agent webhook: auto SMS failed", err);
+    }
   }
 
   return NextResponse.json({

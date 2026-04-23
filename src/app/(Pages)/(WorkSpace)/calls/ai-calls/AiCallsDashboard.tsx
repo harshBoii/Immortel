@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PhoneCall,
   PhoneOff,
@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Download,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import type {
   CallDirection,
@@ -120,6 +121,9 @@ export default function AiCallsDashboard({
   const [active, setActive] = useState<CallRow | null>(null);
   const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [smsLead, setSmsLead] = useState<{ id: string; name: string; phone: string } | null>(
+    null
+  );
 
   const filtered = useMemo(() => {
     if (status === "all") return calls;
@@ -205,6 +209,18 @@ export default function AiCallsDashboard({
       align: "right",
       cell: (r) => (
         <div className="flex items-center justify-end gap-1">
+          {r.lead && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSmsLead(r.lead);
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-1 text-[11px] hover:bg-[var(--sibling-primary)]/10"
+            >
+              <MessageSquare className="w-3 h-3" /> SMS
+            </button>
+          )}
           {(r.status === "DROPPED" ||
             r.status === "FAILED" ||
             r.status === "NO_ANSWER" ||
@@ -354,7 +370,102 @@ export default function AiCallsDashboard({
           </div>
         )}
       </DetailDrawer>
+
+      <SmsDrawer lead={smsLead} onClose={() => setSmsLead(null)} />
     </div>
+  );
+}
+
+function SmsDrawer({
+  lead,
+  onClose,
+}: {
+  lead: { id: string; name: string; phone: string } | null;
+  onClose: () => void;
+}) {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lead) return;
+    setMessage(`${lead.name}, thanks for your time on the call! Thank you, Team Immortell.`);
+    setSent(false);
+    setError(null);
+  }, [lead?.id]);
+
+  async function send() {
+    if (!lead) return;
+    setSending(true);
+    setError(null);
+    const res = await fetch("/api/calling-agent/sms/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to: lead.phone, message, leadId: lead.id }),
+    });
+    setSending(false);
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.success) {
+      setError(j.error ?? "Failed to send SMS");
+      return;
+    }
+    setSent(true);
+  }
+
+  return (
+    <DetailDrawer
+      open={!!lead}
+      title={lead ? `Send SMS to ${lead.name}` : "Send SMS"}
+      subtitle={lead?.phone}
+      onClose={() => {
+        setMessage("");
+        setError(null);
+        setSent(false);
+        onClose();
+      }}
+      footer={
+        lead ? (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending || sent || !message.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--sibling-primary)] px-3 py-2 text-[12px] font-semibold text-white hover:brightness-110 disabled:opacity-50"
+            >
+              {sending ? "Sending…" : sent ? "Sent" : "Send SMS"}
+            </button>
+          </div>
+        ) : null
+      }
+      widthClass="w-full sm:w-[560px]"
+    >
+      {!lead ? null : (
+        <div className="flex flex-col gap-3 text-[13px]">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Message
+            </span>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={6}
+              className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)]/40"
+            />
+          </label>
+          {error && (
+            <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-[12px] text-rose-500">
+              {error}
+            </div>
+          )}
+          {sent && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[12px] text-emerald-600">
+              SMS sent.
+            </div>
+          )}
+        </div>
+      )}
+    </DetailDrawer>
   );
 }
 

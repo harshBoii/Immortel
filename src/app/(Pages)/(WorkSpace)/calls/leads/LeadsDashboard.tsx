@@ -11,6 +11,7 @@ import {
   UserPlus,
   Upload,
   PhoneCall,
+  MessageSquare,
   Search,
   Sparkles,
 } from "lucide-react";
@@ -97,6 +98,7 @@ export default function LeadsDashboard({
   const [activeLead, setActiveLead] = useState<LeadRow | null>(null);
   const [leadDetail, setLeadDetail] = useState<Record<string, unknown> | null>(null);
   const [loadingLeadDetail, setLoadingLeadDetail] = useState(false);
+  const [smsLead, setSmsLead] = useState<LeadRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -157,6 +159,14 @@ export default function LeadsDashboard({
     }
     alert(`AI call queued for ${lead.name}`);
     startTransition(() => router.refresh());
+  }
+
+  function defaultSmsBody(lead: LeadRow) {
+    const name = lead.name?.trim() || "there";
+    const product = lead.productName?.trim();
+    return `${name}, thanks for your time on the call. ${
+      product ? `Here is the product we discussed: ${product}. ` : ""
+    }Thank you, Team Immortell.`;
   }
 
   const columns: CallsTableColumn<LeadRow>[] = [
@@ -227,6 +237,16 @@ export default function LeadsDashboard({
             className="inline-flex items-center gap-1 rounded-md border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-1 text-[11px] font-medium text-foreground hover:bg-[var(--sibling-primary)]/10 hover:text-[var(--sibling-primary)] transition-colors"
           >
             <PhoneCall className="w-3 h-3" /> Call
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSmsLead(r);
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2 py-1 text-[11px] font-medium text-foreground hover:bg-[var(--sibling-primary)]/10 hover:text-[var(--sibling-primary)] transition-colors"
+          >
+            <MessageSquare className="w-3 h-3" /> SMS
           </button>
         </div>
       ),
@@ -372,10 +392,115 @@ export default function LeadsDashboard({
         }}
       />
 
+      <SmsDrawer
+        lead={smsLead}
+        onClose={() => setSmsLead(null)}
+        getDefaultBody={defaultSmsBody}
+      />
+
       {isPending && (
         <div className="text-[12px] text-muted-foreground/70">Refreshing…</div>
       )}
     </div>
+  );
+}
+
+function SmsDrawer({
+  lead,
+  onClose,
+  getDefaultBody,
+}: {
+  lead: LeadRow | null;
+  onClose: () => void;
+  getDefaultBody: (lead: LeadRow) => string;
+}) {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!lead) return;
+    setMessage(getDefaultBody(lead));
+    setError(null);
+    setSent(false);
+  }, [lead?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function send() {
+    if (!lead) return;
+    setSending(true);
+    setError(null);
+    const res = await fetch("/api/calling-agent/sms/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: lead.phone,
+        message,
+        leadId: lead.id,
+      }),
+    });
+    setSending(false);
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.success) {
+      setError(j.error ?? "Failed to send SMS");
+      return;
+    }
+    setSent(true);
+  }
+
+  return (
+    <DetailDrawer
+      open={!!lead}
+      title={lead ? `Send SMS to ${lead.name}` : "Send SMS"}
+      subtitle={lead?.phone}
+      onClose={() => {
+        setMessage("");
+        setError(null);
+        setSent(false);
+        onClose();
+      }}
+      footer={
+        lead ? (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={send}
+              disabled={sending || sent || !message.trim()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--sibling-primary)] px-3 py-2 text-[12px] font-semibold text-white hover:brightness-110 disabled:opacity-50"
+            >
+              {sending ? "Sending…" : sent ? "Sent" : "Send SMS"}
+            </button>
+          </div>
+        ) : null
+      }
+    >
+      {!lead ? null : (
+        <div className="flex flex-col gap-3 text-[13px]">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">
+              Message
+            </span>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={6}
+              className="rounded-md border border-[var(--glass-border)] bg-[var(--glass)]/60 px-2.5 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--sibling-primary)]/40"
+            />
+          </label>
+
+          {error && (
+            <div className="rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-[12px] text-rose-500">
+              {error}
+            </div>
+          )}
+          {sent && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-[12px] text-emerald-600">
+              SMS sent.
+            </div>
+          )}
+        </div>
+      )}
+    </DetailDrawer>
   );
 }
 

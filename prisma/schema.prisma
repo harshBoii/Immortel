@@ -55,6 +55,8 @@ model Company {
   subscriptionCreatedAt DateTime?          @map("subscription_created_at")
   subscriptionUpdatedAt DateTime?          @map("subscription_updated_at")
 
+  CallFeedbacks           CallFeedback[]
+  CallFeedbackTokens      CallFeedbackToken[]
   metaIntegration         MetaIntegration?
   aeoGenerationProfiles   AeoGenerationProfile[]
   aeoPages                AeoPage[]
@@ -1309,6 +1311,8 @@ model Lead {
   followUps        FollowUp[]
   conversations    Conversation[]
   campaignMessages CampaignMessage[]
+  feedbackTokens   CallFeedbackToken[]
+  feedback         CallFeedback[]
 
   @@index([companyId])
   @@index([companyId, stage])
@@ -1345,6 +1349,8 @@ model Call {
   lead       Lead?           @relation(fields: [leadId], references: [id], onDelete: SetNull)
   campaign   Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   transcript CallTranscript?
+  feedbackTokens CallFeedbackToken[]
+  feedback       CallFeedback[]
 
   @@index([companyId])
   @@index([companyId, status])
@@ -1372,6 +1378,49 @@ model CallTranscript {
   call Call @relation(fields: [callId], references: [id], onDelete: Cascade)
 
   @@map("call_transcripts")
+}
+
+/// One-time token used for collecting post-call customer feedback (public link).
+model CallFeedbackToken {
+  id        String   @id @default(cuid())
+  token     String   @unique @db.VarChar(128)
+  companyId String
+  leadId    String?
+  callId    String
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead    Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  call    Call    @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, callId])
+  @@index([leadId])
+  @@index([expiresAt])
+  @@map("call_feedback_tokens")
+}
+
+/// Customer feedback collected via the post-call public feedback link.
+model CallFeedback {
+  id        String   @id @default(cuid())
+  companyId String
+  leadId    String?
+  callId    String
+  rating    Int
+  reason    String?  @db.VarChar(80)
+  text      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  lead    Lead?   @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  call    Call    @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([companyId, leadId])
+  @@index([companyId, callId])
+  @@map("call_feedback")
 }
 
 /// Outbound campaign. VOICE is fully wired; SMS/WHATSAPP/EMAIL schema-only for now.
