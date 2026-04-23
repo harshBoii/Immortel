@@ -390,7 +390,9 @@ function SmsDrawer({
 
   useEffect(() => {
     if (!lead) return;
-    setMessage(`${lead.name}, thanks for your time on the call! Thank you, Team Immortell.`);
+    setMessage(
+      `${lead.name}, thanks for your time on the call! If you are interested, you can use this link to make the purchase: {productLink}. Thank you, Team Immortell.`
+    );
     setSent(false);
     setError(null);
   }, [lead?.id]);

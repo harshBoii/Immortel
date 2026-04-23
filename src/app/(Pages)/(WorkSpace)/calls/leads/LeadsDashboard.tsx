@@ -166,7 +166,7 @@ export default function LeadsDashboard({
     const product = lead.productName?.trim();
     return `${name}, thanks for your time on the call. ${
       product ? `Here is the product we discussed: ${product}. ` : ""
-    }Thank you, Team Immortell.`;
+    }If you are interested, you can use this link to make the purchase: {productLink}. Thank you, Team Immortell.`;
   }
 
   const columns: CallsTableColumn<LeadRow>[] = [

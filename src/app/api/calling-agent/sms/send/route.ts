@@ -9,6 +9,74 @@ function trimmedString(v: unknown): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
+async function resolvePurchaseLink(args: {
+  companyId: string;
+  leadId: string;
+}): Promise<{ productName: string | null; productLink: string | null }> {
+  const lead = await prisma.lead.findFirst({
+    where: { id: args.leadId, companyId: args.companyId },
+    select: { productProvider: true, productExternalId: true, productName: true },
+  });
+  if (!lead) return { productName: null, productLink: null };
+
+  const provider = (lead.productProvider ?? "").toLowerCase();
+  const externalId = (lead.productExternalId ?? "").trim();
+  const nameQuery = (lead.productName ?? "").trim();
+
+  if (provider === "shopify" || externalId.startsWith("gid://")) {
+    if (externalId) {
+      const p = await prisma.shopifyProduct.findFirst({
+        where: { companyId: args.companyId, shopifyGid: externalId },
+        select: { onlineStoreUrl: true, handle: true, shop: { select: { shopDomain: true } } },
+      });
+      const url =
+        p?.onlineStoreUrl ||
+        (p?.handle && p.shop?.shopDomain ? `https://${p.shop.shopDomain}/products/${p.handle}` : null);
+      return { productName: lead.productName ?? null, productLink: url };
+    }
+    if (nameQuery) {
+      const p = await prisma.shopifyProduct.findFirst({
+        where: { companyId: args.companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { onlineStoreUrl: true, handle: true, shop: { select: { shopDomain: true } } },
+      });
+      const url =
+        p?.onlineStoreUrl ||
+        (p?.handle && p.shop?.shopDomain ? `https://${p.shop.shopDomain}/products/${p.handle}` : null);
+      return { productName: lead.productName ?? null, productLink: url };
+    }
+  }
+
+  if (provider === "woocommerce" || /^\d+$/.test(externalId)) {
+    const wcId = externalId && /^\d+$/.test(externalId) ? parseInt(externalId, 10) : null;
+    if (wcId !== null) {
+      const p = await prisma.wooCommerceProduct.findFirst({
+        where: { companyId: args.companyId, wcProductId: wcId },
+        select: { onlineStoreUrl: true, handle: true, store: { select: { storeUrl: true } } },
+      });
+      const url =
+        p?.onlineStoreUrl ||
+        (p?.handle && p.store?.storeUrl
+          ? `${p.store.storeUrl.replace(/\/+$/, "")}/product/${p.handle}`
+          : null);
+      return { productName: lead.productName ?? null, productLink: url };
+    }
+    if (nameQuery) {
+      const p = await prisma.wooCommerceProduct.findFirst({
+        where: { companyId: args.companyId, title: { contains: nameQuery, mode: "insensitive" } },
+        select: { onlineStoreUrl: true, handle: true, store: { select: { storeUrl: true } } },
+      });
+      const url =
+        p?.onlineStoreUrl ||
+        (p?.handle && p.store?.storeUrl
+          ? `${p.store.storeUrl.replace(/\/+$/, "")}/product/${p.handle}`
+          : null);
+      return { productName: lead.productName ?? null, productLink: url };
+    }
+  }
+
+  return { productName: lead.productName ?? null, productLink: null };
+}
+
 export async function POST(request: Request) {
   const session = await getSession();
   if (!session?.companyId) {
@@ -26,7 +94,7 @@ export async function POST(request: Request) {
   }
 
   const to = trimmedString(body.to);
-  const message = trimmedString(body.message);
+  let message = trimmedString(body.message);
   const leadIdInput = trimmedString(body.leadId);
 
   if (!to || !message) {
@@ -57,6 +125,17 @@ export async function POST(request: Request) {
       select: { id: true },
     });
     if (match) resolvedLeadId = match.id;
+  }
+
+  // Expand placeholders (optional): {productLink} / {productName}
+  if (resolvedLeadId && (message.includes("{productLink}") || message.includes("{productName}"))) {
+    const resolved = await resolvePurchaseLink({
+      companyId: session.companyId,
+      leadId: resolvedLeadId,
+    });
+    message = message
+      .replaceAll("{productLink}", resolved.productLink ?? "")
+      .replaceAll("{productName}", resolved.productName ?? "");
   }
 
   try {
