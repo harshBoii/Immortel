@@ -68,6 +68,26 @@ function toDate(input: unknown): Date | null {
   return Number.isFinite(d.getTime()) ? d : null;
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Picks a follow-up due time from analysis output:
+ * - null / invalid / in the past / more than 7 days out → now + 3 days
+ * - otherwise use followUpAt
+ */
+function computeFollowUpDueAt(followUpAt: Date | null, now: Date): Date {
+  if (!followUpAt) {
+    return new Date(now.getTime() + 3 * MS_PER_DAY);
+  }
+  if (followUpAt.getTime() <= now.getTime()) {
+    return new Date(now.getTime() + 3 * MS_PER_DAY);
+  }
+  if (followUpAt.getTime() > now.getTime() + 7 * MS_PER_DAY) {
+    return new Date(now.getTime() + 3 * MS_PER_DAY);
+  }
+  return followUpAt;
+}
+
 function coerceEnum<T extends string>(
   value: unknown,
   enumObj: Record<string, T>
@@ -274,6 +294,9 @@ export async function POST(request: Request) {
   const metadata =
     call.metadata && typeof call.metadata === "object" ? call.metadata : undefined;
 
+  const followUpAgreed = typeof call.followUpAgreed === "boolean" ? call.followUpAgreed : false;
+  const followUpAtParsed = toDate(call.followUpAt);
+
   // ── Transaction: upsert Call, transcript, follow-up, conversation, campaign msg, lead stage ──
   try {
     await prisma.$transaction(async (tx) => {
@@ -370,34 +393,40 @@ export async function POST(request: Request) {
         });
       }
 
-      // 3) CALL_BACK_LATER → create a high-priority FollowUp
-      if (outcome === CallOutcome.CALL_BACK_LATER && leadId) {
-        const exists = await tx.followUp.findFirst({
-          where: {
-            companyId,
-            leadId,
-            status: FollowUpStatus.PENDING,
-            reason: FollowUpReason.CALL_LATER,
-          },
+      // 3) followUpAgreed → upsert a FollowUp (update pending row if one exists)
+      if (followUpAgreed && leadId) {
+        const now = new Date();
+        const dueAt = computeFollowUpDueAt(followUpAtParsed, now);
+        const leadForPriority = await tx.lead.findUnique({
+          where: { id: leadId },
+          select: { intentScore: true, stage: true },
+        });
+        const isHotLead =
+          leadForPriority?.stage === LeadStage.HOT ||
+          (leadForPriority?.intentScore ?? 0) >= 75;
+        const priority = isHotLead ? FollowUpPriority.URGENT : FollowUpPriority.HIGH;
+        const lastInteractionAt = endedAt ?? now;
+
+        const existingPending = await tx.followUp.findFirst({
+          where: { companyId, leadId, status: FollowUpStatus.PENDING },
           select: { id: true },
         });
-        if (!exists) {
-          const leadForPriority = await tx.lead.findUnique({
-            where: { id: leadId },
-            select: { intentScore: true, stage: true },
+
+        if (existingPending) {
+          await tx.followUp.update({
+            where: { id: existingPending.id },
+            data: { dueAt, lastInteractionAt, priority },
           });
-          const isHotLead =
-            leadForPriority?.stage === LeadStage.HOT ||
-            (leadForPriority?.intentScore ?? 0) >= 75;
+        } else {
           await tx.followUp.create({
             data: {
               companyId,
               leadId,
               reason: FollowUpReason.CALL_LATER,
-              dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-              priority: isHotLead ? FollowUpPriority.URGENT : FollowUpPriority.HIGH,
+              dueAt,
+              priority,
               status: FollowUpStatus.PENDING,
-              lastInteractionAt: endedAt ?? new Date(),
+              lastInteractionAt,
             },
           });
         }
