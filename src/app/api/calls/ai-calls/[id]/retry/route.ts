@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCallsSession } from "@/lib/calls/session";
+import { getPreviousChatContext } from "@/lib/calling-agent/previousChatContext";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,6 +48,9 @@ export async function POST(_request: Request, ctx: RouteContext) {
     leadId: source.lead.id,
     campaignId: source.campaignId,
   };
+
+  const previousChatContext = await getPreviousChatContext(session.companyId, source.lead.id);
+  if (previousChatContext) payload.previousChatContext = previousChatContext;
 
   let externalCallId: string | null = null;
   let ok = false;

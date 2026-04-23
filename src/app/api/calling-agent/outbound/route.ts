@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getPreviousChatContext } from "@/lib/calling-agent/previousChatContext";
 import { CallDirection, CallStatus } from "@prisma/client";
 
 const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
@@ -114,6 +115,7 @@ export type OutboundForwardedPayload = {
   product: string;
   perks_of_product: string;
   info_about_lead: string;
+  previousChatContext?: string;
   languageMode: LanguageSlug;
   voiceMode: VoiceMode;
   voiceId: string;
@@ -213,22 +215,9 @@ export async function POST(request: Request) {
     resolvedCampaignId = campaign.id;
   }
 
-  const callConfig = (await (prisma as any).callConfig
+  const callConfig = await prisma.callConfig
     .findUnique({ where: { companyId } })
-    .catch(() => null)) as
-    | {
-        languageMode?: string | null;
-        voiceMode?: string | null;
-        voiceId?: string | null;
-        llmProvider?: string | null;
-        agentName?: string | null;
-        agentTone?: string | null;
-        systemPrompt?: string | null;
-        openingGreeting?: string | null;
-        useSarvamTts?: boolean | null;
-        sarvamSpeaker?: string | null;
-      }
-    | null;
+    .catch(() => null);
 
   const languageMode = normalizeLanguageSlug(
     body.languageMode ?? body.language ?? callConfig?.languageMode
@@ -260,9 +249,10 @@ export async function POST(request: Request) {
     optionalTrimmedString(body.agent_role) ??
     optionalTrimmedString(callConfig?.agentTone);
   const questions_to_ask = optionalTrimmedString(body.questions_to_ask);
+  const questionsToAskRaw = (body as Record<string, unknown>).questionsToAsk;
   const questionsToAskList =
-    Array.isArray((body as any).questionsToAsk) && (body as any).questionsToAsk.length > 0
-      ? ((body as any).questionsToAsk as unknown[])
+    Array.isArray(questionsToAskRaw) && questionsToAskRaw.length > 0
+      ? (questionsToAskRaw as unknown[])
           .filter((x): x is string => typeof x === "string")
           .map((s) => s.trim())
           .filter(Boolean)
@@ -410,7 +400,7 @@ export async function POST(request: Request) {
 
     const presetId = lead?.questionPresetId ?? null;
     if (presetId) {
-      const preset = await (prisma as any).callQuestionPreset.findFirst({
+      const preset = await prisma.callQuestionPreset.findFirst({
         where: { id: presetId, companyId },
         select: { questions: true },
       });
@@ -418,7 +408,7 @@ export async function POST(request: Request) {
       if (qs.length > 0) return qs.join("\n");
     }
 
-    const def = await (prisma as any).callQuestionPreset.findFirst({
+    const def = await prisma.callQuestionPreset.findFirst({
       where: { companyId, isDefault: true },
       orderBy: { updatedAt: "desc" },
       select: { questions: true },
@@ -451,6 +441,10 @@ export async function POST(request: Request) {
     campaignId: resolvedCampaignId,
   };
 
+  const previousChatContext =
+    resolvedLeadId ? await getPreviousChatContext(companyId, resolvedLeadId) : undefined;
+  if (previousChatContext) payload.previousChatContext = previousChatContext;
+
   payload.use_sarvam_tts = use_sarvam_tts;
   if (use_sarvam_tts && sarvam_speaker !== undefined) {
     payload.sarvam_speaker = sarvam_speaker;
@@ -470,6 +464,7 @@ export async function POST(request: Request) {
     product: effectiveProduct,
     perks_of_product: effectivePerks,
     info_about_lead: info_about_lead || "—",
+    ...(previousChatContext && { previousChatContext }),
     languageMode,
     voiceMode,
     voiceId,

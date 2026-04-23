@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma, CampaignStatus, CampaignType, LeadStage } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCallsSession } from "@/lib/calls/session";
+import { getPreviousChatContext } from "@/lib/calling-agent/previousChatContext";
 
 const CALLING_AGENT_BASE = "https://calling-agent-ki3j.onrender.com";
 const DEFAULT_VOICE_ID = "oO7sLA3dWfQXsKeSAjpA";
@@ -145,6 +146,9 @@ export async function POST(_request: Request, ctx: RouteContext) {
       leadId: lead.id,
       campaignId: campaign.id,
     };
+
+    const previousChatContext = await getPreviousChatContext(session.companyId, lead.id);
+    if (previousChatContext) payload.previousChatContext = previousChatContext;
 
     let ok = false;
     let externalCallId: string | null = null;
