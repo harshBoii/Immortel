@@ -1,8 +1,6 @@
 // lib/jobs/run-bounty.ts
 import { prisma }          from "@/lib/prisma"
 import type { Difficulty } from "@prisma/client"
-import { huntBountyForCompany } from "@/lib/geo/bounty/huntForCompany"
-import { approveBountyToShopify } from "@/lib/geo/bounty/approveBountyToShopify"
 
 // ─── Types (move out of route file) ──────────────────────────────────────────
 type BountyRequest = {
@@ -110,90 +108,6 @@ export async function runBountyJob(companyId: string) {
 
   const topicPromptAnalysis = Array.isArray(data?.topic_prompt_analysis) ? data.topic_prompt_analysis : []
   const revenueByPrompt     = data?.revenue_by_prompt && typeof data.revenue_by_prompt === "object" ? data.revenue_by_prompt : {}
-
-  const autoGenerateFromLatestTopic = async () => {
-    const latestTopic = await prisma.llmTopic.findFirst({
-      where: { companyId },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, name: true },
-    })
-    if (!latestTopic) return { created: 0, hunted: 0, approved: 0, skipped: 0, errors: [] as string[] }
-
-    const prompts = await prisma.prompt.findMany({
-      where: { topicId: latestTopic.id, isActive: true, ishunted: false },
-      orderBy: { createdAt: "asc" },
-      take: 2,
-      select: { id: true, query: true },
-    })
-
-    const summary = { created: 0, hunted: 0, approved: 0, skipped: 0, errors: [] as string[] }
-    for (const p of prompts) {
-      const query = p.query?.trim()
-      if (!query) { summary.skipped++; continue }
-
-      try {
-        const existing = await prisma.citationBounty.findFirst({
-          where: { companyId, query },
-          select: { id: true, aeoPageId: true, status: true },
-          orderBy: { createdAt: "desc" },
-        })
-
-        if (existing?.aeoPageId) {
-          summary.skipped++
-          await prisma.prompt.update({ where: { id: p.id }, data: { ishunted: true } }).catch(() => {})
-          continue
-        }
-
-        if (existing && existing.status !== "OPEN") {
-          summary.skipped++
-          summary.errors.push(`[skip] ${query}: existing bounty not OPEN (${existing.status})`)
-          continue
-        }
-
-        const bounty = existing?.id
-          ? { id: existing.id }
-          : await prisma.citationBounty.create({
-              data: {
-                companyId,
-                query,
-                pageType: "USE_CASE",
-                confidence: 50,
-                status: "OPEN",
-              },
-              select: { id: true },
-            })
-
-        if (!existing) summary.created++
-
-        const hunt = await huntBountyForCompany({ companyId, bountyId: bounty.id })
-        if (hunt?.aeoPageId) summary.hunted++
-
-        await prisma.prompt.update({ where: { id: p.id }, data: { ishunted: true } })
-
-        try {
-          await approveBountyToShopify({ companyId, bountyId: bounty.id })
-          summary.approved++
-        } catch (e) {
-          // Best-effort: skip approval failures (e.g. no Shopify connected)
-          summary.errors.push(
-            `[approve] ${query}: ${e instanceof Error ? e.message : String(e)}`
-          )
-        }
-      } catch (e) {
-        summary.errors.push(
-          `[auto] ${query}: ${e instanceof Error ? e.message : String(e)}`
-        )
-      }
-    }
-
-    console.log("[runBountyJob] auto-generated bounty pages", {
-      companyId,
-      latestTopicId: latestTopic.id,
-      latestTopicName: latestTopic.name,
-      ...summary,
-    })
-    return summary
-  }
 
   // ── Newer shape: topic_prompt_analysis ──────────────────────────────────────
   if (topicPromptAnalysis.length > 0) {
@@ -365,15 +279,11 @@ export async function runBountyJob(companyId: string) {
       }
     }
 
-    const auto = await autoGenerateFromLatestTopic()
-    return { topic_prompt_analysis: topicPromptAnalysis, auto_generated_bounty_pages: auto }
+    return { topic_prompt_analysis: topicPromptAnalysis }
   }
 
   // ── Legacy shape: niches ─────────────────────────────────────────────────────
-  if (!data?.niches?.length) {
-    const auto = await autoGenerateFromLatestTopic()
-    return { niches: [], summary: data?.summary ?? null, auto_generated_bounty_pages: auto }
-  }
+  if (!data?.niches?.length) return { niches: [], summary: data?.summary ?? null }
 
   for (const niche of data.niches) {
     const topicName = niche.topic?.trim()
@@ -417,6 +327,5 @@ export async function runBountyJob(companyId: string) {
     await prisma.promptRevenue.upsert({ where: { promptId: prompt.id }, create: row, update: row })
   }
 
-  const auto = await autoGenerateFromLatestTopic()
-  return { niches: data.niches, summary: data.summary ?? null, auto_generated_bounty_pages: auto }
+  return { niches: data.niches, summary: data.summary ?? null }
 }

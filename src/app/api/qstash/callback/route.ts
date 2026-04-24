@@ -90,6 +90,7 @@ async function handler(req: Request) {
     publishJob("/api/jobs/seed",   { companyId }),
     publishJob("/api/jobs/radar",  { companyId }),
     publishJob("/api/jobs/bounty", { companyId }),
+    publishJob("/api/jobs/bounty-pages", { companyId }),
   ])
 
   // ── 3. Return immediately — QStash is happy ✅ ───────────────────────────────

@@ -44,6 +44,7 @@ export function middleware(request: NextRequest) {
   const isJobsSeed = pathname.startsWith('/api/jobs/seed');
   const isJobsRadar = pathname.startsWith('/api/jobs/radar');
   const isJobsBounty = pathname.startsWith('/api/jobs/bounty');
+  const isJobsBountyPages = pathname.startsWith('/api/jobs/bounty-pages');
   const isCallCenter = pathname.startsWith('/calls/outbound-legacy');
   const isCallingAgentWebhook = pathname.startsWith('/api/calling-agent/webhook');
 
@@ -73,6 +74,7 @@ export function middleware(request: NextRequest) {
     isJobsSeed||
     isJobsRadar||
     isJobsBounty||
+    isJobsBountyPages||
     isCallCenter||
     isCallingAgentWebhook;
 
