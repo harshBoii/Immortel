@@ -431,16 +431,17 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
               </p>
             </div>
           ) : (
-            <div className="max-h-[70vh] overflow-y-auto overflow-x-hidden pr-1">
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="overflow-x-auto overflow-y-hidden pb-1">
+              <div className="flex min-w-max gap-3">
                 {presets.map((p) => (
-                  <PresetCard
-                    key={p.id}
-                    preset={p}
-                    onSetDefault={() => void setDefaultPreset(p.id)}
-                    onSave={(name, questions) => void savePreset(p.id, name, questions)}
-                    onDelete={() => void deletePreset(p.id)}
-                  />
+                  <div key={p.id} className="w-[420px] max-w-[86vw] shrink-0">
+                    <PresetCard
+                      preset={p}
+                      onSetDefault={() => void setDefaultPreset(p.id)}
+                      onSave={(name, questions) => void savePreset(p.id, name, questions)}
+                      onDelete={() => void deletePreset(p.id)}
+                    />
+                  </div>
                 ))}
 
                 {/* Dashed "add" card */}
@@ -448,7 +449,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
                   <button
                     type="button"
                     onClick={() => setCreating(true)}
-                    className="group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--glass-border)] bg-transparent px-4 py-8 text-[12px] font-semibold text-muted-foreground/50 hover:border-[var(--sibling-primary)]/40 hover:text-muted-foreground/80 hover:bg-[var(--glass)]/30 transition-all min-h-[120px]"
+                    className="w-[420px] max-w-[86vw] shrink-0 group flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--glass-border)] bg-transparent px-4 py-8 text-[12px] font-semibold text-muted-foreground/50 hover:border-[var(--sibling-primary)]/40 hover:text-muted-foreground/80 hover:bg-[var(--glass)]/30 transition-all min-h-[120px]"
                   >
                     <Plus className="h-5 w-5 transition-transform group-hover:scale-110" />
                     Add preset
