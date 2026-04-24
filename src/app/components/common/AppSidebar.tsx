@@ -356,11 +356,11 @@ const NotificationsPanel = () => {
   return (
     <div className="px-2 pt-3">
       {/* Panel header */}
-      <div className="flex items-center gap-2 px-1 mb-3">
+      <div className="flex items-center gap-2 px-1 mb-5 border-b border-gray-200 pb-3 ">
         <div className="flex h-5 w-5 items-center justify-center rounded-md bg-amber-500/15 flex-shrink-0">
-          <Zap className="h-3 w-3 text-amber-500" />
+          <Bell className="h-3 w-3 text-amber-500" />
         </div>
-        <span className="text-[11px] font-semibold text-foreground flex-1">Grab These Now</span>
+        <span className="text-[18px] font-semibold text-foreground flex-1  ">Notifications</span>
         {loading && (
           <span className="text-[10px] text-muted-foreground/40 animate-pulse">Loading…</span>
         )}
@@ -437,7 +437,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
     case 'home':
       return (
         <>
-          <SecondaryNavItem icon={IconLayoutDashboard} label="Dashboard" href="/" />
+          {/* <SecondaryNavItem icon={IconLayoutDashboard} label="Dashboard" href="/" /> */}
           <NotificationsPanel />
         </>
       );
