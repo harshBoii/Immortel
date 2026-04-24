@@ -260,9 +260,6 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
                 onChange={setLanguageMode}
                 options={LANGUAGE_OPTIONS.map((l) => ({ value: l.value, label: l.label }))}
               />
-              <span className="mt-1 text-[11px] text-muted-foreground/50">
-                Deepgram: <code className="font-mono">{deepgramLanguage}</code>
-              </span>
             </Field>
             <Field label="Voice mode">
               <SelectDropdown
@@ -275,7 +272,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
 
           <Divider />
 
-          <Field label="LLM provider">
+          <Field label="Calling Agent">
             <SelectDropdown
               value={llmProvider}
               onChange={setLlmProvider}
@@ -287,7 +284,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
             />
           </Field>
 
-          <Field label="ElevenLabs voice ID" hint="Leave blank to use default voice">
+          <Field label="Voice ID" hint="Leave blank to use default voice">
             <input
               value={voiceId}
               onChange={(e) => setVoiceId(e.target.value)}
