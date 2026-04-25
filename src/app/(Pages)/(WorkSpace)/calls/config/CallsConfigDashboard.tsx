@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, KeyboardEvent } from "react";
-import { Save, Mic, Bot, Star, Plus, Trash2, ListChecks, X } from "lucide-react";
+import { Save, Mic, Bot, Star, Plus, Trash2, ListChecks, X, PhoneCall } from "lucide-react";
 import { PageHeader } from "@/app/components/calls/common/PageHeader";
 import { SelectDropdown } from "@/app/components/common/UI/SelectDropdown";
 import { DEFAULT_QUESTION_PRESETS } from "@/lib/defaults/questionPresets";
+import { useCurrentContext } from "@/app/components/common/useCurrentContext";
 
 type CallConfig = {
   languageMode?: string;
@@ -49,15 +50,23 @@ const LANGUAGE_OPTIONS = [
 
 const MAX_QUESTIONS = 4;
 
+type QuestionPreset = { id: string; name: string; isDefault: boolean; questions: string[] };
+
+function normalizePhoneToE164(raw: string) {
+  const t = raw.trim().replace(/\s+/g, "");
+  if (!t) return "";
+  if (t.startsWith("+")) return t;
+  return `+${t.replace(/^\+/, "")}`;
+}
+
 export default function CallsConfigDashboard({ initial }: { initial: CallConfig | null }) {
+  const { company } = useCurrentContext();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [presetErr, setPresetErr] = useState<string | null>(null);
 
-  const [presets, setPresets] = useState<
-    { id: string; name: string; isDefault: boolean; questions: string[] }[]
-  >([]);
+  const [presets, setPresets] = useState<QuestionPreset[]>([]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newQuestions, setNewQuestions] = useState<string[]>([]);
@@ -82,10 +91,30 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
   const deepgramLanguage =
     LANGUAGE_OPTIONS.find((l) => l.value === languageMode)?.deepgram ?? "en";
 
+  const [tryOpen, setTryOpen] = useState(false);
+  const [tryPreset, setTryPreset] = useState<QuestionPreset | null>(null);
+  const [tryBusy, setTryBusy] = useState(false);
+  const [tryErr, setTryErr] = useState<string | null>(null);
+  const [tryOk, setTryOk] = useState<string | null>(null);
+
+  const [tryPhone, setTryPhone] = useState("");
+  const [tryContactName, setTryContactName] = useState("Test Lead");
+  const [tryCompanyName, setTryCompanyName] = useState("");
+  const [tryProduct, setTryProduct] = useState("Outbound Call");
+  const [tryPerks, setTryPerks] = useState("—");
+  const [tryLeadInfo, setTryLeadInfo] = useState("");
+
   useEffect(() => {
     const forced = languageMode !== "english" && languageMode !== "hindi";
     setUseSarvamTts(forced);
   }, [languageMode]);
+
+  useEffect(() => {
+    if (!tryOpen) return;
+    if (company?.name?.trim()) {
+      setTryCompanyName((prev) => (prev.trim() ? prev : company.name!.trim()));
+    }
+  }, [tryOpen, company?.name]);
 
   const payload = useMemo(
     () => ({
@@ -217,6 +246,59 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
       setTemplateErr(e instanceof Error ? e.message : "Failed to apply templates");
     } finally {
       setTemplateBusy(false);
+    }
+  }
+
+  function openTryPreset(p: QuestionPreset) {
+    setTryErr(null);
+    setTryOk(null);
+    setTryPreset(p);
+    setTryOpen(true);
+    setTryPhone("");
+    setTryContactName("Test Lead");
+    setTryCompanyName(company?.name?.trim() || "");
+    setTryProduct("Outbound Call");
+    setTryPerks("—");
+    setTryLeadInfo(`Trying preset: ${p.name}`);
+  }
+
+  async function scheduleTryCall() {
+    if (!tryPreset) return;
+    const to = normalizePhoneToE164(tryPhone);
+    if (!to || !tryContactName.trim()) return;
+
+    setTryBusy(true);
+    setTryErr(null);
+    setTryOk(null);
+    try {
+      const questions = (tryPreset.questions ?? [])
+        .map((s) => (typeof s === "string" ? s.trim() : ""))
+        .filter(Boolean)
+        .slice(0, MAX_QUESTIONS);
+
+      const r = await fetch("/api/calling-agent/outbound", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to,
+          name: tryContactName.trim(),
+          company: tryCompanyName.trim(),
+          product: tryProduct.trim(),
+          perks_of_product: tryPerks.trim() || "—",
+          info_about_lead: tryLeadInfo.trim() || "—",
+          questionsToAsk: questions,
+        }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j?.success === false) {
+        setTryErr(j?.error ?? "Failed to schedule call");
+        return;
+      }
+      setTryOk(`Call queued for ${tryContactName.trim()} using "${tryPreset.name}".`);
+    } catch (e) {
+      setTryErr(e instanceof Error ? e.message : "Failed to schedule call");
+    } finally {
+      setTryBusy(false);
     }
   }
 
@@ -437,6 +519,7 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
                       onSetDefault={() => void setDefaultPreset(p.id)}
                       onSave={(name, questions) => void savePreset(p.id, name, questions)}
                       onDelete={() => void deletePreset(p.id)}
+                      onTry={() => openTryPreset(p)}
                     />
                   </div>
                 ))}
@@ -572,6 +655,141 @@ export default function CallsConfigDashboard({ initial }: { initial: CallConfig 
           </div>
         </div>
       )}
+
+      {tryOpen && tryPreset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-2xl rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/90 p-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.5)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-[14px] font-semibold">Try preset</h3>
+                <p className="mt-0.5 text-[12px] text-muted-foreground/70">
+                  Scheduling a test call with <span className="font-semibold">{tryPreset.name}</span>.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setTryOpen(false);
+                  setTryPreset(null);
+                  setTryErr(null);
+                  setTryOk(null);
+                }}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--glass-border)] bg-[var(--glass)] hover:bg-[var(--glass-hover)]"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {(tryErr || tryOk) && (
+              <div
+                className={`mt-4 rounded-xl border px-4 py-3 text-[12px] font-medium ${
+                  tryErr
+                    ? "border-rose-500/30 bg-rose-500/5 text-rose-400"
+                    : "border-emerald-500/30 bg-emerald-500/5 text-emerald-400"
+                }`}
+              >
+                {tryErr ?? tryOk}
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Mobile number" hint="E.164 recommended (we auto-add +)">
+                <input
+                  value={tryPhone}
+                  onChange={(e) => setTryPhone(e.target.value)}
+                  className={inputCls}
+                  placeholder="+91 98765 43210"
+                  autoFocus
+                />
+              </Field>
+              <Field label="Contact name">
+                <input
+                  value={tryContactName}
+                  onChange={(e) => setTryContactName(e.target.value)}
+                  className={inputCls}
+                  placeholder="Test Lead"
+                />
+              </Field>
+              <Field label="Company name">
+                <input
+                  value={tryCompanyName}
+                  onChange={(e) => setTryCompanyName(e.target.value)}
+                  className={inputCls}
+                  placeholder="Immortell"
+                />
+              </Field>
+              <Field label="Product">
+                <input
+                  value={tryProduct}
+                  onChange={(e) => setTryProduct(e.target.value)}
+                  className={inputCls}
+                  placeholder="Outbound Call"
+                />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Perks">
+                  <input
+                    value={tryPerks}
+                    onChange={(e) => setTryPerks(e.target.value)}
+                    className={inputCls}
+                    placeholder="—"
+                  />
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Lead info">
+                  <textarea
+                    value={tryLeadInfo}
+                    onChange={(e) => setTryLeadInfo(e.target.value)}
+                    className={textareaCls}
+                    rows={3}
+                    placeholder="Trying preset…"
+                  />
+                </Field>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/60">
+                Questions (up to {MAX_QUESTIONS})
+              </p>
+              <div className="mt-2">
+                <ReadOnlyQuestions
+                  questions={(tryPreset.questions ?? [])
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                    .slice(0, MAX_QUESTIONS)}
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTryOpen(false);
+                  setTryPreset(null);
+                  setTryErr(null);
+                  setTryOk(null);
+                }}
+                className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)] px-3 py-2 text-[12px] font-semibold hover:bg-[var(--glass-hover)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={scheduleTryCall}
+                disabled={tryBusy || !normalizePhoneToE164(tryPhone) || !tryContactName.trim()}
+                className="inline-flex items-center gap-2 rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-[12px] font-semibold text-white disabled:opacity-50 hover:brightness-110 transition-all"
+              >
+                <PhoneCall className="h-4 w-4" />
+                {tryBusy ? "Scheduling…" : "Schedule call"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -682,11 +900,13 @@ function PresetCard({
   onSetDefault,
   onSave,
   onDelete,
+  onTry,
 }: {
   preset: { id: string; name: string; isDefault: boolean; questions: string[] };
   onSetDefault: () => void;
   onSave: (name: string, questions: string[]) => void;
   onDelete: () => void;
+  onTry: () => void;
 }) {
   const [name, setName] = useState(preset.name);
   const [questions, setQuestions] = useState<string[]>(preset.questions ?? []);
@@ -737,6 +957,14 @@ function PresetCard({
           >
             {count}/{MAX_QUESTIONS}
           </span>
+
+          <button
+            type="button"
+            onClick={onTry}
+            className="inline-flex items-center gap-1 rounded-full border border-[var(--glass-border)] bg-[var(--glass)] px-2 py-0.5 text-[10px] font-semibold text-muted-foreground hover:bg-[var(--glass-hover)] transition-colors"
+          >
+            <PhoneCall className="h-2.5 w-2.5" /> Try preset
+          </button>
 
           {/* Default badge / button */}
           {preset.isDefault ? (
