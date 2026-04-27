@@ -292,13 +292,25 @@ export async function hydrateVideoIds(
   let inserted = 0;
 
   await runWithConcurrency(missing, CONCURRENCY, async (videoId) => {
-    const detail = (await graphGet(
-      videoId,
-      { fields: "source,picture,title" },
-      { accessToken: loaded.accessToken },
-    )) as AdVideoRow;
+    // const detail = (await graphGet(
+    //   videoId,
+    //   { fields: "source,picture,title" },
+    //   { accessToken: loaded.accessToken },
+    // )) as AdVideoRow;
+    const videoApiUrl = new URL(`https://graph.facebook.com/v25.0/${videoId}`);
+    videoApiUrl.searchParams.set("fields", "source,picture,title");
+    videoApiUrl.searchParams.set("access_token", loaded.accessToken);
+    // Add this temporarily right before the fetch to see what token is being used
+    console.log("[hydrateVideo] token prefix", loaded.accessToken.slice(0, 20));
+    const videoApiRes = await fetch(videoApiUrl.toString());
+    if (!videoApiRes.ok) {
+      throw new Error(`Meta video API HTTP ${videoApiRes.status} for videoId ${videoId}`);
+    }
+    const detail = (await videoApiRes.json()) as AdVideoRow;
+    console.log("video response", JSON.stringify(detail, null, 2));
 
     const source = detail.source;
+    console.log("detail", JSON.stringify(detail, null, 2));
     if (!source) {
       throw new Error(`advideo ${videoId} missing source url`);
     }

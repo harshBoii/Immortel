@@ -12,12 +12,13 @@ type AdRow = {
   metaAdId: string;
   name: string | null;
   status: string | null;
+  updatedAt?: string;
   adSet: { name: string | null };
   creative: { headline: string } | null;
 };
 
 type SyncFilter = 'all' | 'synced' | 'not_synced';
-type SortKey = 'name' | 'adset' | 'creative' | 'status' | 'metaId';
+type SortKey = 'recentSync' | 'name' | 'adset' | 'creative' | 'status' | 'metaId';
 type SortDir = 'asc' | 'desc';
 
 export function AdsTab() {
@@ -34,8 +35,8 @@ export function AdsTab() {
 
   const [query, setQuery] = useState('');
   const [syncFilter, setSyncFilter] = useState<SyncFilter>('all');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [sortKey, setSortKey] = useState<SortKey>('recentSync');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const [adSetId, setAdSetId] = useState('');
   const [creativeId, setCreativeId] = useState('');
@@ -163,8 +164,6 @@ export function AdsTab() {
     }
   };
 
-  if (!meta) return null;
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = items.slice();
@@ -194,6 +193,8 @@ export function AdsTab() {
     const dir = sortDir === 'asc' ? 1 : -1;
     const keyFor = (a: AdRow): string => {
       switch (sortKey) {
+        case 'recentSync':
+          return a.updatedAt ?? '';
         case 'name':
           return a.name ?? '';
         case 'adset':
@@ -212,11 +213,18 @@ export function AdsTab() {
     list.sort((a, b) => {
       const ka = keyFor(a);
       const kb = keyFor(b);
+      if (sortKey === 'recentSync') {
+        const ta = ka ? Date.parse(ka) : 0;
+        const tb = kb ? Date.parse(kb) : 0;
+        return (ta - tb) * dir;
+      }
       return ka.localeCompare(kb, undefined, { sensitivity: 'base' }) * dir;
     });
 
     return list;
   }, [items, query, sortKey, sortDir, syncFilter]);
+
+  if (!meta) return null;
 
   return (
     <div className="mx-auto w-full max-w-6xl">
@@ -294,17 +302,17 @@ export function AdsTab() {
         <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
             <h3 className="text-sm font-semibold">Ads</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search…"
-                className="h-8 w-40 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+                className="h-8 w-full min-w-0 sm:w-40 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
               />
               <select
                 value={syncFilter}
                 onChange={(e) => setSyncFilter(e.target.value as SyncFilter)}
-                className="h-8 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+                className="h-8 w-full min-w-0 sm:w-auto rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
               >
                 <option value="all">All</option>
                 <option value="synced">Synced</option>
@@ -313,8 +321,9 @@ export function AdsTab() {
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="h-8 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+                className="h-8 w-full min-w-0 sm:w-auto rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
               >
+                <option value="recentSync">Sort: Recently synced</option>
                 <option value="name">Sort: Name</option>
                 <option value="adset">Sort: Ad set</option>
                 <option value="creative">Sort: Creative</option>
@@ -324,7 +333,7 @@ export function AdsTab() {
               <button
                 type="button"
                 onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-                className="h-8 rounded-lg border border-[var(--glass-border)] px-2 text-xs font-medium hover:bg-[var(--glass-hover)]"
+                className="h-8 shrink-0 rounded-lg border border-[var(--glass-border)] px-2 text-xs font-medium hover:bg-[var(--glass-hover)]"
               >
                 {sortDir === 'asc' ? '↑' : '↓'}
               </button>
@@ -332,7 +341,7 @@ export function AdsTab() {
                 type="button"
                 onClick={() => void sync()}
                 disabled={syncing}
-                className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+                className="h-8 shrink-0 rounded-lg border border-[var(--glass-border)] px-3 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
               >
                 {syncing ? 'Syncing…' : hasMore || nextAfter ? 'Sync next 10' : 'Sync 10 from Meta'}
               </button>

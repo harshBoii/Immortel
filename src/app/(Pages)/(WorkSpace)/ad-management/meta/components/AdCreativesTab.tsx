@@ -106,7 +106,7 @@ export function AdCreativesTab() {
     setSyncing(true);
     setError(null);
     try {
-      const res = await fetch('/api/meta/adcreatives/sync', {
+      const res = await fetch('/api/meta/adcreatives/sync-with-videos', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

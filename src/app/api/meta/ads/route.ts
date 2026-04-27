@@ -11,7 +11,12 @@ export async function GET() {
 
   const items = await prisma.metaAd.findMany({
     where: { metaIntegrationId: loaded.integrationId },
-    include: {
+    select: {
+      id: true,
+      metaAdId: true,
+      name: true,
+      status: true,
+      updatedAt: true,
       adSet: { select: { id: true, name: true, metaAdSetId: true } },
       creative: { select: { id: true, headline: true, metaCreativeId: true } },
     },

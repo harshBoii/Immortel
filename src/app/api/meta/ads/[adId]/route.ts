@@ -18,6 +18,7 @@ export async function GET(
   const { adId } = await ctx.params;
   const metaAdId = typeof adId === "string" ? adId : "";
   if (!metaAdId) return NextResponse.json({ error: "Missing adId" }, { status: 400 });
+  const debug = process.env.META_SYNC_DEBUG === "1";
 
   const ad = await prisma.metaAd.findFirst({
     where: {
@@ -47,6 +48,19 @@ export async function GET(
 
   if (!ad) {
     return NextResponse.json({ error: "Ad not found" }, { status: 404 });
+  }
+
+  if (debug) {
+    console.log("[api/meta/ads/[adId]] ad loaded", {
+      metaAdId,
+      hasCreativeLink: Boolean(ad.creative),
+      metaCreativeId: ad.creative?.metaCreativeId ?? null,
+      imageUrl: ad.creative?.imageUrl ? "yes" : "no",
+      thumbnailUrl: ad.creative?.thumbnailUrl ? "yes" : "no",
+      videoUrl: ad.creative?.videoUrl ? "yes" : "no",
+      imageHash: ad.creative?.imageHash ?? null,
+      videoId: ad.creative?.videoId ?? null,
+    });
   }
 
   const latestMetrics = await prisma.metaAdMetrics.findFirst({

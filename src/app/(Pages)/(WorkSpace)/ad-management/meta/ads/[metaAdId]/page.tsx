@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 type Creative = {
@@ -59,11 +59,12 @@ function Stat({ label, value }: { label: string; value: string }) {
 export default function MetaAdDetailPage({
   params,
 }: {
-  params: { metaAdId: string };
+  params: Promise<{ metaAdId: string }>;
 }) {
-  const metaAdId = params.metaAdId;
+  const { metaAdId } = use(params);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchingMedia, setFetchingMedia] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ad, setAd] = useState<Ad | null>(null);
   const [metrics, setMetrics] = useState<Metrics>(null);
@@ -98,6 +99,27 @@ export default function MetaAdDetailPage({
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const fetchMedia = useCallback(async () => {
+    setFetchingMedia(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/meta/ads/${encodeURIComponent(metaAdId)}/fetch-media`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setError(typeof j?.error === 'string' ? j.error : 'Failed to fetch media');
+        return;
+      }
+      await fetchData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to fetch media');
+    } finally {
+      setFetchingMedia(false);
+    }
+  }, [metaAdId, fetchData]);
 
   const best = useMemo(() => {
     const src = live ?? metrics;
@@ -138,14 +160,24 @@ export default function MetaAdDetailPage({
             metaAdId: {metaAdId}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void fetchData({ live: true })}
-          disabled={refreshing}
-          className="shrink-0 rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-        >
-          {refreshing ? 'Refreshing…' : 'Refresh metrics'}
-        </button>
+        <div className="shrink-0 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void fetchMedia()}
+            disabled={fetchingMedia}
+            className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+          >
+            {fetchingMedia ? 'Fetching…' : 'Fetch media'}
+          </button>
+          <button
+            type="button"
+            onClick={() => void fetchData({ live: true })}
+            disabled={refreshing}
+            className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing…' : 'Refresh metrics'}
+          </button>
+        </div>
       </div>
 
       {error && (
