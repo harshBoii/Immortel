@@ -169,6 +169,7 @@ export async function listMetaAnalyzedAssets(opts: {
     metaMediaId: string;
     metaVideoId: string | null;
     thumbnailUrl: string | null;
+    videoUrl: string | null;
     asset: {
       id: string;
       title: string;
@@ -188,6 +189,7 @@ export async function listMetaAnalyzedAssets(opts: {
     select: {
       id: true,
       videoId: true,
+      videoUrl: true,
       thumbnailUrl: true,
       assetId: true as any,
       asset: {
@@ -206,6 +208,7 @@ export async function listMetaAnalyzedAssets(opts: {
     metaMediaId: r.id,
     metaVideoId: r.videoId ?? null,
     thumbnailUrl: r.thumbnailUrl ?? null,
+    videoUrl: r.videoUrl ?? null,
     asset: {
       id: r.asset.id,
       title: r.asset.title,

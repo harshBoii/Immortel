@@ -3,6 +3,8 @@
 import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
+import { MetaMediaPreview } from '../../components/MetaMediaPreview';
+
 type Creative = {
   id: string;
   metaCreativeId: string | null;
@@ -257,34 +259,26 @@ export default function MetaAdDetailPage({
             </div>
 
             <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 p-3">
-              <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted/40 flex items-center justify-center">
-                {ad.creative.thumbnailUrl ? (
-                  <img
-                    src={ad.creative.thumbnailUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : ad.creative.imageUrl ? (
-                  <img
-                    src={ad.creative.imageUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">No media preview</span>
-                )}
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted/40">
+                <MetaMediaPreview
+                  videoUrl={ad.creative.videoUrl}
+                  posterUrl={ad.creative.thumbnailUrl}
+                  imageUrl={
+                    ad.creative.imageUrl && !ad.creative.videoUrl ? ad.creative.imageUrl : null
+                  }
+                  emptyLabel="No media preview"
+                />
               </div>
 
               {ad.creative.videoUrl && (
                 <div className="mt-3">
-                  <p className="text-[10px] text-muted-foreground mb-1">Video URL</p>
                   <a
                     href={ad.creative.videoUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="text-xs font-medium text-[var(--sibling-primary)] underline-offset-2 hover:underline break-all"
                   >
-                    {ad.creative.videoUrl}
+                    Open video in new tab
                   </a>
                 </div>
               )}

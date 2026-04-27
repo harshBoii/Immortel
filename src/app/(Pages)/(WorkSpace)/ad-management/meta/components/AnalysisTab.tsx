@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
+import { MetaMediaPreview } from './MetaMediaPreview';
+
 type Chapter = { timestamp?: number; title?: string; description?: string };
 type ShortsHook = { start?: number; end?: number; hook_type?: string; description?: string };
 
@@ -36,6 +38,7 @@ type Item = {
   metaMediaId: string;
   metaVideoId: string | null;
   thumbnailUrl: string | null;
+  videoUrl: string | null;
   asset: {
     id: string;
     title: string;
@@ -164,12 +167,13 @@ export function AnalysisTab() {
                   return (
                     <li key={it.asset.id} className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/10">
                       <div className="flex items-center gap-3 p-3">
-                        <div className="h-14 w-24 overflow-hidden rounded-lg bg-muted/40 shrink-0 flex items-center justify-center">
-                          {it.thumbnailUrl ? (
-                            <img src={it.thumbnailUrl} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">VIDEO</span>
-                          )}
+                        <div className="relative h-14 w-24 overflow-hidden rounded-lg bg-muted/40 shrink-0">
+                          <MetaMediaPreview
+                            videoUrl={it.videoUrl}
+                            posterUrl={it.thumbnailUrl}
+                            imageUrl={!it.videoUrl ? it.thumbnailUrl : null}
+                            emptyLabel="VIDEO"
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">

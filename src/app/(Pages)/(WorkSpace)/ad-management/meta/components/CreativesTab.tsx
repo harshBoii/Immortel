@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 
+import { MetaMediaPreview } from './MetaMediaPreview';
+
 type MediaRow = {
   id: string;
   kind: string;
@@ -209,15 +211,14 @@ export function CreativesTab() {
                     key={m.id}
                     className="relative aspect-video overflow-hidden rounded-lg border border-[var(--glass-border)] bg-black/20"
                   >
-                    {m.thumbnailUrl ? (
-                      <Image src={m.thumbnailUrl} alt="" fill className="object-cover" unoptimized />
-                    ) : m.videoUrl ? (
-                      <video src={m.videoUrl} className="h-full w-full object-cover" controls muted playsInline />
-                    ) : (
-                      <span className="p-2 text-xs text-muted-foreground">Video</span>
-                    )}
+                    <MetaMediaPreview
+                      videoUrl={m.videoUrl}
+                      posterUrl={m.thumbnailUrl}
+                      imageUrl={!m.videoUrl ? m.thumbnailUrl ?? null : null}
+                      emptyLabel="Video"
+                    />
                     {m.status && m.status !== 'ready' && (
-                      <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-white">
+                      <span className="pointer-events-none absolute bottom-1 right-1 z-10 rounded bg-black/60 px-1 text-[10px] text-white">
                         {m.status}
                       </span>
                     )}
