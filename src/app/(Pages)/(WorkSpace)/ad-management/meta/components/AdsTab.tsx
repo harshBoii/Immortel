@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ViewMoreDropdown } from '@/app/components/common/UI/ViewMoreDropdown';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 
@@ -23,6 +24,9 @@ export function AdsTab() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextAfter, setNextAfter] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [lastBatch, setLastBatch] = useState<number | null>(null);
 
   const [adSetId, setAdSetId] = useState('');
   const [creativeId, setCreativeId] = useState('');
@@ -107,12 +111,20 @@ export function AdsTab() {
     setSyncing(true);
     setError(null);
     try {
-      const res = await fetch('/api/meta/ads/sync', { method: 'POST', credentials: 'include' });
+      const res = await fetch('/api/meta/ads/sync', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ after: nextAfter ?? undefined, limit: 10 }),
+      });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(typeof j.error === 'string' ? j.error : 'Sync failed');
         return;
       }
+      setNextAfter(typeof j.nextAfter === 'string' ? j.nextAfter : null);
+      setHasMore(Boolean(j.hasMore));
+      setLastBatch(typeof j.synced === 'number' ? j.synced : null);
       await load();
     } catch {
       setError('Sync failed');
@@ -220,15 +232,23 @@ export function AdsTab() {
         <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/20">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
             <h3 className="text-sm font-semibold">Ads</h3>
-            <button
-              type="button"
-              onClick={() => void sync()}
-              disabled={syncing}
-              className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
-            >
-              {syncing ? 'Syncing…' : 'Sync from Meta'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void sync()}
+                disabled={syncing}
+                className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
+              >
+                {syncing ? 'Syncing…' : hasMore || nextAfter ? 'Sync next 10' : 'Sync 10 from Meta'}
+              </button>
+            </div>
           </div>
+          {(lastBatch != null || hasMore || nextAfter) && (
+            <div className="border-b border-[var(--glass-border)] px-3 py-2 text-[10px] text-muted-foreground">
+              {lastBatch != null ? <>Last batch synced: {lastBatch}. </> : null}
+              {hasMore ? 'More ads available on Meta.' : 'No more Meta pages (or end reached).'}
+            </div>
+          )}
 
           {loading ? (
             <p className="p-3 text-sm text-muted-foreground">Loading…</p>
@@ -249,7 +269,14 @@ export function AdsTab() {
                   <tbody>
                     {items.map((a) => (
                       <tr key={a.id} className="border-b border-[var(--glass-border)]/60">
-                        <td className="p-2">{a.name ?? '—'}</td>
+                        <td className="p-2">
+                          <Link
+                            href={`/ad-management/meta/ads/${encodeURIComponent(a.metaAdId)}`}
+                            className="font-medium text-[var(--sibling-primary)] hover:underline underline-offset-2"
+                          >
+                            {a.name ?? '—'}
+                          </Link>
+                        </td>
                         <td className="p-2">{a.adSet.name ?? '—'}</td>
                         <td className="p-2">{a.creative?.headline ?? '—'}</td>
                         <td className="p-2">{a.status ?? '—'}</td>

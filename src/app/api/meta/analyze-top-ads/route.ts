@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { graphGet } from "@/lib/meta/graph";
+import { graphGet, MetaGraphError } from "@/lib/meta/graph";
 import { loadIntegrationForSession } from "@/lib/meta/loadIntegration";
 import { hydrateImageHashes, hydrateVideoIds } from "@/lib/meta/mediaSync";
 import { syncMetaAdMetrics } from "@/lib/meta/metricsSync";
@@ -54,11 +54,44 @@ function collectMediaRefsFromCreative(c: CreativeRef | undefined): {
   return { hashes, videoIds };
 }
 
+function isMissingVideoIdFieldError(e: unknown): boolean {
+  if (!(e instanceof MetaGraphError)) return false;
+  const msg = String(e.message || "").toLowerCase();
+  if (!msg.includes("video_id")) return false;
+
+  // Meta typically uses code 100 for "nonexisting field" schema errors.
+  const payload = e.payload as { error?: { code?: number } } | undefined;
+  const code = payload?.error?.code;
+  if (code === 100) return true;
+  return msg.includes("nonexisting field") || msg.includes("tried accessing nonexisting field");
+}
+
 async function creativeForAd(metaAdId: string, accessToken: string): Promise<CreativeRef | undefined> {
-  const fields =
-    "creative{id,image_hash,video_id,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}";
-  const res = (await graphGet(metaAdId, { fields }, { accessToken })) as { creative?: CreativeRef };
-  return res.creative;
+  const attempts = [
+    // Attempt A (max detail)
+    "creative{id,image_hash,video_id,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}",
+    // Attempt B (drop creative.video_id)
+    "creative{id,image_hash,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}",
+    // Attempt C (drop link_data.*video_id)
+    "creative{id,image_hash,object_story_spec{link_data{image_hash,child_attachments{image_hash}},video_data{video_id,image_hash}}}",
+    // Attempt D (drop all video_id)
+    "creative{id,image_hash,object_story_spec{link_data{image_hash,child_attachments{image_hash}},video_data{image_hash}}}",
+  ];
+
+  let lastError: unknown = null;
+  for (const fields of attempts) {
+    try {
+      const res = (await graphGet(metaAdId, { fields }, { accessToken })) as { creative?: CreativeRef };
+      return res.creative;
+    } catch (e) {
+      lastError = e;
+      if (!isMissingVideoIdFieldError(e)) throw e;
+    }
+  }
+
+  // Should be unreachable because the last attempt contains no video_id, but keep a safe fallback.
+  if (lastError) throw lastError;
+  return undefined;
 }
 
 export async function POST() {

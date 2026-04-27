@@ -27,6 +27,9 @@ export function AdCreativesTab() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextAfter, setNextAfter] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [lastBatch, setLastBatch] = useState<number | null>(null);
 
   const [mediaId, setMediaId] = useState('');
   const [headline, setHeadline] = useState('');
@@ -106,12 +109,17 @@ export function AdCreativesTab() {
       const res = await fetch('/api/meta/adcreatives/sync', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ after: nextAfter ?? undefined, limit: 10 }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(typeof j.error === 'string' ? j.error : 'Sync failed');
         return;
       }
+      setNextAfter(typeof j.nextAfter === 'string' ? j.nextAfter : null);
+      setHasMore(Boolean(j.hasMore));
+      setLastBatch(typeof j.synced === 'number' ? j.synced : null);
       await load();
     } catch {
       setError('Sync failed');
@@ -232,9 +240,15 @@ export function AdCreativesTab() {
               disabled={syncing}
               className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
             >
-              {syncing ? 'Syncing…' : 'Sync from Meta'}
+              {syncing ? 'Syncing…' : hasMore || nextAfter ? 'Sync next 10' : 'Sync 10 from Meta'}
             </button>
           </div>
+          {(lastBatch != null || hasMore || nextAfter) && (
+            <div className="border-b border-[var(--glass-border)] px-3 py-2 text-[10px] text-muted-foreground">
+              {lastBatch != null ? <>Last batch synced: {lastBatch}. </> : null}
+              {hasMore ? 'More creatives available on Meta.' : 'No more Meta pages (or end reached).'}
+            </div>
+          )}
 
           {loading ? (
             <p className="p-3 text-sm text-muted-foreground">Loading…</p>

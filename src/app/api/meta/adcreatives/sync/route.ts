@@ -11,6 +11,14 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
+function parseCursorPayload(body: unknown): { after?: string; limit: number } {
+  const obj = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const after = typeof obj.after === "string" && obj.after.length > 0 ? obj.after : undefined;
+  const rawLimit = typeof obj.limit === "number" ? obj.limit : Number(obj.limit);
+  const limit = Number.isFinite(rawLimit) ? Math.floor(rawLimit) : 10;
+  return { after, limit: Math.min(50, Math.max(1, limit || 10)) };
+}
+
 type LinkData = {
   name?: string;
   message?: string;
@@ -112,11 +120,13 @@ function pickMedia(
   };
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const loaded = await loadIntegrationForSession();
   if (!loaded) {
     return NextResponse.json({ error: "Meta not connected" }, { status: 401 });
   }
+
+  const { after, limit } = parseCursorPayload(await req.json().catch(() => null));
 
   const fields = [
     "id",
@@ -127,29 +137,22 @@ export async function POST() {
     "thumbnail_url",
     "object_story_spec{link_data{name,message,link,description,image_hash,picture,video_id,child_attachments{image_hash,picture,video_id}},video_data{video_id,image_hash,image_url}}",
   ].join(",");
-  const rows: CrRow[] = [];
-  let after: string | undefined;
+  let rows: CrRow[] = [];
+  let nextAfter: string | null = null;
 
   try {
-    for (;;) {
-      const params: Record<string, string | number | boolean | undefined> = {
-        fields,
-        limit: 100,
-      };
-      if (after) params.after = after;
+    const params: Record<string, string | number | boolean | undefined> = { fields, limit };
+    if (after) params.after = after;
 
-      const page = (await graphGet(`${loaded.actId}/adcreatives`, params, {
-        accessToken: loaded.accessToken,
-      })) as {
-        data?: CrRow[];
-        paging?: { cursors?: { after?: string } };
-      };
+    const page = (await graphGet(`${loaded.actId}/adcreatives`, params, {
+      accessToken: loaded.accessToken,
+    })) as {
+      data?: CrRow[];
+      paging?: { cursors?: { after?: string } };
+    };
 
-      const chunk = page.data ?? [];
-      rows.push(...chunk);
-      after = page.paging?.cursors?.after;
-      if (!after || chunk.length === 0) break;
-    }
+    rows = page.data ?? [];
+    nextAfter = page.paging?.cursors?.after ?? null;
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Sync failed";
     return NextResponse.json({ error: msg }, { status: 502 });
@@ -213,6 +216,8 @@ export async function POST() {
   return NextResponse.json({
     ok: true,
     synced,
+    hasMore: Boolean(nextAfter && rows.length > 0),
+    nextAfter,
     media: {
       images: {
         inserted: imageResult.inserted,
