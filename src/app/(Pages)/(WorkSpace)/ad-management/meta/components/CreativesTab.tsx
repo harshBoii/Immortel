@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
 
@@ -51,6 +51,7 @@ export function CreativesTab() {
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadGallery = useCallback(async () => {
     setLoading(true);
@@ -97,30 +98,36 @@ export function CreativesTab() {
     }
   };
 
-  const onFiles = async (files: FileList | null) => {
-    if (!files?.length) return;
-    setError(null);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]!;
-      const isVideo = file.type.startsWith('video/');
-      const url = isVideo ? '/api/meta/advideos' : '/api/meta/adimages';
-      setProgress(0);
-      try {
-        const { ok, json } = await uploadWithProgress(file, url, setProgress);
-        if (!ok) {
-          const msg =
-            typeof (json as { error?: string })?.error === 'string'
-              ? (json as { error: string }).error
-              : 'Upload failed';
-          setError(msg);
+  const onFiles = useCallback(
+    async (files: FileList | null) => {
+      if (files == null || files.length === 0) return;
+      // Copy to an array: clearing the input (or a live FileList) must not break uploads.
+      const batch = Array.from(files);
+      setError(null);
+      for (let i = 0; i < batch.length; i++) {
+        const file = batch[i]!;
+        const isVideo = file.type.startsWith('video/');
+        const url = isVideo ? '/api/meta/advideos' : '/api/meta/adimages';
+        setProgress(0);
+        try {
+          const { ok, json } = await uploadWithProgress(file, url, setProgress);
+          if (!ok) {
+            const msg =
+              typeof (json as { error?: string })?.error === 'string'
+                ? (json as { error: string }).error
+                : 'Upload failed';
+            setError(msg);
+          }
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Upload failed');
         }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Upload failed');
+        setProgress(null);
       }
-      setProgress(null);
-    }
-    await loadGallery();
-  };
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await loadGallery();
+    },
+    [loadGallery],
+  );
 
   if (!meta) {
     return null;
@@ -143,28 +150,47 @@ export function CreativesTab() {
           </div>
 
           <div
-            className="rounded-xl border-2 border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-4 py-8 text-center text-sm text-muted-foreground"
+            role="button"
+            tabIndex={0}
+            aria-label="Upload images or videos"
+            className="relative cursor-pointer rounded-xl border-2 border-dashed border-[var(--glass-border)] bg-[var(--glass)]/40 px-4 py-8 text-center text-sm text-muted-foreground"
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
             }}
             onDrop={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               void onFiles(e.dataTransfer.files);
+            }}
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
             }}
           >
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
               multiple
-              className="hidden"
-              id="meta-creative-files"
-              onChange={(e) => void onFiles(e.target.files)}
+              tabIndex={-1}
+              className="pointer-events-none absolute m-0 h-0 w-0 overflow-hidden border-0 p-0 opacity-0 [clip:rect(0,0,0,0)]"
+              onChange={(e) => {
+                const list = e.currentTarget.files;
+                // Run uploads first (sync part copies files), then clear so the same file can be chosen again.
+                void onFiles(list);
+                e.currentTarget.value = '';
+              }}
             />
-            <label htmlFor="meta-creative-files" className="cursor-pointer text-[var(--sibling-primary)] font-medium">
-              Choose files
-            </label>
-            <span className="mx-1">or drag and drop images and videos here.</span>
+            <p className="pointer-events-none">
+              <span className="font-medium text-[var(--sibling-primary)]">Choose files</span>
+              <span className="mx-1">or drag and drop images and videos here.</span>
+            </p>
           </div>
 
           {progress != null && (

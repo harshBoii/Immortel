@@ -43,8 +43,15 @@ export async function POST(req: Request) {
   }
 
   const file = form.get("file");
-  if (!file || !(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
+  const isBlob =
+    file != null &&
+    typeof file === "object" &&
+    typeof (file as Blob).arrayBuffer === "function";
+  if (!isBlob) {
+    return NextResponse.json(
+      { error: "file is required (multipart field name: file)" },
+      { status: 400 },
+    );
   }
 
   const mime = file.type || "application/octet-stream";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MetaGraphError, graphPost } from "@/lib/meta/graph";
+import { MetaGraphError } from "@/lib/meta/graph";
 import { loadIntegrationForSession } from "@/lib/meta/loadIntegration";
 import { prisma } from "@/lib/prisma";
 import {
@@ -13,6 +13,9 @@ import {
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION?.trim() || "v25.0";
+const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 function logAdimagesError(stage: string, err: unknown, extra?: Record<string, unknown>) {
   const base =
@@ -49,13 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Meta not connected" }, { status: 401 });
   }
 
-  const bucket = getMetaBucket();
-  if (!bucket) {
-    return NextResponse.json(
-      { error: "R2_META_BUCKET or R2_BUCKET_NAME must be set" },
-      { status: 500 },
-    );
-  }
+  const bucket = getMetaBucket().trim() || null;
 
   let form: FormData;
   try {
@@ -65,59 +62,105 @@ export async function POST(req: Request) {
   }
 
   const file = form.get("file");
-  if (!file || !(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
+  if (file == null || !(file instanceof Blob)) {
+    return NextResponse.json(
+      { error: "file is required (multipart field name: file)" },
+      { status: 400 },
+    );
   }
 
   const mime = file.type || "application/octet-stream";
-  if (!mime.startsWith("image/")) {
+  const looksImage =
+    mime.startsWith("image/") ||
+    (file instanceof File && /\.(jpe?g|png|gif|webp|bmp|svg|heic|heif)$/i.test(file.name));
+  if (!looksImage) {
     return NextResponse.json({ error: "Expected an image file" }, { status: 400 });
   }
 
-  const key = metaImageKey(loaded.companyId, file.name || "image");
+  // Read buffer once — file.stream() is a one-shot readable,
+  // so we materialise it here and fan out to R2 + Meta in parallel.
+  let buffer: ArrayBuffer;
   try {
-    await streamToR2({
-      body: file.stream() as unknown as StreamBody,
-      key,
-      contentType: mime,
-      bucket,
-    });
+    buffer = await file.arrayBuffer();
   } catch (e) {
-    logAdimagesError("r2_upload", e, { key, bucket });
-    const msg = e instanceof Error ? e.message : "R2 upload failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    logAdimagesError("read_buffer", e);
+    return NextResponse.json({ error: "Failed to read file" }, { status: 400 });
   }
 
-  let presigned: string;
-  try {
-    presigned = await getPresignedGetUrl(key, 86400);
-  } catch (e) {
-    logAdimagesError("presign", e, { key, bucket });
-    const msg = e instanceof Error ? e.message : "Presign failed";
-    return NextResponse.json({ error: msg }, { status: 500 });
-  }
+  const baseName = file instanceof File && file.name ? file.name : "image.jpg";
+  const key = metaImageKey(loaded.companyId, baseName);
 
-  const displayUrl = getImageAccessUrl(key, presigned);
+  // R2 needs a ReadableStream when mirroring. Meta form uses a File/Blob so `filename` is set in multipart.
+  const r2Stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(buffer));
+      controller.close();
+    },
+  });
 
-  let graphRes: unknown;
+  const metaForm = new FormData();
+  const filePart =
+    typeof File !== "undefined"
+      ? new File([new Uint8Array(buffer)], baseName, { type: mime || "image/jpeg" })
+      : new Blob([buffer], { type: mime || "image/jpeg" });
+  metaForm.append("filename", filePart);
+  // Graph file uploads: put token in the query so the multipart body is only the file (reliable in Node/undici).
+  const graphUrl = `${GRAPH_BASE}/${loaded.actId}/adimages?access_token=${encodeURIComponent(loaded.accessToken)}`;
+
+  // Upload to R2 (optional) and Meta in parallel.
+  let metaJsonRes: Response;
   try {
-    graphRes = await graphPost(
-      `${loaded.actId}/adimages`,
-      {
-        url: displayUrl,
-      },
-      { accessToken: loaded.accessToken },
-    );
+    const r2Part =
+      bucket
+        ? streamToR2({
+            body: r2Stream as unknown as StreamBody,
+            key,
+            contentType: mime,
+            bucket,
+          })
+        : Promise.resolve();
+    [metaJsonRes] = await Promise.all([
+      fetch(graphUrl, {
+        method: "POST",
+        body: metaForm,
+      }),
+      r2Part,
+    ]);
   } catch (e) {
-    logAdimagesError("meta_adimages", e, { actId: loaded.actId, displayUrl: displayUrl.slice(0, 120) });
-    const msg = e instanceof Error ? e.message : "Meta adimages failed";
+    logAdimagesError("parallel_upload", e, { key, actId: loaded.actId, hasBucket: Boolean(bucket) });
+    const msg = e instanceof Error ? e.message : "Upload failed";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 
-  const images = (graphRes as { images?: Record<string, { hash?: string; width?: number; height?: number }> })
-    ?.images;
+  let graphRes: unknown;
+  try {
+    graphRes = await metaJsonRes.json();
+  } catch {
+    return NextResponse.json({ error: "Meta returned non-JSON response" }, { status: 502 });
+  }
+
+  if (!metaJsonRes.ok || (graphRes as any)?.error) {
+    const msg =
+      (graphRes as any)?.error?.message ?? `Meta adimages HTTP ${metaJsonRes.status}`;
+    logAdimagesError("meta_adimages", new Error(msg), {
+      actId: loaded.actId,
+      status: metaJsonRes.status,
+      graphRes,
+    });
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
+
+  const images = (
+    graphRes as {
+      images?: Record<
+        string,
+        { hash?: string; width?: number; height?: number; url?: string; permalink_url?: string }
+      >;
+    }
+  )?.images;
   const first = images ? Object.values(images)[0] : undefined;
   const imageHash = first?.hash;
+
   if (!imageHash) {
     logAdimagesError("meta_no_hash", new Error("missing image hash"), {
       graphRes,
@@ -129,16 +172,50 @@ export async function POST(req: Request) {
     );
   }
 
+  // With R2: presign a GET for our mirror. Without R2: use Meta’s CDN URL from the adimages response.
+  let displayUrl: string;
+  const r2KeyOut: string | null = bucket ? key : null;
+  if (bucket) {
+    try {
+      const presigned = await getPresignedGetUrl(key, 86400);
+      displayUrl = getImageAccessUrl(key, presigned);
+    } catch (e) {
+      logAdimagesError("presign", e, { key });
+      const fromMeta = first?.url || first?.permalink_url;
+      if (typeof fromMeta === "string" && fromMeta.length > 0) {
+        displayUrl = fromMeta;
+      } else {
+        const msg = e instanceof Error ? e.message : "Presign failed";
+        return NextResponse.json({ error: msg }, { status: 500 });
+      }
+    }
+  } else {
+    const fromMeta = first?.url || first?.permalink_url;
+    if (typeof fromMeta !== "string" || !fromMeta.length) {
+      return NextResponse.json(
+        {
+          error:
+            "R2 is not configured and Meta did not return an image URL in the adimages response. Set R2_META_BUCKET or R2_BUCKET_NAME, or re-connect Meta with permissions that return image URLs.",
+        },
+        { status: 502 },
+      );
+    }
+    displayUrl = fromMeta;
+  }
+
+  const byteSize = typeof (file as Blob).size === "number" ? (file as Blob).size : null;
+
   try {
     const row = await prisma.metaMedia.create({
       data: {
         metaIntegrationId: loaded.integrationId,
         kind: "image",
         imageHash,
-        r2Key: key,
+        r2Key: r2KeyOut,
         imageUrl: displayUrl,
         mimeType: mime,
-        bytes: file.size || null,
+        bytes: byteSize,
+        filename: baseName,
         width: first?.width ?? null,
         height: first?.height ?? null,
         status: "ready",
