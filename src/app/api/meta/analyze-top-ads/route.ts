@@ -54,42 +54,65 @@ function collectMediaRefsFromCreative(c: CreativeRef | undefined): {
   return { hashes, videoIds };
 }
 
+// Duck-typed guard — does NOT use instanceof to avoid Next.js split-module false negatives
 function isMissingVideoIdFieldError(e: unknown): boolean {
-  if (!(e instanceof MetaGraphError)) return false;
-  const msg = String(e.message || "").toLowerCase();
+  if (typeof e !== "object" || e === null) return false;
+
+  const msg = String((e as any).message ?? "").toLowerCase();
   if (!msg.includes("video_id")) return false;
 
-  // Meta typically uses code 100 for "nonexisting field" schema errors.
-  const payload = e.payload as { error?: { code?: number } } | undefined;
-  const code = payload?.error?.code;
+  // Meta can nest the code in several different payload shapes
+  const code =
+    (e as any).code ??
+    (e as any).payload?.error?.code ??
+    (e as any).payload?.code ??
+    (e as any).response?.error?.code;
+
   if (code === 100) return true;
-  return msg.includes("nonexisting field") || msg.includes("tried accessing nonexisting field");
+  return (
+    msg.includes("nonexisting field") ||
+    msg.includes("tried accessing nonexisting field")
+  );
 }
 
-async function creativeForAd(metaAdId: string, accessToken: string): Promise<CreativeRef | undefined> {
+async function creativeForAd(
+  metaAdId: string,
+  accessToken: string
+): Promise<CreativeRef | undefined> {
   const attempts = [
-    // Attempt A (max detail)
+    // A — max detail
     "creative{id,image_hash,video_id,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}",
-    // Attempt B (drop creative.video_id)
+    // B — drop creative.video_id
     "creative{id,image_hash,object_story_spec{link_data{image_hash,video_id,child_attachments{image_hash,video_id}},video_data{video_id,image_hash}}}",
-    // Attempt C (drop link_data.*video_id)
+    // C — drop link_data.*video_id
     "creative{id,image_hash,object_story_spec{link_data{image_hash,child_attachments{image_hash}},video_data{video_id,image_hash}}}",
-    // Attempt D (drop all video_id)
+    // D — drop all video_id
     "creative{id,image_hash,object_story_spec{link_data{image_hash,child_attachments{image_hash}},video_data{image_hash}}}",
+    // E — bare minimum: image-only / DPA / collection ads that have no object_story_spec
+    "creative{id,image_hash}",
   ];
 
   let lastError: unknown = null;
   for (const fields of attempts) {
     try {
-      const res = (await graphGet(metaAdId, { fields }, { accessToken })) as { creative?: CreativeRef };
+      const res = (await graphGet(
+        metaAdId,
+        { fields },
+        { accessToken }
+      )) as { creative?: CreativeRef };
       return res.creative;
     } catch (e) {
       lastError = e;
+      console.warn("[creativeForAd] attempt failed", {
+        fields,
+        isVideoIdErr: isMissingVideoIdFieldError(e),
+        code: (e as any).code ?? (e as any).payload?.error?.code,
+        message: (e as any).message,
+      });
       if (!isMissingVideoIdFieldError(e)) throw e;
     }
   }
 
-  // Should be unreachable because the last attempt contains no video_id, but keep a safe fallback.
   if (lastError) throw lastError;
   return undefined;
 }
@@ -98,12 +121,13 @@ export async function POST() {
   try {
     const loaded = await loadIntegrationForSession();
     if (!loaded) {
-      return NextResponse.json({ success: false, error: "Meta not connected" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Meta not connected" },
+        { status: 401 }
+      );
     }
 
-    // Step 1 — pull metrics from Meta for up to `METRICS_LIMIT` ads (union of
-    // top by impressions + most recent) and persist a snapshot into
-    // `meta_ad_metrics`.
+    // Step 1 — pull metrics
     const metrics = await syncMetaAdMetrics({
       integrationId: loaded.integrationId,
       accessToken: loaded.accessToken,
@@ -115,12 +139,11 @@ export async function POST() {
     if (metrics.selected.length === 0) {
       return NextResponse.json(
         { success: false, error: "No ads found for this integration" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    // Step 2 — from the synced pool, pick the top ads by impressions for
-    // creative/media processing.
+    // Step 2 — pick top ads by impressions
     const top = metrics.selected
       .slice()
       .sort((a, b) => b.impressions - a.impressions)
@@ -129,7 +152,10 @@ export async function POST() {
     const topAdIds = top.map((t) => t.metaAdId);
 
     const creativeRefs = await Promise.all(
-      topAdIds.map(async (id) => ({ id, creative: await creativeForAd(id, loaded.accessToken) })),
+      topAdIds.map(async (id) => ({
+        id,
+        creative: await creativeForAd(id, loaded.accessToken),
+      }))
     );
 
     const hashes: string[] = [];
@@ -141,11 +167,30 @@ export async function POST() {
     }
 
     const imageResult = await hydrateImageHashes(hashes, loaded);
-    const videoResult = await hydrateVideoIds(videoIds, loaded);
+
+    // Step 3 — hydrate video IDs, degrade gracefully if Meta rejects video_id field
+    let videoResult: Awaited<ReturnType<typeof hydrateVideoIds>>;
+    try {
+      videoResult = await hydrateVideoIds(videoIds, loaded);
+    } catch (e) {
+      if (isMissingVideoIdFieldError(e)) {
+        console.warn(
+          "[meta/ads/sync] hydrateVideoIds hit video_id field error, skipping video hydration",
+          e
+        );
+        videoResult = { ids: new Map(), errors: [] } as any;
+      } else {
+        throw e;
+      }
+    }
 
     const metaMediaIds: string[] = [];
     const assetIds: string[] = [];
-    const errors: Array<{ metaVideoId?: string; metaMediaId?: string; error: string }> = [];
+    const errors: Array<{
+      metaVideoId?: string;
+      metaMediaId?: string;
+      error: string;
+    }> = [];
 
     for (const [, metaMediaId] of videoResult.ids) {
       metaMediaIds.push(metaMediaId);
@@ -156,8 +201,12 @@ export async function POST() {
         });
         assetIds.push(assetId);
 
-        processAsset({ assetId, assetType: "VIDEO", scenePreset: "long_video" }).catch((e) =>
-          console.error("[meta/analyze-top-ads] processAsset failed", e),
+        processAsset({
+          assetId,
+          assetType: "VIDEO",
+          scenePreset: "long_video",
+        }).catch((e) =>
+          console.error("[meta/analyze-top-ads] processAsset failed", e)
         );
       } catch (e) {
         errors.push({
@@ -188,7 +237,7 @@ export async function POST() {
     console.error("[meta/analyze-top-ads]", e);
     return NextResponse.json(
       { success: false, error: e instanceof Error ? e.message : String(e) },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
