@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { resolveCompanyByPassword } from "@/lib/mcp/companyPasswordAuth";
 import { loadSerializedDataMineForCompany } from "@/lib/geo/dataMinePayload";
 
 export const runtime = "nodejs";
@@ -12,57 +11,6 @@ type Body = {
   companyName?: unknown;
   userName?: unknown;
 };
-
-async function resolveCompanyByPassword(password: string, hint?: {
-  email?: string;
-  companyName?: string;
-  userName?: string;
-}) {
-  if (hint?.email) {
-    const c = await prisma.company.findUnique({
-      where: { email: hint.email.trim().toLowerCase() },
-    });
-    if (c?.password && (await bcrypt.compare(password, c.password))) return c;
-    return null;
-  }
-
-  if (hint?.userName) {
-    const c = await prisma.company.findUnique({
-      where: { userName: hint.userName.trim() },
-    });
-    if (c?.password && (await bcrypt.compare(password, c.password))) return c;
-    return null;
-  }
-
-  if (hint?.companyName) {
-    const name = hint.companyName.trim();
-    const candidates = await prisma.company.findMany({
-      where: {
-        password: { not: null },
-        OR: [
-          { slug: name.toLowerCase() },
-          { name: { equals: name, mode: "insensitive" } },
-        ],
-      },
-      take: 20,
-    });
-    for (const c of candidates) {
-      if (c.password && (await bcrypt.compare(password, c.password))) return c;
-    }
-    return null;
-  }
-
-  const candidates = await prisma.company.findMany({
-    where: { password: { not: null }, isExternal: false },
-    select: { id: true, password: true },
-  });
-  for (const c of candidates) {
-    if (c.password && (await bcrypt.compare(password, c.password))) {
-      return prisma.company.findUnique({ where: { id: c.id } });
-    }
-  }
-  return null;
-}
 
 export async function POST(request: Request) {
   let body: Body;

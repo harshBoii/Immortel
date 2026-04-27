@@ -308,6 +308,67 @@ import {
       }) as any
     );
 
+    // ─── get_company_ads_data ──────────────────────────────────────────────
+
+    server.registerTool(
+      "get_company_ads_data",
+      {
+        title: "Get company Meta ads (top by performance + media)",
+        description:
+          "Authenticate with the company account password and return Meta ad performance for this company: top 5 ads by impressions, top 5 by clicks, and top 5 by ROAS (using the latest stored metrics per ad). Each ad includes name/status, ad set, key metrics, creative text/CTA/URLs, and linked media (creative image/video/thumbnail fields plus any matching `MetaMedia` rows: Stream URLs, thumbnails, status). Use the same `password` as get_company_data; optional `email`, `companyName`, or `userName` narrow the company lookup.",
+        inputSchema: (getCompanyDataInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { password, email, companyName, userName } = input as GetCompanyDataInput;
+        const url = new URL("/api/mcp/company-ads-data", IMMORTEL_BASE_URL);
+
+        const body: Record<string, unknown> = { password };
+        if (email) body.email = email;
+        if (companyName) body.companyName = companyName;
+        if (userName) body.userName = userName;
+
+        console.log(
+          "[get_company_ads_data] →",
+          url.toString(),
+          "hints:",
+          JSON.stringify({
+            email: email ? "***" : undefined,
+            companyName,
+            userName,
+          })
+        );
+
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+          console.error("[get_company_ads_data] ✗ HTTP", res.status);
+          let errText = `Error: ${res.status}`;
+          try {
+            const j = await res.json();
+            if (j?.error) errText = `Error: ${j.error}`;
+          } catch {}
+          return { content: [{ type: "text" as const, text: errText }] };
+        }
+
+        const data = await res.json();
+        const nI = (data as { topByImpressions?: unknown[] }).topByImpressions?.length ?? 0;
+        const nC = (data as { topByClicks?: unknown[] }).topByClicks?.length ?? 0;
+        const nR = (data as { topByRoas?: unknown[] }).topByRoas?.length ?? 0;
+        console.log(
+          `[get_company_ads_data] ✓ topByImpr=${nI} topByClicks=${nC} topByRoas=${nR} connected=${(data as { meta?: { connected?: boolean } }).meta?.connected !== false}`
+        );
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(data) }],
+          structuredContent: data,
+        };
+      }) as any
+    );
+
     // ─── UI Resources ────────────────────────────────────────────────────────
   
     registerAppResource(
