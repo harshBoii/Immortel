@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ViewMoreDropdown } from '@/app/components/common/UI/ViewMoreDropdown';
 import { useCurrentContext } from '@/app/components/common/useCurrentContext';
@@ -16,6 +16,10 @@ type AdRow = {
   creative: { headline: string } | null;
 };
 
+type SyncFilter = 'all' | 'synced' | 'not_synced';
+type SortKey = 'name' | 'adset' | 'creative' | 'status' | 'metaId';
+type SortDir = 'asc' | 'desc';
+
 export function AdsTab() {
   const { meta } = useCurrentContext();
   const [adSets, setAdSets] = useState<AdSetOpt[]>([]);
@@ -27,6 +31,11 @@ export function AdsTab() {
   const [nextAfter, setNextAfter] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
   const [lastBatch, setLastBatch] = useState<number | null>(null);
+
+  const [query, setQuery] = useState('');
+  const [syncFilter, setSyncFilter] = useState<SyncFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const [adSetId, setAdSetId] = useState('');
   const [creativeId, setCreativeId] = useState('');
@@ -156,6 +165,59 @@ export function AdsTab() {
 
   if (!meta) return null;
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = items.slice();
+
+    if (syncFilter !== 'all') {
+      list = list.filter((a) => {
+        const isSynced = Boolean(a.creative);
+        return syncFilter === 'synced' ? isSynced : !isSynced;
+      });
+    }
+
+    if (q.length > 0) {
+      list = list.filter((a) => {
+        const hay = [
+          a.name ?? '',
+          a.metaAdId ?? '',
+          a.status ?? '',
+          a.adSet?.name ?? '',
+          a.creative?.headline ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const keyFor = (a: AdRow): string => {
+      switch (sortKey) {
+        case 'name':
+          return a.name ?? '';
+        case 'adset':
+          return a.adSet?.name ?? '';
+        case 'creative':
+          return a.creative?.headline ?? '';
+        case 'status':
+          return a.status ?? '';
+        case 'metaId':
+          return a.metaAdId ?? '';
+        default:
+          return a.name ?? '';
+      }
+    };
+
+    list.sort((a, b) => {
+      const ka = keyFor(a);
+      const kb = keyFor(b);
+      return ka.localeCompare(kb, undefined, { sensitivity: 'base' }) * dir;
+    });
+
+    return list;
+  }, [items, query, sortKey, sortDir, syncFilter]);
+
   return (
     <div className="mx-auto w-full max-w-6xl">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -233,6 +295,39 @@ export function AdsTab() {
           <div className="flex items-center justify-between gap-2 border-b border-[var(--glass-border)] px-3 py-2">
             <h3 className="text-sm font-semibold">Ads</h3>
             <div className="flex items-center gap-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                className="h-8 w-40 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+              />
+              <select
+                value={syncFilter}
+                onChange={(e) => setSyncFilter(e.target.value as SyncFilter)}
+                className="h-8 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+              >
+                <option value="all">All</option>
+                <option value="synced">Synced</option>
+                <option value="not_synced">Not synced</option>
+              </select>
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+                className="h-8 rounded-lg border border-[var(--glass-border)] bg-background px-2 text-xs"
+              >
+                <option value="name">Sort: Name</option>
+                <option value="adset">Sort: Ad set</option>
+                <option value="creative">Sort: Creative</option>
+                <option value="status">Sort: Status</option>
+                <option value="metaId">Sort: Meta ID</option>
+              </select>
+              <button
+                type="button"
+                onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                className="h-8 rounded-lg border border-[var(--glass-border)] px-2 text-xs font-medium hover:bg-[var(--glass-hover)]"
+              >
+                {sortDir === 'asc' ? '↑' : '↓'}
+              </button>
               <button
                 type="button"
                 onClick={() => void sync()}
@@ -262,12 +357,13 @@ export function AdsTab() {
                       <th className="p-2 font-medium">Ad set</th>
                       <th className="p-2 font-medium">Creative</th>
                       <th className="p-2 font-medium">Status</th>
+                      <th className="p-2 font-medium">Sync</th>
                       <th className="p-2 font-medium">Meta ID</th>
                       <th className="p-2 font-medium" />
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((a) => (
+                    {filtered.map((a) => (
                       <tr key={a.id} className="border-b border-[var(--glass-border)]/60">
                         <td className="p-2">
                           <Link
@@ -280,6 +376,17 @@ export function AdsTab() {
                         <td className="p-2">{a.adSet.name ?? '—'}</td>
                         <td className="p-2">{a.creative?.headline ?? '—'}</td>
                         <td className="p-2">{a.status ?? '—'}</td>
+                        <td className="p-2">
+                          <span
+                            className={
+                              a.creative
+                                ? 'rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300'
+                                : 'rounded border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200'
+                            }
+                          >
+                            {a.creative ? 'Synced' : 'Not synced'}
+                          </span>
+                        </td>
                         <td className="p-2 font-mono text-[10px]">{a.metaAdId}</td>
                         <td className="p-2">
                           <button
@@ -293,6 +400,13 @@ export function AdsTab() {
                         </td>
                       </tr>
                     ))}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-3 text-sm text-muted-foreground">
+                          No ads match your filters.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
