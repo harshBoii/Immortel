@@ -22,7 +22,45 @@ export async function GET() {
     },
     orderBy: { updatedAt: "desc" },
   });
-  return NextResponse.json({ items });
+
+  const metaAdIds = items.map((a) => a.metaAdId);
+  const metricsRows =
+    metaAdIds.length === 0
+      ? []
+      : await prisma.metaAdMetrics.findMany({
+          where: { metaAdId: { in: metaAdIds } },
+          orderBy: { recordedAt: "desc" },
+          select: {
+            metaAdId: true,
+            impressions: true,
+            clicks: true,
+            ctr: true,
+            roas: true,
+            recordedAt: true,
+          },
+        });
+
+  const latestByMetaAdId = new Map<
+    string,
+    { impressions: number; clicks: number; ctr: number; roas: number | null }
+  >();
+  for (const m of metricsRows) {
+    if (!latestByMetaAdId.has(m.metaAdId)) {
+      latestByMetaAdId.set(m.metaAdId, {
+        impressions: m.impressions,
+        clicks: m.clicks,
+        ctr: m.ctr,
+        roas: m.roas,
+      });
+    }
+  }
+
+  const payload = items.map((row) => ({
+    ...row,
+    metrics: latestByMetaAdId.get(row.metaAdId) ?? null,
+  }));
+
+  return NextResponse.json({ items: payload });
 }
 
 export async function POST(req: Request) {

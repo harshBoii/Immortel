@@ -15,11 +15,32 @@ type AdRow = {
   updatedAt?: string;
   adSet: { name: string | null };
   creative: { headline: string } | null;
+  metrics: {
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    roas: number | null;
+  } | null;
 };
 
 type SyncFilter = 'all' | 'synced' | 'not_synced';
-type SortKey = 'recentSync' | 'name' | 'adset' | 'creative' | 'status' | 'metaId';
+type SortKey =
+  | 'recentSync'
+  | 'name'
+  | 'adset'
+  | 'creative'
+  | 'status'
+  | 'metaId'
+  | 'impressions'
+  | 'clicks'
+  | 'ctr'
+  | 'roas';
 type SortDir = 'asc' | 'desc';
+
+/** Meta insights `ctr` is usually already a percentage (e.g. 1.23 = 1.23%). */
+function formatCtrPct(ctr: number) {
+  return `${ctr.toFixed(2)}%`;
+}
 
 export function AdsTab() {
   const { meta } = useCurrentContext();
@@ -210,7 +231,31 @@ export function AdsTab() {
       }
     };
 
+    const metricValue = (a: AdRow, key: 'impressions' | 'clicks' | 'ctr' | 'roas'): number | null => {
+      const m = a.metrics;
+      if (!m) return null;
+      if (key === 'roas') {
+        return m.roas != null && Number.isFinite(m.roas) ? m.roas : null;
+      }
+      return m[key];
+    };
+
     list.sort((a, b) => {
+      if (
+        sortKey === 'impressions' ||
+        sortKey === 'clicks' ||
+        sortKey === 'ctr' ||
+        sortKey === 'roas'
+      ) {
+        const na = metricValue(a, sortKey);
+        const nb = metricValue(b, sortKey);
+        if (na == null && nb == null) return 0;
+        if (na == null) return 1;
+        if (nb == null) return -1;
+        const cmp = na - nb;
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+
       const ka = keyFor(a);
       const kb = keyFor(b);
       if (sortKey === 'recentSync') {
@@ -329,6 +374,10 @@ export function AdsTab() {
                 <option value="creative">Sort: Creative</option>
                 <option value="status">Sort: Status</option>
                 <option value="metaId">Sort: Meta ID</option>
+                <option value="impressions">Sort: Impressions</option>
+                <option value="clicks">Sort: Clicks</option>
+                <option value="ctr">Sort: CTR</option>
+                <option value="roas">Sort: ROAS</option>
               </select>
               <button
                 type="button"
@@ -367,6 +416,10 @@ export function AdsTab() {
                       <th className="p-2 font-medium">Creative</th>
                       <th className="p-2 font-medium">Status</th>
                       <th className="p-2 font-medium">Sync</th>
+                      <th className="p-2 font-medium text-right">Impr.</th>
+                      <th className="p-2 font-medium text-right">Clicks</th>
+                      <th className="p-2 font-medium text-right">CTR</th>
+                      <th className="p-2 font-medium text-right">ROAS</th>
                       <th className="p-2 font-medium">Meta ID</th>
                       <th className="p-2 font-medium" />
                     </tr>
@@ -396,6 +449,18 @@ export function AdsTab() {
                             {a.creative ? 'Synced' : 'Not synced'}
                           </span>
                         </td>
+                        <td className="p-2 text-right tabular-nums">
+                          {a.metrics != null ? a.metrics.impressions : '—'}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">
+                          {a.metrics != null ? a.metrics.clicks : '—'}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">
+                          {a.metrics != null ? formatCtrPct(a.metrics.ctr) : '—'}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">
+                          {a.metrics != null && a.metrics.roas != null ? a.metrics.roas.toFixed(2) : '—'}
+                        </td>
                         <td className="p-2 font-mono text-[10px]">{a.metaAdId}</td>
                         <td className="p-2">
                           <button
@@ -411,7 +476,7 @@ export function AdsTab() {
                     ))}
                     {filtered.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="p-3 text-sm text-muted-foreground">
+                        <td colSpan={11} className="p-3 text-sm text-muted-foreground">
                           No ads match your filters.
                         </td>
                       </tr>
