@@ -67,6 +67,8 @@ export default function MetaAdDetailPage({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchingMedia, setFetchingMedia] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisAssetId, setAnalysisAssetId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ad, setAd] = useState<Ad | null>(null);
   const [metrics, setMetrics] = useState<Metrics>(null);
@@ -123,6 +125,28 @@ export default function MetaAdDetailPage({
     }
   }, [metaAdId, fetchData]);
 
+  const analyzeMedia = useCallback(async () => {
+    setAnalyzing(true);
+    setError(null);
+    setAnalysisAssetId(null);
+    try {
+      const res = await fetch(`/api/meta/ads/${encodeURIComponent(metaAdId)}/analyze-media`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setError(typeof j?.error === 'string' ? j.error : 'Failed to enqueue analysis');
+        return;
+      }
+      if (typeof j?.assetId === 'string') setAnalysisAssetId(j.assetId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to enqueue analysis');
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [metaAdId]);
+
   const best = useMemo(() => {
     const src = live ?? metrics;
     if (!src) return null;
@@ -173,6 +197,14 @@ export default function MetaAdDetailPage({
           </button>
           <button
             type="button"
+            onClick={() => void analyzeMedia()}
+            disabled={analyzing}
+            className="rounded-lg bg-[var(--sibling-primary)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {analyzing ? 'Enqueuing…' : 'Analyze via microservice'}
+          </button>
+          <button
+            type="button"
             onClick={() => void fetchData({ live: true })}
             disabled={refreshing}
             className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--glass-hover)] disabled:opacity-50"
@@ -181,6 +213,18 @@ export default function MetaAdDetailPage({
           </button>
         </div>
       </div>
+
+      {analysisAssetId && (
+        <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/20 px-3 py-2 text-xs text-muted-foreground">
+          Enqueued. View intelligence:{' '}
+          <Link
+            href={`/ingestion/asset/${analysisAssetId}/description`}
+            className="font-medium text-[var(--sibling-primary)] underline-offset-2 hover:underline"
+          >
+            {analysisAssetId}
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">

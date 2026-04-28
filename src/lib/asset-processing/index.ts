@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { streamToR2 } from "@/lib/cloudfare";
+import { streamMp4PlaybackUrl, streamToR2 } from "@/lib/cloudfare";
 
 type AssetType = "VIDEO" | "IMAGE";
 
@@ -80,6 +80,7 @@ export async function createAssetFromMetaVideo(opts: {
       metaIntegrationId: true,
       videoId: true,
       videoUrl: true,
+      videoStreamId: true,
       thumbnailUrl: true,
       filename: true,
       mimeType: true,
@@ -108,7 +109,12 @@ export async function createAssetFromMetaVideo(opts: {
 
   const key = metaVideoAssetKey(opts.companyId, row.videoId);
 
-  const dl = await fetch(sourceUrl);
+  let dl = await fetch(sourceUrl);
+  if ((!dl.ok || !dl.body) && row.videoStreamId) {
+    // Some Stream accounts require using the customer subdomain for downloads.
+    const fallbackUrl = streamMp4PlaybackUrl(row.videoStreamId);
+    dl = await fetch(fallbackUrl);
+  }
   if (!dl.ok || !dl.body) {
     throw new Error(`Failed to download meta video bytes: HTTP ${dl.status}`);
   }

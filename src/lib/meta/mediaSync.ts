@@ -7,6 +7,7 @@ import {
   getMetaBucket,
   getPresignedGetUrl,
   metaImageKey,
+  metaVideoKey,
   pollStreamReady,
   streamAccountPath,
   streamMp4PlaybackUrl,
@@ -315,6 +316,31 @@ export async function hydrateVideoIds(
       throw new Error(`advideo ${videoId} missing source url`);
     }
 
+    // Mirror bytes to R2 (in addition to Stream copy), so we always have a downloadable file.
+    // This is intentionally done from Meta's `source` URL to avoid Stream-download restrictions.
+    const bucket = getMetaBucket();
+    let r2Key: string | null = null;
+    let bytes: number | null = null;
+    let mimeType: string | null = null;
+    if (!bucket) {
+      console.error("[meta/mediaSync] R2 bucket not configured, skipping video mirror to R2");
+    } else {
+      const dl = await fetch(source);
+      if (!dl.ok || !dl.body) {
+        throw new Error(`meta video download failed: HTTP ${dl.status} for videoId ${videoId}`);
+      }
+      mimeType = dl.headers.get("content-type") || "video/mp4";
+      const contentLengthHeader = dl.headers.get("content-length");
+      bytes = contentLengthHeader ? Number(contentLengthHeader) : null;
+      r2Key = metaVideoKey(loaded.companyId, videoId);
+      await streamToR2({
+        body: dl.body as unknown as StreamBody,
+        key: r2Key,
+        contentType: mimeType,
+        bucket,
+      });
+    }
+
     const copyEnvelope = await cfStreamJson<{
       uid?: string;
       readyToStream?: boolean;
@@ -359,6 +385,9 @@ export async function hydrateVideoIds(
         videoStreamId: uid,
         videoUrl: streamMp4PlaybackUrl(uid),
         thumbnailUrl: thumb,
+        r2Key,
+        mimeType,
+        bytes: Number.isFinite(bytes as any) ? (bytes as any) : null,
         filename: detail.title ?? null,
         durationMs,
         status: ready ? "ready" : "processing",
@@ -367,6 +396,9 @@ export async function hydrateVideoIds(
         videoStreamId: uid,
         videoUrl: streamMp4PlaybackUrl(uid),
         thumbnailUrl: thumb,
+        r2Key,
+        mimeType,
+        bytes: Number.isFinite(bytes as any) ? (bytes as any) : null,
         filename: detail.title ?? null,
         durationMs,
         status: ready ? "ready" : "processing",

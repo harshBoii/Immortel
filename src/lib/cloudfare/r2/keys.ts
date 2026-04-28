@@ -9,3 +9,9 @@ function safeFilename(name: string): string {
 export function metaImageKey(companyId: string, filename: string): string {
   return `meta/${companyId}/images/${randomUUID()}-${safeFilename(filename)}`;
 }
+
+/** R2 object key: meta/{companyId}/videos/{metaVideoId}.mp4 */
+export function metaVideoKey(companyId: string, metaVideoId: string): string {
+  const id = safeFilename(metaVideoId);
+  return `meta/${companyId}/videos/${id}.mp4`;
+}
