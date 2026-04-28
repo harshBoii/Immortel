@@ -49,7 +49,7 @@ export function middleware(request: NextRequest) {
   const isJobsBountyPages = pathname.startsWith('/api/jobs/bounty-pages');
   const isCallCenter = pathname.startsWith('/calls/outbound-legacy');
   const isCallingAgentWebhook = pathname.startsWith('/api/calling-agent/webhook');
-  const isAssetDownloadApi = pathname.startsWith('/api/assets/') 
+  const isAssetDownloadApi = pathname.startsWith('/api/assets') 
 
   const isPublic =
     isLoginPage ||
