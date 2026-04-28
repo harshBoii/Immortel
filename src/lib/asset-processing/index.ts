@@ -25,6 +25,10 @@ function metaVideoAssetKey(companyId: string, metaVideoId: string): string {
   return `assets/${companyId}/meta/${metaVideoId}.mp4`;
 }
 
+function metaImageAssetKey(companyId: string, metaImageHash: string): string {
+  return `assets/${companyId}/meta/${metaImageHash}.bin`;
+}
+
 export async function processAsset(opts: {
   assetId: string;
   assetType: AssetType;
@@ -156,6 +160,92 @@ export async function createAssetFromMetaVideo(opts: {
   await prisma.metaMedia.update({
     where: { id: row.id },
     data: { assetId: asset.id } as any, // assetId added by migration
+  });
+
+  return { assetId: asset.id };
+}
+
+/**
+ * Ensure a Meta image is represented as an `Asset` (R2-backed),
+ * then link the `Asset.id` back onto `MetaMedia.assetId`.
+ */
+export async function createAssetFromMetaImage(opts: {
+  metaMediaId: string;
+  companyId: string;
+}): Promise<{ assetId: string }> {
+  const bucket = assetsBucket();
+  if (!bucket) {
+    throw new Error("R2_BUCKET_NAME must be set (assets bucket)");
+  }
+
+  const row = await prisma.metaMedia.findUnique({
+    where: { id: opts.metaMediaId },
+    select: {
+      id: true,
+      kind: true,
+      metaIntegrationId: true,
+      imageHash: true,
+      r2Key: true,
+      imageUrl: true,
+      filename: true,
+      mimeType: true,
+      bytes: true,
+      assetId: true as any,
+    },
+  });
+
+  if (!row) throw new Error("MetaMedia not found");
+  if (row.kind !== "image") throw new Error("MetaMedia is not an image");
+  if (!row.imageHash) throw new Error("MetaMedia.imageHash missing");
+
+  // If already linked, just ensure the asset exists.
+  if (row.assetId) {
+    const existing = await prisma.asset.findFirst({
+      where: { id: row.assetId, companyId: opts.companyId },
+      select: { id: true },
+    });
+    if (existing) return { assetId: existing.id };
+  }
+
+  // Prefer using the existing R2 object created during hydration.
+  const key =
+    (typeof row.r2Key === "string" && row.r2Key.length > 0
+      ? row.r2Key
+      : metaImageAssetKey(opts.companyId, row.imageHash));
+
+  const bytes = typeof row.bytes === "number" && Number.isFinite(row.bytes) ? row.bytes : 0;
+  const contentType = row.mimeType?.trim() || "application/octet-stream";
+  const filename =
+    row.filename?.trim() ||
+    (contentType.startsWith("image/") ? `meta-${row.imageHash}.jpg` : `meta-${row.imageHash}.bin`);
+
+  const asset = await prisma.asset.create({
+    data: {
+      companyId: opts.companyId,
+      assetType: "IMAGE",
+      title: filename,
+      filename,
+      originalSize: BigInt(bytes),
+      status: "READY",
+      r2Key: key,
+      r2Bucket: bucket,
+      mimeType: contentType,
+      thumbnailUrl: row.imageUrl ?? null,
+      intelligenceStatus: "PROCESSING",
+      metadata: {
+        source: "meta_ad",
+        metaMediaId: row.id,
+        metaImageHash: row.imageHash,
+        metaIntegrationId: row.metaIntegrationId,
+      },
+      uploadSource: "NATIVE",
+    },
+    select: { id: true },
+  });
+
+  await prisma.metaMedia.update({
+    where: { id: row.id },
+    data: { assetId: asset.id } as any,
   });
 
   return { assetId: asset.id };

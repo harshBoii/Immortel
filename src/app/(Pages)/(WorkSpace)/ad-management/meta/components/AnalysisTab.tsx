@@ -48,7 +48,7 @@ type Item = {
   };
 };
 
-type RankingPack = { ad: any; metrics: any };
+type RankingPack = { ad: any; metrics: any; media?: any };
 type RankingsResponse = {
   ok?: boolean;
   error?: string;
@@ -57,6 +57,13 @@ type RankingsResponse = {
     byImpressions?: { top?: RankingPack[]; middle?: RankingPack[] };
     byClicks?: { top?: RankingPack[]; middle?: RankingPack[] };
   };
+};
+
+type SamplesResponse = {
+  ok?: boolean;
+  error?: string;
+  datePreset?: string;
+  items?: RankingPack[];
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -254,11 +261,18 @@ export function AnalysisTab() {
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
-  const [rankingsLoading, setRankingsLoading] = useState(true);
+  const [rankingsLoading, setRankingsLoading] = useState(false);
   const [rankingsError, setRankingsError] = useState<string | null>(null);
   const [rankings, setRankings] = useState<RankingsResponse | null>(null);
+  const [rankingsTouched, setRankingsTouched] = useState(false);
   const [selected, setSelected] = useState<RankingPack | null>(null);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+
+  const [samplesLoading, setSamplesLoading] = useState(true);
+  const [samplesError, setSamplesError] = useState<string | null>(null);
+  const [samples, setSamples] = useState<RankingPack[]>([]);
+  const [samplesAnalyzeRunning, setSamplesAnalyzeRunning] = useState(false);
+  const [samplesAnalyzeError, setSamplesAnalyzeError] = useState<string | null>(null);
 
   const anyProcessing = useMemo(
     () => items.some((i) => (i.asset.intelligenceStatus ?? '').toUpperCase() === 'PROCESSING'),
@@ -286,7 +300,30 @@ export function AnalysisTab() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const loadSamples = useCallback(async () => {
+    setSamplesLoading(true);
+    setSamplesError(null);
+    try {
+      const res = await fetch('/api/meta/ads/samples', { credentials: 'include' });
+      const j = (await res.json().catch(() => ({}))) as SamplesResponse;
+      if (!res.ok || !j?.ok) {
+        setSamplesError(typeof j?.error === 'string' ? j.error : 'Failed to load sample ads');
+        setSamples([]);
+        return;
+      }
+      setSamples(Array.isArray(j.items) ? j.items : []);
+    } catch (e) {
+      setSamplesError(e instanceof Error ? e.message : 'Failed to load sample ads');
+      setSamples([]);
+    } finally {
+      setSamplesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadSamples(); }, [loadSamples]);
+
   const loadRankings = useCallback(async () => {
+    setRankingsTouched(true);
     setRankingsLoading(true);
     setRankingsError(null);
     try {
@@ -298,15 +335,14 @@ export function AnalysisTab() {
         return;
       }
       setRankings(j);
+      await loadSamples();
     } catch (e) {
       setRankingsError(e instanceof Error ? e.message : 'Failed to load sample ads');
       setRankings(null);
     } finally {
       setRankingsLoading(false);
     }
-  }, []);
-
-  useEffect(() => { void loadRankings(); }, [loadRankings]);
+  }, [loadSamples]);
 
   useEffect(() => {
     if (!anyProcessing) return;
@@ -329,6 +365,27 @@ export function AnalysisTab() {
       setError(e instanceof Error ? e.message : 'Analyze failed');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const analyzeSamples = async () => {
+    setSamplesAnalyzeRunning(true);
+    setSamplesAnalyzeError(null);
+    try {
+      const res = await fetch('/api/meta/ads/samples/analyze', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setSamplesAnalyzeError(typeof j?.error === 'string' ? j.error : 'Sample analysis enqueue failed');
+        return;
+      }
+      await loadSamples();
+    } catch (e) {
+      setSamplesAnalyzeError(e instanceof Error ? e.message : 'Sample analysis enqueue failed');
+    } finally {
+      setSamplesAnalyzeRunning(false);
     }
   };
 
@@ -372,10 +429,16 @@ export function AnalysisTab() {
     return Array.from(byId.values());
   }, [packs]);
 
+  const visiblePacks = useMemo(() => {
+    // By default, show the persisted sample ads from DB.
+    // Only show the computed ranking groups after user explicitly recomputes.
+    return rankingsTouched ? allUniquePacks : samples;
+  }, [rankingsTouched, allUniquePacks, samples]);
+
   const openModal = (pack: RankingPack) => {
     const id = pack?.ad?.metaAdId;
     setSelected(pack);
-    setSelectedReasons(id ? reasonsByMetaAdId.get(id) ?? [] : []);
+    setSelectedReasons(rankingsTouched && id ? reasonsByMetaAdId.get(id) ?? [] : []);
   };
 
   const closeModal = () => { setSelected(null); setSelectedReasons([]); };
@@ -396,10 +459,10 @@ export function AnalysisTab() {
                   Syncs performance metrics for up to 50 ads, mirrors top-5 media to R2, and sends videos for intelligence processing.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => void analyze()}
-                disabled={running}
+            <button
+              type="button"
+              onClick={() => void analyze()}
+              disabled={running}
                 className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-[var(--sibling-primary)] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {running ? (
@@ -418,7 +481,7 @@ export function AnalysisTab() {
                     Analyze ads
                   </>
                 )}
-              </button>
+            </button>
             </div>
             {error && (
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2.5 text-xs text-red-600 dark:text-red-400">
@@ -439,21 +502,47 @@ export function AnalysisTab() {
                 <h3 className="text-sm font-semibold text-foreground">Selected sample ads</h3>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Top 3 + middle 3 by impressions &amp; clicks
-                  {allUniquePacks.length > 0 && (
-                    <span className="ml-1.5 text-muted-foreground/60">· {allUniquePacks.length} ads</span>
+                  {visiblePacks.length > 0 && (
+                    <span className="ml-1.5 text-muted-foreground/60">· {visiblePacks.length} ads</span>
                   )}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => void loadRankings()}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)] transition-colors"
-              >
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
-                </svg>
-                Refresh
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void analyzeSamples()}
+                  disabled={samplesAnalyzeRunning}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--sibling-primary)] px-3 py-1.5 text-[10px] font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {samplesAnalyzeRunning ? (
+                    <>
+                      <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Enqueuing…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 3v18m9-9H3" />
+                      </svg>
+                      Analyze sample ads
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void loadRankings()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 px-3 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)] transition-colors"
+                >
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4-4.64 4.36A9 9 0 0 1 3.51 15"/>
+                  </svg>
+                  {rankingsTouched ? 'Refresh' : 'Recompute'}
+                </button>
+              </div>
             </div>
 
             {/* Error */}
@@ -466,8 +555,27 @@ export function AnalysisTab() {
               </div>
             )}
 
+            {samplesAnalyzeError && (
+              <div className="m-3 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2.5 text-xs text-red-600 dark:text-red-400">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                </svg>
+                {samplesAnalyzeError}
+              </div>
+            )}
+
+            {/* Persisted sample ads load error */}
+            {samplesError && (
+              <div className="m-3 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2.5 text-xs text-red-600 dark:text-red-400">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                </svg>
+                {samplesError}
+              </div>
+            )}
+
             {/* Loading skeletons */}
-            {rankingsLoading ? (
+            {rankingsLoading || samplesLoading ? (
               <div
                 className="flex gap-3 overflow-x-hidden px-3 py-3"
                 style={{ WebkitOverflowScrolling: 'touch' }}
@@ -487,14 +595,16 @@ export function AnalysisTab() {
                   </div>
                 ))}
               </div>
-            ) : allUniquePacks.length === 0 ? (
+            ) : visiblePacks.length === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center gap-2 py-10 px-6 text-center">
                 <svg className="h-8 w-8 text-muted-foreground/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>
                 </svg>
-                <p className="text-sm text-muted-foreground">No sample ads found.</p>
-                <p className="text-xs text-muted-foreground/70">Make sure metrics exist for this account &amp; date preset.</p>
+                <p className="text-sm text-muted-foreground">No sample ads yet.</p>
+                <p className="text-xs text-muted-foreground/70">
+                  Click <span className="font-medium text-foreground">Recompute</span> to select and persist sample ads.
+                </p>
               </div>
             ) : (
               /* ── Horizontal scroll row ── */
@@ -509,9 +619,9 @@ export function AnalysisTab() {
                     scrollbarColor: 'var(--glass-border) transparent',
                   }}
                 >
-                  {allUniquePacks.map((p) => {
+                  {visiblePacks.map((p) => {
                     const id = p.ad?.metaAdId ?? '';
-                    const reasons = id ? reasonsByMetaAdId.get(id) ?? [] : [];
+                    const reasons = rankingsTouched && id ? reasonsByMetaAdId.get(id) ?? [] : [];
                     return (
                       <AdCard
                         key={id || Math.random()}
@@ -741,7 +851,7 @@ export function AnalysisTab() {
                                 {intel.modelVersion && <span className="font-mono">model: {intel.modelVersion}</span>}
                                 {intel.confidence != null && <span>confidence: {intel.confidence}</span>}
                                 <span>processed: {new Date(intel.processedAt).toLocaleString()}</span>
-                              </div>
+                                </div>
                             </>
                           )}
                         </div>
@@ -860,13 +970,76 @@ export function AnalysisTab() {
                   </div>
                 </div>
 
+                <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass)]/10 p-4">
+                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Media analysis</h4>
+                  <div className="space-y-2">
+                    {selected.media?.video?.asset?.id ? (
+                      <div className="rounded-lg bg-[var(--glass)]/20 border border-[var(--glass-border)] px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-muted-foreground mb-0.5">Video asset</p>
+                            <p className="text-xs font-mono text-foreground break-all">{selected.media.video.asset.id}</p>
+                          </div>
+                          <Link
+                            href={`/ingestion/asset/${selected.media.video.asset.id}/description`}
+                            className="rounded-lg border border-[var(--glass-border)] px-2.5 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)] shrink-0"
+                          >
+                            View ↗
+                          </Link>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          {selected.media.video.asset.intelligenceStatus ? (
+                            <StatusBadge status={String(selected.media.video.asset.intelligenceStatus)} />
+                          ) : null}
+                          {selected.media.video.asset.intelligence?.[0]?.titlePrimary ? (
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {selected.media.video.asset.intelligence[0].titlePrimary}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No linked video asset yet.</p>
+                    )}
+
+                    {selected.media?.image?.asset?.id ? (
+                      <div className="rounded-lg bg-[var(--glass)]/20 border border-[var(--glass-border)] px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[10px] text-muted-foreground mb-0.5">Image asset</p>
+                            <p className="text-xs font-mono text-foreground break-all">{selected.media.image.asset.id}</p>
+                          </div>
+                          <Link
+                            href={`/ingestion/asset/${selected.media.image.asset.id}/description`}
+                            className="rounded-lg border border-[var(--glass-border)] px-2.5 py-1.5 text-[10px] font-semibold hover:bg-[var(--glass-hover)] shrink-0"
+                          >
+                            View ↗
+                          </Link>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2">
+                          {selected.media.image.asset.intelligenceStatus ? (
+                            <StatusBadge status={String(selected.media.image.asset.intelligenceStatus)} />
+                          ) : null}
+                          {selected.media.image.asset.intelligence?.[0]?.titlePrimary ? (
+                            <span className="text-[11px] text-muted-foreground truncate">
+                              {selected.media.image.asset.intelligence[0].titlePrimary}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No linked image asset yet.</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="rounded-xl border border-[var(--glass-border)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--glass-border)] bg-[var(--glass)]/20">
                     <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Raw JSON</h4>
                     <span className="text-[10px] text-muted-foreground/60 font-mono">ad · metrics</span>
                   </div>
                   <pre className="max-h-[35vh] overflow-auto bg-[#0d0d0d] p-4 text-[11px] text-[#a8ff78] font-mono leading-relaxed">
-                    {prettyJson({ ad: selected.ad, metrics: selected.metrics })}
+                    {prettyJson({ ad: selected.ad, metrics: selected.metrics, media: selected.media ?? null })}
                   </pre>
                 </div>
               </div>

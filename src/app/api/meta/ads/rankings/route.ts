@@ -36,6 +36,12 @@ function percentileIndex(n: number, p: number): number {
   return Math.min(n - 1, Math.max(0, idx));
 }
 
+function clamp01(v: number): number {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+
 function middleThreeByBandAndTarget(opts: {
   sortedAsc: Array<{ metaAdId: string; value: number }>;
   topIds: Set<string>;
@@ -131,19 +137,40 @@ function selectTopAndMiddle(opts: {
     k,
   });
 
-  // Special rule: impressions fallback to p25 if the middle-3 all have 0 impressions.
+  // Special rule: impressions fallback chain if the middle-3 all have 0 impressions.
   if (opts.metric === "impressions" && middle.length > 0) {
     const byId = new Map(opts.rows.map((r) => [r.metaAdId, r.value]));
     const allZero = middle.every((id) => (byId.get(id) ?? 0) === 0);
     if (allZero) {
-      middle = middleThreeByBandAndTarget({
-        sortedAsc: byAsc,
-        topIds,
-        bandLoP: 0.15,
-        bandHiP: 0.35,
-        targetP: 0.25,
-        k,
-      });
+      const isNonZero = (ids: string[]) => ids.some((id) => (byId.get(id) ?? 0) > 0);
+
+      // Keep halving toward the bottom: p25 → p12.5 → p6.25 → ... until non-zero
+      // or until p gets extremely small.
+      let p = 0.25;
+      let attempts = 0;
+      while (attempts < 10) {
+        const bandWidth = 0.1;
+        const next = middleThreeByBandAndTarget({
+          sortedAsc: byAsc,
+          topIds,
+          bandLoP: clamp01(p - bandWidth),
+          bandHiP: clamp01(p + bandWidth),
+          targetP: p,
+          k,
+        });
+
+        middle = next;
+        if (isNonZero(middle)) break;
+
+        p = p / 2;
+        attempts += 1;
+        if (p < 0.005) break;
+      }
+
+      // Final fallback: pick 4th/5th/6th by impressions desc (if available).
+      if (!isNonZero(middle)) {
+        middle = byDesc.slice(3, 6).map((r) => r.metaAdId);
+      }
     }
   }
 
@@ -260,6 +287,26 @@ export async function GET(req: Request) {
     ]),
   );
 
+  // Persist selection: reset all ads, then mark selected as sample.
+  // Note: we intentionally use `as any` so this compiles before Prisma client regeneration.
+  const persisted = await prisma.$transaction(async (tx) => {
+    const reset = await (tx.metaAd as any).updateMany({
+      where: { metaIntegrationId: loaded.integrationId },
+      data: { isSample: false },
+    });
+    const marked =
+      uniqueSelected.length === 0
+        ? { count: 0 }
+        : await (tx.metaAd as any).updateMany({
+            where: {
+              metaIntegrationId: loaded.integrationId,
+              metaAdId: { in: uniqueSelected },
+            },
+            data: { isSample: true },
+          });
+    return { resetCount: reset.count ?? 0, markedCount: marked.count ?? 0 };
+  });
+
   // Media hydration step (best-effort).
   const hydrateResults = await hydrateMediaForAdIds({ req, adIds: uniqueSelected });
 
@@ -314,6 +361,7 @@ export async function GET(req: Request) {
         middle: clicksSel.middle.map(pack),
       },
     },
+    persisted,
     hydration: {
       attempted: uniqueSelected.length,
       results: hydrateResults,

@@ -21,6 +21,8 @@ export function middleware(request: NextRequest) {
   const isCronApi = pathname.startsWith('/api/cron');
   const isVideosDownloadApi =
     pathname.startsWith('/api/videos') && pathname.endsWith('/download');
+
+
   const isMicroservicesApi = pathname.startsWith('/api/receive-intel');
   const isDataMineApi = pathname.startsWith('/api/geo/company-data');
   const isShopifyOAuth = pathname.startsWith('/shopify/');
@@ -47,6 +49,7 @@ export function middleware(request: NextRequest) {
   const isJobsBountyPages = pathname.startsWith('/api/jobs/bounty-pages');
   const isCallCenter = pathname.startsWith('/calls/outbound-legacy');
   const isCallingAgentWebhook = pathname.startsWith('/api/calling-agent/webhook');
+  const isAssetDownloadApi = pathname.startsWith('/api/assets/') && pathname.endsWith('/download');
 
   const isPublic =
     isLoginPage ||
@@ -76,6 +79,7 @@ export function middleware(request: NextRequest) {
     isJobsBounty||
     isJobsBountyPages||
     isCallCenter||
+    isAssetDownloadApi
     isCallingAgentWebhook;
 
   if (isPublic) {

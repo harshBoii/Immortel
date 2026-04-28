@@ -1154,6 +1154,7 @@ model MetaAd {
   metaAdId          String    @db.VarChar(100)
   name              String?
   status            String?   @db.VarChar(50)
+  isSample          Boolean   @default(false) @map("is_sample")
   publishedAt       DateTime? @db.Timestamptz(3)
   reviewStatus      String?   @db.VarChar(50)
   reviewFeedback    String?   @db.Text
