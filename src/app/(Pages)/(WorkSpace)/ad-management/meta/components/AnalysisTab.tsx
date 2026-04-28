@@ -283,6 +283,14 @@ export function AnalysisTab() {
     remaining: number;
   } | null>(null);
 
+  const [winningFormulaRunning, setWinningFormulaRunning] = useState(false);
+  const [winningFormulaError, setWinningFormulaError] = useState<string | null>(null);
+  const [winningFormulaSummary, setWinningFormulaSummary] = useState<{
+    items: number;
+    mediaEligible: number;
+    ads: number;
+  } | null>(null);
+
   const anyProcessing = useMemo(
     () => items.some((i) => (i.asset.intelligenceStatus ?? '').toUpperCase() === 'PROCESSING'),
     [items],
@@ -424,6 +432,32 @@ export function AnalysisTab() {
     }
   };
 
+  const buildWinningFormula = async () => {
+    setWinningFormulaRunning(true);
+    setWinningFormulaError(null);
+    setWinningFormulaSummary(null);
+    try {
+      const res = await fetch('/api/meta/winning-formula/build', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setWinningFormulaError(typeof j?.error === 'string' ? j.error : 'Winning formula build failed');
+        return;
+      }
+      setWinningFormulaSummary({
+        items: Number(j?.counts?.items ?? 0),
+        mediaEligible: Number(j?.counts?.mediaEligible ?? 0),
+        ads: Number(j?.counts?.ads ?? 0),
+      });
+    } catch (e) {
+      setWinningFormulaError(e instanceof Error ? e.message : 'Winning formula build failed');
+    } finally {
+      setWinningFormulaRunning(false);
+    }
+  };
+
   const packs = useMemo(() => {
     const p = rankings?.rankings;
     return {
@@ -487,14 +521,14 @@ export function AnalysisTab() {
 
           {/* Analyze card */}
           <div className="rounded-xl border border-[var(--glass-border)] bg-gradient-to-br from-[var(--glass)]/30 to-[var(--glass)]/10 p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1 flex-1">
+            <div className="flex flex-col gap-4">
+              <div className="min-w-0 w-full space-y-2">
                 <h3 className="text-sm font-semibold text-foreground">Ad creative analysis</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed w-full">
                   Syncs performance metrics for up to 50 ads, mirrors top-5 media to R2, and sends videos for intelligence processing.
                 </p>
               </div>
-              <div className="shrink-0 flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full min-w-0">
                 <button
                   type="button"
                   onClick={() => void analyze()}
@@ -528,6 +562,16 @@ export function AnalysisTab() {
                 >
                   {videoBackfillRunning ? 'Backfilling…' : 'Backfill videos → R2'}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => void buildWinningFormula()}
+                  disabled={winningFormulaRunning}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/30 px-3 py-2 text-xs font-semibold hover:bg-[var(--glass-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Build and persist winning formula from analyzed assets"
+                >
+                  {winningFormulaRunning ? 'Building…' : 'Build winning formula'}
+                </button>
               </div>
             </div>
             {error && (
@@ -551,6 +595,21 @@ export function AnalysisTab() {
             {videoBackfillSummary && (
               <div className="mt-3 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/20 px-3 py-2 text-[11px] text-muted-foreground">
                 Backfill complete. updated {videoBackfillSummary.updated} · remaining {videoBackfillSummary.remaining} · failed {videoBackfillSummary.failedCount}
+              </div>
+            )}
+
+            {winningFormulaError && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2.5 text-xs text-red-600 dark:text-red-400">
+                <svg className="mt-0.5 h-3.5 w-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+                </svg>
+                {winningFormulaError}
+              </div>
+            )}
+
+            {winningFormulaSummary && (
+              <div className="mt-3 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/20 px-3 py-2 text-[11px] text-muted-foreground">
+                Winning formula persisted. items {winningFormulaSummary.items} · ads {winningFormulaSummary.ads} · eligible media {winningFormulaSummary.mediaEligible}
               </div>
             )}
           </div>

@@ -996,6 +996,10 @@ model MetaIntegration {
   avgWinningCtr    Float? // benchmark CTR for this account
   contextBuiltAt   DateTime? // when the context was last analysed
 
+  // ── Winning Formula (from analyzed assets + metrics) ─────────────
+  winningFormula        Json?     @map("winning_formula")
+  winningFormulaBuiltAt DateTime? @map("winning_formula_built_at") @db.Timestamptz(3)
+
   // ── Relations ───────────────────────────────────────────────────
   company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   campaigns MetaCampaign[]
