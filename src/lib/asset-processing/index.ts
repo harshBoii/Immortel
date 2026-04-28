@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { streamMp4PlaybackUrl, streamToR2 } from "@/lib/cloudfare";
+import { getPresignedGetUrl, streamMp4PlaybackUrl, streamToR2 } from "@/lib/cloudfare";
 
 type AssetType = "VIDEO" | "IMAGE";
 
@@ -82,6 +82,7 @@ export async function createAssetFromMetaVideo(opts: {
       videoUrl: true,
       videoStreamId: true,
       thumbnailUrl: true,
+      r2Key: true,
       filename: true,
       mimeType: true,
       bytes: true,
@@ -102,21 +103,28 @@ export async function createAssetFromMetaVideo(opts: {
     if (existing) return { assetId: existing.id };
   }
 
-  const sourceUrl = row.videoUrl;
-  if (!sourceUrl) {
-    throw new Error("MetaMedia.videoUrl missing (cannot mirror video)");
-  }
-
   const key = metaVideoAssetKey(opts.companyId, row.videoId);
 
-  let dl = await fetch(sourceUrl);
-  if ((!dl.ok || !dl.body) && row.videoStreamId) {
-    // Some Stream accounts require using the customer subdomain for downloads.
-    const fallbackUrl = streamMp4PlaybackUrl(row.videoStreamId);
-    dl = await fetch(fallbackUrl);
+  let dl: Response | null = null;
+
+  // Prefer R2-backed MetaMedia when available.
+  if (row.r2Key) {
+    const presigned = await getPresignedGetUrl(row.r2Key, 3600);
+    dl = await fetch(presigned);
   }
-  if (!dl.ok || !dl.body) {
-    throw new Error(`Failed to download meta video bytes: HTTP ${dl.status}`);
+
+  // Fall back to Stream-hosted url (legacy).
+  if ((!dl || !dl.ok || !dl.body) && row.videoUrl) {
+    dl = await fetch(row.videoUrl);
+    if ((!dl.ok || !dl.body) && row.videoStreamId) {
+      // Some Stream accounts require using the customer subdomain for downloads.
+      const fallbackUrl = streamMp4PlaybackUrl(row.videoStreamId);
+      dl = await fetch(fallbackUrl);
+    }
+  }
+
+  if (!dl || !dl.ok || !dl.body) {
+    throw new Error(`Failed to download meta video bytes: HTTP ${dl?.status ?? 0}`);
   }
 
   const contentType =

@@ -60,6 +60,8 @@ async function fetchMetaVideoSource(opts: { videoId: string; accessToken: string
   return json.source;
 }
 
+type BackfillRow = { id: string; videoId: string | null };
+
 export async function POST() {
   const loaded = await loadIntegrationForSession();
   if (!loaded) {
@@ -86,7 +88,7 @@ export async function POST() {
   const concurrency = 3;
 
   for (;;) {
-    const rows = await prisma.metaMedia.findMany({
+    const rows: BackfillRow[] = await prisma.metaMedia.findMany({
       where: {
         metaIntegrationId: loaded.integrationId,
         kind: "video",
@@ -105,7 +107,7 @@ export async function POST() {
     scanned += rows.length;
     cursorId = rows[rows.length - 1]!.id;
 
-    await runWithConcurrency(rows, concurrency, async (row) => {
+    await runWithConcurrency<BackfillRow>(rows, concurrency, async (row) => {
       try {
         const videoId = row.videoId!;
         const source = await fetchMetaVideoSource({ videoId, accessToken: pageToken });
