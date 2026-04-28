@@ -236,9 +236,25 @@ export async function POST(req: Request) {
       let asset_type: "VIDEO" | "DOCUMENT";
 
       if (it.kind === "video") {
-        const path = `/api/videos/${it.assetId}/download`;
-        api_url = `${appUrl}${path}`;
-        asset_type = "VIDEO";
+        // Match frontend logic: if creative.videoUrl exists, treat as VIDEO; else DOCUMENT.
+        const adRow = await prisma.metaAd.findFirst({
+          where: {
+            metaIntegrationId: loaded.integrationId,
+            metaAdId: it.metaAdId,
+          },
+          select: { creative: { select: { videoUrl: true } } },
+        });
+        const hasVideoUrl = Boolean(adRow?.creative?.videoUrl);
+
+        if (hasVideoUrl) {
+          const path = `/api/videos/${it.assetId}/download`;
+          api_url = `${appUrl}${path}`;
+          asset_type = "VIDEO";
+        } else {
+          const path = `/api/assets/${it.assetId}/download`;
+          api_url = `${appUrl}${path}`;
+          asset_type = "DOCUMENT";
+        }
       } else {
         // For image LLM analysis, still use DOCUMENT but provide a URL served by our app.
         // This endpoint redirects to R2 so the microservice can download the image bytes.
