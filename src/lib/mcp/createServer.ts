@@ -372,7 +372,7 @@ import {
     );
 
     // ─── generate_ad_story_ideas ─────────────────────────────────────────────
-    // Returns a prompt payload that an MCP-capable agent can use to generate 5 ad story ideas.
+    // Returns a prompt payload that an MCP-capable agent can use to generate ad story ideas.
     const generateAdStoryIdeasInputSchema = z.object({
       password: z
         .string()
@@ -392,7 +392,7 @@ import {
       {
         title: "Generate ad story ideas ",
         description:
-          "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 5 oscar worthy ad story concepts using the provided template.",
+          "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 3 oscar worthy ad story concepts using the provided template.",
         inputSchema: (generateAdStoryIdeasInputSchema as any).shape,
       },
       (async (input: unknown) => {
@@ -425,7 +425,7 @@ import {
         const generationRules = [
           "Style: melodrama, dramatic reveals, emotional pacing",
           "Must include: a lesson/moral, and brand solves the problem in a satisfying end card.",
-          "Output: exactly 3 concepts (one of 10-15 seconds duration , another of 20-25 seconds duration , and another of 25-40 seconds duration). Each must be labeled `Short-Length` ... `Medium-Length` ... `Long-Length`.",
+          "Output: exactly 3 concepts (one of 10-15 seconds duration , another of 20-25 seconds duration , and last of 25-40 seconds duration). Each must be labeled `Short-Length` ... `Medium-Length` ... `Long-Length`.",
           "The brand tag should use only the brand name from the winning mantra/endcard guidance (do not add extra brands).",
           "Keep it concise but screenplay-like; each concept should be self-contained.",
           "Do Not Exact Match the template, but follow the structure and style.",
@@ -435,7 +435,6 @@ import {
 
         const templateGuide = `
 Example template (Do Not Exact Match):
-Concept 01
 She Saved for Everyone, Never for Herself
 A middle-class Indian mother keeps sacrificing small joys for the family.
 Lesson/Moral: The one who gives most is often forgotten first.
@@ -487,8 +486,8 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
           winning_mantra: winningMantra,
           generation_rules: generationRules,
           output_requirements: {
-            concept_count: 5,
-            concept_label_format: "Concept 01..Concept 05",
+            concept_count: 3,
+            concept_label_format: "Short-Length..Medium-Length..Long-Length",
             template: templateGuide,
           },
         };
