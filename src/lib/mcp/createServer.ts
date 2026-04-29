@@ -392,7 +392,7 @@ import {
       {
         title: "Generate ad story ideas ",
         description:
-          "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 5 spicy Bollywood ad story concepts using the provided template.",
+          "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 5 oscar worthy ad story concepts using the provided template.",
         inputSchema: (generateAdStoryIdeasInputSchema as any).shape,
       },
       (async (input: unknown) => {
@@ -423,34 +423,64 @@ import {
         const winningMantra = metaIntegration.winningFormula;
 
         const generationRules = [
-          "Style: Spicy Bollywood (melodrama, dramatic reveals, emotional pacing).",
+          "Style: melodrama, dramatic reveals, emotional pacing",
           "Must include: a lesson/moral, and brand solves the problem in a satisfying end card.",
-          "Output: exactly 5 concepts. Each must be labeled `Concept 01` ... `Concept 05`.",
-          "Structure: follow the template exactly (title line, Emotional reveal, Husband POV, duration, No dialogue until end, timeline blocks, Audio cues, End card with single-word brand tag + end-card line).",
+          "Output: exactly 3 concepts. Each must be labeled `Concept 01` ... `Concept 03`.",
           "The brand tag should use only the brand name from the winning mantra/endcard guidance (do not add extra brands).",
           "Keep it concise but screenplay-like; each concept should be self-contained.",
+          "Do Not Exact Match the template, but follow the structure and style.",
+          "You have to act like a director and write a screenplay for the ad story ideas. , mention the events happening at each 3 second mark in the screenplay and try to keep it under 30-45 seconds.",
+          "Maintain An Indian Style Screenplay, with the characters and the events happening in the screenplay."
         ].join("\n");
 
         const templateGuide = `
 Example template (Do Not Exact Match):
 Concept 01
-He Knew Before She Told Him
-A package arrives...
-Emotional reveal
-Husband POV
-45s
-No dialogue until end
-0–5s
-Setup
-5–20s
-Tension
-20–35s
-Reveal
-35–45s
-End card
-Product
-End card line
-"Some dads just know. Putchi — Made for Moms."
+She Saved for Everyone, Never for Herself
+A middle-class Indian mother keeps sacrificing small joys for the family.
+Lesson/Moral: The one who gives most is often forgotten first.
+Mother POV
+36s
+No dialogue until final reveal
+
+0–3s
+Morning kitchen rush. Maa serves breakfast, her own plate empty.
+
+3–6s
+She quietly stitches son’s torn school shirt.
+
+6–9s
+She counts coins in a steel box, then puts them back.
+
+9–12s
+Daughter asks for project chart paper. Maa smiles, gives money.
+
+12–15s
+Rain leaks from ceiling. Maa shifts bucket, keeps cooking.
+
+15–18s
+Family laughs watching TV. Maa stands behind, folding clothes.
+
+18–21s
+She sees an old faded maternity photo in drawer.
+
+21–24s
+Son notices her tired hands for the first time.
+
+24–27s
+Next morning, family table is decorated simply.
+
+27–30s
+Gift box placed before her. She opens it slowly.
+
+30–33s
+Soft tears. Family hugs her.
+
+33–36s
+End card.
+
+Product: Putchi
+End card line: “The hands that held everyone deserve holding too. Putchi.”"
         `.trim();
 
         const payload = {
