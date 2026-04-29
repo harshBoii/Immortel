@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
   extractHeygenVideoId,
+  HeygenApiError,
   heygenFetchJson,
   requireAppUrl,
   requireCompanySession,
@@ -107,6 +108,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, jobId: job.id, heygenVideoId });
     } catch (error) {
       const message = error instanceof Error ? error.message : "HeyGen request failed";
+      const details =
+        error instanceof HeygenApiError
+          ? { status: error.status, path: error.path, responseBody: error.responseBody }
+          : undefined;
       await jobs.update({
         where: { id: job.id },
         data: {
@@ -116,7 +121,7 @@ export async function POST(request: Request) {
         },
       });
 
-      return NextResponse.json({ ok: false, error: message }, { status: 502 });
+      return NextResponse.json({ ok: false, error: message, details }, { status: 502 });
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to start video generation";

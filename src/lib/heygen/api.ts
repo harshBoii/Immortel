@@ -4,6 +4,20 @@ export const HEYGEN_API_BASE = "https://api.heygen.com";
 
 type UnknownRecord = Record<string, unknown>;
 
+export class HeygenApiError extends Error {
+  status: number;
+  path: string;
+  responseBody: unknown;
+
+  constructor(opts: { message: string; status: number; path: string; responseBody: unknown }) {
+    super(opts.message);
+    this.name = "HeygenApiError";
+    this.status = opts.status;
+    this.path = opts.path;
+    this.responseBody = opts.responseBody;
+  }
+}
+
 export type HeygenAvatar = {
   id: string;
   name: string;
@@ -84,7 +98,12 @@ export async function heygenFetchJson<T>(
       (typeof json?.message === "string" && json.message) ||
       (typeof json?.msg === "string" && json.msg) ||
       `HeyGen request failed with HTTP ${response.status}`;
-    throw new Error(message);
+    throw new HeygenApiError({
+      message,
+      status: response.status,
+      path,
+      responseBody: json,
+    });
   }
 
   return json;
