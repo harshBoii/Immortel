@@ -7,6 +7,7 @@ const TABS = [
   { id: 'adsets', label: 'Ad Sets' },
   { id: 'adcreatives', label: 'Ad Creatives' },
   { id: 'ads', label: 'Ads' },
+  { id: 'ad_generation', label: 'Ad generation' },
   { id: 'analysis', label: 'Analysis' },
 ] as const;
 

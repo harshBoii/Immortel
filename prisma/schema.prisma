@@ -58,6 +58,7 @@ model Company {
   CallFeedbacks           CallFeedback[]
   CallFeedbackTokens      CallFeedbackToken[]
   metaIntegration         MetaIntegration?
+  videoGenerationJobs    videoGenerationJob[]
   aeoGenerationProfiles   AeoGenerationProfile[]
   aeoPages                AeoPage[]
   assetIntelligence       AssetIntelligence[]
@@ -351,6 +352,7 @@ model Asset {
   streamQueueItems   StreamQueue[]
   webinars           Webinar[]
   metaMedia          MetaMedia?
+  videoGenerationJobs videoGenerationJob[]
 
   @@index([companyId])
   @@index([assetType])
@@ -382,6 +384,39 @@ model StreamQueue {
   @@index([status, priority, createdAt])
   @@index([assetId])
   @@map("stream_queue")
+}
+
+model videoGenerationJob {
+  id              String   @id @default(cuid())
+  companyId       String
+  createdByUserId String?  @db.VarChar(255)
+  script          String
+  avatarId        String   @db.VarChar(255)
+  voiceId         String   @db.VarChar(255)
+  customAvatarId  String?  @db.VarChar(255)
+  customVoiceId   String?  @db.VarChar(255)
+  heygenVideoId   String?  @unique @db.VarChar(255)
+  heygenStatus    String   @default("queued") @db.VarChar(50)
+  heygenError     String?
+  assetId         String?
+  streamUid       String?  @db.VarChar(255)
+  r2Key           String?  @db.VarChar(500)
+  downloadUrl     String?  @db.VarChar(2000)
+  playbackUrl     String?  @db.VarChar(2000)
+  thumbnailUrl    String?  @db.VarChar(2000)
+  progressMessage String?  @db.VarChar(500)
+  metadata        Json?    @default("{}")
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  asset   Asset?  @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([companyId, createdAt(sort: Desc)])
+  @@index([companyId, heygenStatus])
+  @@index([assetId])
+  @@map("video_generation_jobs")
 }
 
 model UploadSession {

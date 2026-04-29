@@ -51,6 +51,7 @@ export function middleware(request: NextRequest) {
   const isCallingAgentWebhook = pathname.startsWith('/api/calling-agent/webhook');
   const isAssetDownloadApi = pathname.startsWith('/api/assets') 
   const isWinningFormulaWebhook = pathname.startsWith('/api/meta/winning-formula/webhook');
+  const isHeygenWebhook = pathname.startsWith('/api/meta/heygen/webhook');
 
   const isPublic =
     isLoginPage ||
@@ -82,6 +83,7 @@ export function middleware(request: NextRequest) {
     isCallCenter||
     isAssetDownloadApi||
     isWinningFormulaWebhook||
+    isHeygenWebhook||
     isCallingAgentWebhook;
 
   if (isPublic) {
