@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import {
   getMetaBucket,
   pollStreamReady,
@@ -31,6 +32,17 @@ type VideoGenerationJobDelegate = {
   update(args: unknown): Promise<unknown>;
   updateMany(args: unknown): Promise<unknown>;
 };
+
+function toInputJson(value: unknown): Prisma.InputJsonValue | null {
+  try {
+    if (value === undefined) return null;
+    return JSON.parse(
+      JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? v.toString() : v)),
+    ) as Prisma.InputJsonValue;
+  } catch {
+    return null;
+  }
+}
 
 function assetTitleFromScript(script: string) {
   const oneLine = script.replace(/\s+/g, " ").trim();
@@ -90,8 +102,8 @@ export async function POST(request: Request) {
         data: {
           heygenStatus: "failed",
           heygenError:
-            typeof payload?.error === "string"
-              ? payload.error
+            typeof (payload as { error?: string })?.error === "string"
+              ? (payload as { error?: string }).error
               : "HeyGen reported that the video failed.",
           progressMessage: "HeyGen failed to generate the video.",
           metadata: payload ?? {},
@@ -176,6 +188,8 @@ export async function POST(request: Request) {
 
     const playbackUrl = streamMp4PlaybackUrl(streamUpload.uid);
 
+    const heygenMeta = toInputJson({ payload, details });
+
     const asset = await prisma.asset.create({
       data: {
         companyId: job.companyId,
@@ -195,7 +209,7 @@ export async function POST(request: Request) {
           source: "heygen_ad",
           heygenVideoId,
           videoGenerationJobId: job.id,
-          heygen: { payload, details },
+          heygen: heygenMeta,
         },
         uploadSource: "NATIVE",
       },
@@ -213,7 +227,7 @@ export async function POST(request: Request) {
         thumbnailUrl: thumbnailUrl ?? streamUpload.thumbnail ?? null,
         heygenStatus: "completed",
         progressMessage: "Video delivered and stored successfully.",
-        metadata: { payload, details },
+        metadata: toInputJson({ payload, details }),
       },
     });
 
