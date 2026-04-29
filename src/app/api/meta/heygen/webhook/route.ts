@@ -12,7 +12,9 @@ import {
   extractHeygenDownloadUrl,
   extractHeygenStatus,
   extractHeygenThumbnailUrl,
+  extractHeygenCallbackId,
   extractHeygenVideoId,
+  extractHeygenSessionId,
   heygenAssetKey,
   heygenFetchJson,
 } from "@/lib/heygen/api";
@@ -54,6 +56,12 @@ function assetFilenameFromJob(jobId: string) {
   return `heygen-${jobId}.mp4`;
 }
 
+function respond(body: unknown, init?: { status?: number }) {
+  const status = init?.status ?? 200;
+  console.log("[heygen/webhook] respond", { status, body });
+  return NextResponse.json(body, { status });
+}
+
 async function resolveHeygenVideoDetails(videoId: string) {
   return heygenFetchJson<unknown>(`/v3/videos/${encodeURIComponent(videoId)}`, {
     method: "GET",
@@ -68,19 +76,26 @@ export async function POST(request: Request) {
 
   try {
     payload = await request.json().catch(() => ({}));
+    const callbackId = extractHeygenCallbackId(payload);
+    const sessionId = extractHeygenSessionId(payload);
     const heygenVideoId = extractHeygenVideoId(payload);
     const incomingStatus = extractHeygenStatus(payload);
 
-    if (!heygenVideoId) {
-      return NextResponse.json({ ok: false, error: "Missing video_id" }, { status: 400 });
-    }
-
-    const job = await jobs.findFirst({
-      where: { heygenVideoId },
+    console.log("[heygen/webhook] request", {
+      callbackId,
+      sessionId,
+      videoId: heygenVideoId,
+      status: incomingStatus,
+      payload,
     });
 
+    const job =
+      (callbackId ? await jobs.findFirst({ where: { id: callbackId } }) : null) ??
+      (heygenVideoId ? await jobs.findFirst({ where: { heygenVideoId } }) : null);
+
     if (!job) {
-      return NextResponse.json({ ok: true, ignored: true });
+      // Don't ask HeyGen to retry if we can't correlate yet.
+      return respond({ ok: true, ignored: true });
     }
 
     if (job.assetId) {
@@ -91,7 +106,7 @@ export async function POST(request: Request) {
           progressMessage: "Video already delivered.",
         },
       });
-      return NextResponse.json({ ok: true, idempotent: true });
+      return respond({ ok: true, idempotent: true });
     }
 
     const status = incomingStatus ?? "processing";
@@ -109,7 +124,7 @@ export async function POST(request: Request) {
           metadata: payload ?? {},
         },
       });
-      return NextResponse.json({ ok: true });
+      return respond({ ok: true });
     }
 
     if (!["completed", "complete", "ready", "success", "succeeded"].includes(status)) {
@@ -121,7 +136,20 @@ export async function POST(request: Request) {
           metadata: payload ?? {},
         },
       });
-      return NextResponse.json({ ok: true });
+      return respond({ ok: true });
+    }
+
+    // Video Agent can call back before a video_id is attached. In that case we just record progress.
+    if (!heygenVideoId) {
+      await jobs.update({
+        where: { id: job.id },
+        data: {
+          heygenStatus: "processing",
+          progressMessage: "HeyGen completed callback but video_id is not available yet.",
+          metadata: payload ?? {},
+        },
+      });
+      return respond({ ok: true });
     }
 
     const details = await resolveHeygenVideoDetails(heygenVideoId).catch(() => null);
@@ -144,7 +172,7 @@ export async function POST(request: Request) {
           metadata: { payload, details },
         },
       });
-      return NextResponse.json({ ok: true });
+      return respond({ ok: true });
     }
 
     const download = await fetch(downloadUrl, { cache: "no-store" });
@@ -231,7 +259,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true, assetId: asset.id });
+    return respond({ ok: true, assetId: asset.id });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Webhook processing failed";
     const heygenVideoId = extractHeygenVideoId(payload);
@@ -247,7 +275,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    return respond({ ok: false, error: message }, { status: 500 });
   }
 }
 

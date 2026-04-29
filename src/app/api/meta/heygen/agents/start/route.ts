@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import {
-  extractHeygenVideoId,
+  extractHeygenSessionId,
   HeygenApiError,
   heygenFetchJson,
   requireAppUrl,
@@ -13,23 +13,21 @@ export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const startSchema = z.object({
-  script: z.string().trim().min(1, "Script is required").max(10000, "Script is too long"),
-  avatarId: z.string().trim().optional(),
-  voiceId: z.string().trim().optional(),
-  customAvatarId: z.string().trim().optional(),
-  customVoiceId: z.string().trim().optional(),
+  prompt: z.string().trim().min(1, "Prompt is required").max(10000, "Prompt is too long"),
 });
-
-function resolveSelectedId(primary?: string, custom?: string) {
-  if (custom && custom.trim()) return custom.trim();
-  if (primary && primary.trim()) return primary.trim();
-  return "";
-}
 
 type VideoGenerationJobDelegate = {
   create(args: unknown): Promise<{ id: string }>;
   update(args: unknown): Promise<unknown>;
 };
+
+function toPlainJson(value: unknown): Record<string, unknown> {
+  try {
+    return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -44,98 +42,87 @@ export async function POST(request: Request) {
       );
     }
 
-    const finalAvatarId = resolveSelectedId(
-      parsed.data.avatarId,
-      parsed.data.customAvatarId,
-    );
-    const finalVoiceId = resolveSelectedId(
-      parsed.data.voiceId,
-      parsed.data.customVoiceId,
-    );
-
-    if (!finalAvatarId || !finalVoiceId) {
-      return NextResponse.json(
-        { ok: false, error: "Avatar and voice are required" },
-        { status: 400 },
-      );
-    }
-
     const jobs = (prisma as unknown as { videoGenerationJob: VideoGenerationJobDelegate })
       .videoGenerationJob;
     const appUrl = requireAppUrl();
 
+    // Reuse the existing job table; no avatar/voice selection for this mode.
     const job = await jobs.create({
       data: {
         companyId: session.companyId,
-        script: parsed.data.script,
-        avatarId: finalAvatarId,
-        voiceId: finalVoiceId,
-        customAvatarId: parsed.data.customAvatarId || null,
-        customVoiceId: parsed.data.customVoiceId || null,
+        script: parsed.data.prompt,
+        avatarId: "auto",
+        voiceId: "auto",
+        customAvatarId: null,
+        customVoiceId: null,
         heygenStatus: "queued",
-        progressMessage: "Queued for HeyGen video creation.",
+        progressMessage: "Queued for HeyGen Video Agent generation.",
+        metadata: {
+          mode: "video_agent_simple",
+        },
       },
       select: { id: true },
     });
 
     try {
       const heygenBody = {
-        type: "avatar",
-        avatar_id: finalAvatarId,
-        voice_id: finalVoiceId,
-        script: parsed.data.script,
+        prompt: parsed.data.prompt,
         callback_url: `${appUrl}/api/meta/heygen/webhook`,
+        callback_id: job.id,
       };
 
-      // Log the exact request body sent to HeyGen (safe: no API keys).
-      console.log("[heygen/videos/start] POST /v3/videos body", {
+      console.log("[heygen/agents/start] POST /v3/video-agents body", {
         jobId: job.id,
         companyId: session.companyId,
         ...heygenBody,
-        script_preview: parsed.data.script.slice(0, 140),
-        script_length: parsed.data.script.length,
+        prompt_preview: parsed.data.prompt.slice(0, 140),
+        prompt_length: parsed.data.prompt.length,
       });
 
-      const payload = await heygenFetchJson<unknown>("/v3/videos", {
+      const payload = await heygenFetchJson<unknown>("/v3/video-agents", {
         method: "POST",
         body: JSON.stringify(heygenBody),
       });
 
-      const heygenVideoId = extractHeygenVideoId(payload);
-      if (!heygenVideoId) {
-        throw new Error("HeyGen did not return a video_id");
+      const sessionId = extractHeygenSessionId(payload);
+      if (!sessionId) {
+        throw new Error("HeyGen did not return a session_id");
       }
 
       await jobs.update({
         where: { id: job.id },
         data: {
-          heygenVideoId,
           heygenStatus: "processing",
-          progressMessage: "HeyGen accepted the request and is generating the video.",
-          metadata: payload ?? {},
+          progressMessage: "Video Agent session created. Waiting for video_id assignment.",
+          metadata: {
+            ...toPlainJson(payload),
+            heygen_session_id: sessionId,
+            mode: "video_agent_simple",
+          },
         },
       });
 
-      return NextResponse.json({ ok: true, jobId: job.id, heygenVideoId });
+      return NextResponse.json({ ok: true, jobId: job.id, sessionId });
     } catch (error) {
       const message = error instanceof Error ? error.message : "HeyGen request failed";
       const details =
         error instanceof HeygenApiError
           ? { status: error.status, path: error.path, responseBody: error.responseBody }
           : undefined;
+
       await jobs.update({
         where: { id: job.id },
         data: {
           heygenStatus: "failed",
           heygenError: message,
-          progressMessage: "HeyGen rejected the request.",
+          progressMessage: "HeyGen rejected the Video Agent request.",
         },
       });
 
       return NextResponse.json({ ok: false, error: message, details }, { status: 502 });
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to start video generation";
+    const message = error instanceof Error ? error.message : "Failed to start Video Agent";
     const status = message === "Unauthorized" ? 401 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

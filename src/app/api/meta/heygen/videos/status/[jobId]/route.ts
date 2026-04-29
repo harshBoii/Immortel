@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireCompanySession } from "@/lib/heygen/api";
+import {
+  extractHeygenDownloadUrl,
+  extractHeygenSessionId,
+  extractHeygenStatus,
+  extractHeygenThumbnailUrl,
+  extractHeygenVideoId,
+  heygenFetchJson,
+  requireCompanySession,
+} from "@/lib/heygen/api";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,11 +25,24 @@ type VideoGenerationJobRow = {
   downloadUrl: string | null;
   playbackUrl: string | null;
   thumbnailUrl: string | null;
+  metadata: unknown;
 };
 
 type VideoGenerationJobDelegate = {
   findFirst(args: unknown): Promise<VideoGenerationJobRow | null>;
+  update(args: unknown): Promise<unknown>;
 };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function sessionIdFromJob(job: VideoGenerationJobRow): string | null {
+  const meta = asRecord(job.metadata);
+  const direct = meta?.heygen_session_id;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
+  return extractHeygenSessionId(job.metadata);
+}
 
 export async function GET(
   request: Request,
@@ -31,8 +52,7 @@ export async function GET(
     const session = await requireCompanySession();
     const { jobId } = await params;
 
-    const jobs = (prisma as unknown as { videoGenerationJob: VideoGenerationJobDelegate })
-      .videoGenerationJob;
+    const jobs = (prisma as unknown as { videoGenerationJob: VideoGenerationJobDelegate }).videoGenerationJob;
     const job = await jobs.findFirst({
       where: { id: jobId, companyId: session.companyId },
     });
@@ -42,6 +62,59 @@ export async function GET(
     }
 
     const origin = new URL(request.url).origin;
+
+    // Poll HeyGen to refresh status when we don't have an Asset yet.
+    // Video Agent flow:
+    // - poll /v3/video-agents/{session_id} until it gives video_id
+    // - then poll /v3/videos/{video_id} for final status and video_url
+    if (!job.assetId) {
+      let videoId: string | null = job.heygenVideoId ?? null;
+
+      const sessId = sessionIdFromJob(job);
+      if (!videoId && sessId) {
+        const sessPayload = await heygenFetchJson<unknown>(
+          `/v3/video-agents/${encodeURIComponent(sessId)}`,
+          { method: "GET" },
+        );
+        videoId = extractHeygenVideoId(sessPayload);
+        const sessStatus = extractHeygenStatus(sessPayload);
+        await jobs.update({
+          where: { id: job.id },
+          data: {
+            heygenVideoId: videoId,
+            heygenStatus: sessStatus ?? job.heygenStatus,
+            progressMessage: videoId
+              ? "HeyGen assigned a video_id. Tracking video rendering."
+              : "HeyGen is generating. Waiting for video_id assignment.",
+          },
+        });
+      }
+
+      if (videoId) {
+        const videoPayload = await heygenFetchJson<unknown>(
+          `/v3/videos/${encodeURIComponent(videoId)}`,
+          { method: "GET" },
+        );
+        const videoStatus = extractHeygenStatus(videoPayload);
+        const videoUrl = extractHeygenDownloadUrl(videoPayload);
+        const thumb = extractHeygenThumbnailUrl(videoPayload);
+
+        await jobs.update({
+          where: { id: job.id },
+          data: {
+            heygenStatus: videoStatus ?? job.heygenStatus,
+            progressMessage:
+              videoStatus === "completed"
+                ? "HeyGen finished rendering. Waiting for delivery."
+                : videoStatus === "failed"
+                  ? "HeyGen reported a failure."
+                  : "HeyGen is still rendering the video.",
+            downloadUrl: videoUrl ?? job.downloadUrl,
+            thumbnailUrl: thumb ?? job.thumbnailUrl,
+          },
+        });
+      }
+    }
 
     let asset: null | {
       id: string;
