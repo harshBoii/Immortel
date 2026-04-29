@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const metaIntegrationId =
       typeof body?.meta_integration_id === "string" ? body.meta_integration_id : null;
     const companyId = typeof body?.company_id === "string" ? body.company_id : null;
-    const winningFormula = body?.winningFormula ?? null;
+    const winningFormula = body?.winningFormula ?? {};
 
     if (!metaIntegrationId || !companyId) {
       return NextResponse.json(

@@ -8,6 +8,8 @@ import {
   import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
   import type { Request, Response } from "express";
   import { z } from "zod";
+  import { prisma } from "@/lib/prisma";
+  import { resolveCompanyByPassword } from "@/lib/mcp/companyPasswordAuth";
   
   const PORT = process.env.MCP_PORT ? Number(process.env.MCP_PORT) : 3001;
   const IMMORTEL_BASE_URL =
@@ -365,6 +367,105 @@ import {
         return {
           content: [{ type: "text" as const, text: JSON.stringify(data) }],
           structuredContent: data,
+        };
+      }) as any
+    );
+
+    // ─── generate_ad_story_ideas ─────────────────────────────────────────────
+    // Returns a prompt payload that an MCP-capable agent can use to generate 5 ad story ideas.
+    const generateAdStoryIdeasInputSchema = z.object({
+      password: z
+        .string()
+        .min(1)
+        .describe("Company account password (used for authentication). Required."),
+      email: z.string().optional().describe("Optional email hint to narrow lookup."),
+      companyName: z
+        .string()
+        .optional()
+        .describe("Optional company name/slug hint to narrow lookup."),
+      userName: z.string().optional().describe("Optional company userName hint to narrow lookup."),
+    });
+    type GenerateAdStoryIdeasInput = z.infer<typeof generateAdStoryIdeasInputSchema>;
+
+    server.registerTool(
+      "generate_ad_story_ideas",
+      {
+        title: "Generate 5 ad story ideas (spicy Bollywood)",
+        description:
+          "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 5 spicy Bollywood ad story concepts using the provided template.",
+        inputSchema: (generateAdStoryIdeasInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { password, email, companyName, userName } = input as GenerateAdStoryIdeasInput;
+        const company = await resolveCompanyByPassword(password, { email, companyName, userName });
+        if (!company) {
+          return {
+            content: [{ type: "text" as const, text: "Error: Invalid credentials (company not found)." }],
+          };
+        }
+
+        const metaIntegration = await prisma.metaIntegration.findUnique({
+          where: { companyId: company.id },
+          select: { id: true, companyId: true, winningFormula: true },
+        });
+
+        if (!metaIntegration?.winningFormula) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: "Error: Missing winning formula for this company. Build winning formula first in Meta analyze.",
+              },
+            ],
+          };
+        }
+
+        const winningMantra = metaIntegration.winningFormula;
+
+        const generationRules = [
+          "Style: Spicy Bollywood (melodrama, dramatic reveals, emotional pacing).",
+          "Must include: a lesson/moral, and brand solves the problem in a satisfying end card.",
+          "Output: exactly 5 concepts. Each must be labeled `Concept 01` ... `Concept 05`.",
+          "Structure: follow the template exactly (title line, Emotional reveal, Husband POV, duration, No dialogue until end, timeline blocks, Audio cues, End card with single-word brand tag + end-card line).",
+          "The brand tag should use only the brand name from the winning mantra/endcard guidance (do not add extra brands).",
+          "Keep it concise but screenplay-like; each concept should be self-contained.",
+        ].join("\n");
+
+        const templateGuide = `
+Example template (must follow this structure):
+Concept 01
+He Knew Before She Told Him
+A package arrives...
+Emotional reveal
+Husband POV
+45s
+No dialogue until end
+0–5s
+Setup
+5–20s
+Tension
+20–35s
+Reveal
+35–45s
+End card
+Product
+End card line
+"Some dads just know. Putchi — Made for Moms."
+        `.trim();
+
+        const payload = {
+          winning_mantra: winningMantra,
+          generation_rules: generationRules,
+          output_requirements: {
+            concept_count: 5,
+            concept_label_format: "Concept 01..Concept 05",
+            template: templateGuide,
+          },
+        };
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
+          structuredContent: payload,
         };
       }) as any
     );

@@ -5,12 +5,10 @@ import { loadIntegrationForSession } from "@/lib/meta/loadIntegration";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-function processingBaseUrl(): string {
-  return (
-    process.env.PROCESSING_API_BASE ??
-    process.env.CLIPFOX_PROCESSING_URL ??
-    "https://harshboii--asset-intelligence-fastapi-app.modal.run"
-  );
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`${name} is not set`);
+  return v;
 }
 
 type ContractAsset = {
@@ -284,11 +282,12 @@ export async function POST() {
     meta_integration_id: loaded.integrationId,
     generated_at: new Date().toISOString(),
     items,
+    webhook_url: `${requireEnv("NEXT_PUBLIC_APP_URL").replace(/\/$/, "")}/api/meta/winning-formula/webhook`,
   };
 
-  const baseUrl = processingBaseUrl().replace(/\/$/, "");
   console.log("[meta/winning-formula/build] POST payload", JSON.stringify(payload, null, 2));
-  const res = await fetch(`${baseUrl}/winning-formula/from-meta-analyzed-assets`, {
+  const microserviceBase = requireEnv("MICROSERVICE_URL").replace(/\/$/, "");
+  const res = await fetch(`${microserviceBase}/winning-formula/from-meta-analyzed-assets`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -302,21 +301,9 @@ export async function POST() {
     );
   }
 
-  const winningFormula = json?.winningFormula ?? null;
-
-  await prisma.metaIntegration.update({
-    where: { id: loaded.integrationId },
-    data: {
-      winningFormula,
-      winningFormulaBuiltAt: new Date(),
-    } as any,
-  });
-
   return NextResponse.json({
     ok: true,
-    counts: { mediaEligible: eligibleMedia.length, ads: ads.length, items: items.length },
-    winningFormula,
-    persisted: true,
+    job_id: typeof json?.job_id === "string" ? json.job_id : null,
   });
 }
 

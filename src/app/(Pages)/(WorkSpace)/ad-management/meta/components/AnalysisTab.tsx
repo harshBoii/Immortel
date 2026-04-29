@@ -285,11 +285,7 @@ export function AnalysisTab() {
 
   const [winningFormulaRunning, setWinningFormulaRunning] = useState(false);
   const [winningFormulaError, setWinningFormulaError] = useState<string | null>(null);
-  const [winningFormulaSummary, setWinningFormulaSummary] = useState<{
-    items: number;
-    mediaEligible: number;
-    ads: number;
-  } | null>(null);
+  const [winningFormulaSummary, setWinningFormulaSummary] = useState<{ jobId: string } | null>(null);
 
   const anyProcessing = useMemo(
     () => items.some((i) => (i.asset.intelligenceStatus ?? '').toUpperCase() === 'PROCESSING'),
@@ -446,11 +442,11 @@ export function AnalysisTab() {
         setWinningFormulaError(typeof j?.error === 'string' ? j.error : 'Winning formula build failed');
         return;
       }
-      setWinningFormulaSummary({
-        items: Number(j?.counts?.items ?? 0),
-        mediaEligible: Number(j?.counts?.mediaEligible ?? 0),
-        ads: Number(j?.counts?.ads ?? 0),
-      });
+      if (typeof j?.job_id !== 'string') {
+        setWinningFormulaError('Winning formula build did not return job_id');
+        return;
+      }
+      setWinningFormulaSummary({ jobId: j.job_id });
     } catch (e) {
       setWinningFormulaError(e instanceof Error ? e.message : 'Winning formula build failed');
     } finally {
@@ -609,7 +605,7 @@ export function AnalysisTab() {
 
             {winningFormulaSummary && (
               <div className="mt-3 rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/20 px-3 py-2 text-[11px] text-muted-foreground">
-                Winning formula persisted. items {winningFormulaSummary.items} · ads {winningFormulaSummary.ads} · eligible media {winningFormulaSummary.mediaEligible}
+                Winning formula job started. job_id: {winningFormulaSummary.jobId}. It will persist when the microservice completes.
               </div>
             )}
           </div>

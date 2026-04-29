@@ -50,6 +50,7 @@ export function middleware(request: NextRequest) {
   const isCallCenter = pathname.startsWith('/calls/outbound-legacy');
   const isCallingAgentWebhook = pathname.startsWith('/api/calling-agent/webhook');
   const isAssetDownloadApi = pathname.startsWith('/api/assets') 
+  const isWinningFormulaWebhook = pathname.startsWith('/api/meta/winning-formula/webhook');
 
   const isPublic =
     isLoginPage ||
@@ -79,7 +80,8 @@ export function middleware(request: NextRequest) {
     isJobsBounty||
     isJobsBountyPages||
     isCallCenter||
-    isAssetDownloadApi
+    isAssetDownloadApi||
+    isWinningFormulaWebhook||
     isCallingAgentWebhook;
 
   if (isPublic) {
