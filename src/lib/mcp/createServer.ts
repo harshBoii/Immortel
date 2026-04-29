@@ -432,7 +432,7 @@ import {
         ].join("\n");
 
         const templateGuide = `
-Example template (must follow this structure):
+Example template (Do Not Exact Match):
 Concept 01
 He Knew Before She Told Him
 A package arrives...
