@@ -425,11 +425,11 @@ import {
         const generationRules = [
           "Style: melodrama, dramatic reveals, emotional pacing",
           "Must include: a lesson/moral, and brand solves the problem in a satisfying end card.",
-          "Output: exactly 3 concepts. Each must be labeled `Concept 01` ... `Concept 03`.",
+          "Output: exactly 3 concepts (one of 10-15 seconds duration , another of 20-25 seconds duration , and another of 25-40 seconds duration). Each must be labeled `Short-Length` ... `Medium-Length` ... `Long-Length`.",
           "The brand tag should use only the brand name from the winning mantra/endcard guidance (do not add extra brands).",
           "Keep it concise but screenplay-like; each concept should be self-contained.",
           "Do Not Exact Match the template, but follow the structure and style.",
-          "You have to act like a director and write a screenplay for the ad story ideas. , mention the events happening at each 3 second mark in the screenplay and try to keep it under 30-45 seconds.",
+          "You have to act like a director and write a screenplay for the ad story ideas. , mention the events happening at each 3 second mark in the screenplay .",
           "Maintain An Indian Style Screenplay, with the characters and the events happening in the screenplay."
         ].join("\n");
 
