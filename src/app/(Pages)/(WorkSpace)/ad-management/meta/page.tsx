@@ -13,6 +13,7 @@ import { AdCreativesTab } from './components/AdCreativesTab';
 import { AdsTab } from './components/AdsTab';
 import { AnalysisTab } from './components/AnalysisTab';
 import { AdGenerationTab } from './components/AdGenerationTab';
+import { AdJobsTab } from './components/AdJobsTab';
 
 const TABS: MetaTabId[] = [
   'profile',
@@ -22,6 +23,7 @@ const TABS: MetaTabId[] = [
   'adcreatives',
   'ads',
   'ad_generation',
+  'ad_jobs',
   'analysis',
 ];
 
@@ -77,6 +79,7 @@ function MetaAdManagementInner() {
       {activeTab === 'adcreatives' && <AdCreativesTab />}
       {activeTab === 'ads' && <AdsTab />}
       {activeTab === 'ad_generation' && <AdGenerationTab />}
+      {activeTab === 'ad_jobs' && <AdJobsTab />}
       {activeTab === 'analysis' && <AnalysisTab />}
     </div>
   );

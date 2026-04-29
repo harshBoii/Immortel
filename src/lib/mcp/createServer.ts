@@ -390,7 +390,7 @@ import {
     server.registerTool(
       "generate_ad_story_ideas",
       {
-        title: "Generate 5 ad story ideas (spicy Bollywood)",
+        title: "Generate ad story ideas ",
         description:
           "Authenticate a company by password, fetch the company's winning mantra (MetaIntegration.winningFormula), and return a prompt payload that instructs the agent to output exactly 5 spicy Bollywood ad story concepts using the provided template.",
         inputSchema: (generateAdStoryIdeasInputSchema as any).shape,
@@ -466,6 +466,129 @@ End card line
         return {
           content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
           structuredContent: payload,
+        };
+      }) as any
+    );
+
+    // ─── heygen_agent_generate_video ─────────────────────────────────────────
+
+    const heygenAgentGenerateVideoInputSchema = z.object({
+      password: z
+        .string()
+        .min(1)
+        .describe("Company account password (used for authentication). Required."),
+      email: z.string().optional().describe("Optional email hint to narrow lookup."),
+      companyName: z.string().optional().describe("Optional company name/slug hint to narrow lookup."),
+      userName: z.string().optional().describe("Optional company userName hint to narrow lookup."),
+      prompt: z.string().min(1).describe("Prompt to send to HeyGen Video Agent."),
+      timeoutMs: z
+        .number()
+        .int()
+        .optional()
+        .describe("Polling timeout in ms (default 90000). Max 120000."),
+      pollEveryMs: z
+        .number()
+        .int()
+        .optional()
+        .describe("Polling interval in ms (default 2000). Min 500, max 5000."),
+    });
+    type HeygenAgentGenerateVideoInput = z.infer<typeof heygenAgentGenerateVideoInputSchema>;
+
+    server.registerTool(
+      "heygen_agent_generate_video",
+      {
+        title: "Generate HeyGen video (Video Agent)",
+        description:
+          "Authenticate a company by password and start a HeyGen Video Agent generation. This tool polls until HeyGen assigns a `video_id`, then returns `heygenVideoId` (and also `jobId/sessionId`).",
+        inputSchema: (heygenAgentGenerateVideoInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { password, email, companyName, userName, prompt, timeoutMs, pollEveryMs } =
+          input as HeygenAgentGenerateVideoInput;
+
+        const url = new URL("/api/mcp/heygen/agents/start", IMMORTEL_BASE_URL);
+        const body: Record<string, unknown> = { password, prompt };
+        if (email) body.email = email;
+        if (companyName) body.companyName = companyName;
+        if (userName) body.userName = userName;
+        if (typeof timeoutMs === "number") body.timeoutMs = timeoutMs;
+        if (typeof pollEveryMs === "number") body.pollEveryMs = pollEveryMs;
+
+        console.log("[heygen_agent_generate_video] →", url.toString());
+
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !(data as any)?.ok) {
+          const errText =
+            typeof (data as any)?.error === "string"
+              ? `Error: ${(data as any).error}`
+              : `Error: HTTP ${res.status}`;
+          return { content: [{ type: "text" as const, text: errText }], structuredContent: data };
+        }
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(data) }],
+          structuredContent: data,
+        };
+      }) as any
+    );
+
+    // ─── heygen_video_status ────────────────────────────────────────────────
+
+    const heygenVideoStatusInputSchema = z.object({
+      password: z
+        .string()
+        .min(1)
+        .describe("Company account password (used for authentication). Required."),
+      email: z.string().optional().describe("Optional email hint to narrow lookup."),
+      companyName: z.string().optional().describe("Optional company name/slug hint to narrow lookup."),
+      userName: z.string().optional().describe("Optional company userName hint to narrow lookup."),
+      videoId: z.string().min(1).describe("HeyGen video id (video_id)."),
+    });
+    type HeygenVideoStatusInput = z.infer<typeof heygenVideoStatusInputSchema>;
+
+    server.registerTool(
+      "heygen_video_status",
+      {
+        title: "Get HeyGen video status",
+        description:
+          "Authenticate a company by password and query HeyGen `GET /v3/videos/{video_id}`. Returns status and (when ready) `videoUrl`.",
+        inputSchema: (heygenVideoStatusInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { password, email, companyName, userName, videoId } = input as HeygenVideoStatusInput;
+        const url = new URL("/api/mcp/heygen/videos/status", IMMORTEL_BASE_URL);
+
+        const body: Record<string, unknown> = { password, videoId };
+        if (email) body.email = email;
+        if (companyName) body.companyName = companyName;
+        if (userName) body.userName = userName;
+
+        console.log("[heygen_video_status] →", url.toString(), "videoId:", videoId);
+
+        const res = await fetch(url.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !(data as any)?.ok) {
+          const errText =
+            typeof (data as any)?.error === "string"
+              ? `Error: ${(data as any).error}`
+              : `Error: HTTP ${res.status}`;
+          return { content: [{ type: "text" as const, text: errText }], structuredContent: data };
+        }
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(data) }],
+          structuredContent: data,
         };
       }) as any
     );
