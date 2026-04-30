@@ -941,63 +941,7 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
             bytes = Buffer.from(ab);
           }
 
-          // For videos we do not download bytes; rely on Cloudflare Stream once processing finished.
-          if (kind === "video") {
-            const playback =
-              asset.playbackUrl ?? (asset.streamId ? streamMp4PlaybackUrl(asset.streamId) : null);
-            if (!playback || !asset.streamId) {
-              const queue = await prisma.streamQueue.findFirst({
-                where: { assetId: asset.id },
-                orderBy: { createdAt: "desc" },
-                select: { id: true, status: true, streamId: true, lastError: true },
-              });
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text:
-                      "Video is not stream-ready yet. Please retry after Stream processing completes.\n" +
-                      `assetId=${asset.id}\n` +
-                      `streamQueueStatus=${queue?.status ?? "unknown"}\n` +
-                      (queue?.lastError ? `lastError=${queue.lastError}\n` : ""),
-                  },
-                ],
-                structuredContent: {
-                  ok: false,
-                  reason: "STREAM_NOT_READY",
-                  assetId: asset.id,
-                  streamQueue: queue ?? null,
-                },
-              };
-            }
-
-            const polled = await pollStreamReady(asset.streamId, { maxAttempts: 25, delayMs: 3000 });
-            if (!polled.ready) {
-              const queue = await prisma.streamQueue.findFirst({
-                where: { assetId: asset.id },
-                orderBy: { createdAt: "desc" },
-                select: { id: true, status: true, streamId: true, lastError: true },
-              });
-              return {
-                content: [
-                  {
-                    type: "text" as const,
-                    text:
-                      "Video Stream encoding is not ready yet. Please retry in a minute.\n" +
-                      `assetId=${asset.id}\n` +
-                      `streamQueueStatus=${queue?.status ?? "unknown"}\n` +
-                      (queue?.lastError ? `lastError=${queue.lastError}\n` : ""),
-                  },
-                ],
-                structuredContent: {
-                  ok: false,
-                  reason: "STREAM_ENCODING",
-                  assetId: asset.id,
-                  streamQueue: queue ?? null,
-                },
-              };
-            }
-          }
+          // For videos we do not download bytes. Meta will ingest directly from the public R2 URL later.
         } else {
           // Base64 path (small files)
           if (!opts.kind || !opts.filename) {
@@ -1102,26 +1046,14 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
                 thumbnailUrl,
               },
             });
-          } else if (existingAssetRow?.streamId) {
-            streamId = existingAssetRow.streamId;
+          } else if (existingAssetRow) {
+            const base = requireEnv("R2_PUBLIC_BASE_URL").replace(/\/$/, "");
+            const key = existingAssetRow.r2Key.replace(/^\/+/, "");
+            playbackUrl = `${base}/${key}`;
+            streamId = null;
             thumbnailUrl = existingAssetRow.thumbnailUrl;
-            playbackUrl =
-              existingAssetRow.playbackUrl ?? streamMp4PlaybackUrl(existingAssetRow.streamId);
-            if (!playbackUrl) {
-              return {
-                content: [{ type: "text" as const, text: "Error: Video asset missing Stream playback URL." }],
-              };
-            }
-            if (!existingAssetRow.playbackUrl) {
-              await prisma.asset.update({
-                where: { id: asset.id },
-                data: { playbackUrl },
-              });
-            }
           } else {
-            return {
-              content: [{ type: "text" as const, text: "Error: Video asset has no Stream id." }],
-            };
+            return { content: [{ type: "text" as const, text: "Error: Missing asset row." }] };
           }
 
           metaVideoStatus = "ready";

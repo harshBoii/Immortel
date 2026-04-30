@@ -35,3 +35,24 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # Immortel
+
+## Claude creative upload (public R2 URL)
+
+This repo supports a Claude-friendly flow for large creatives:
+
+- Claude returns a time-limited browser link (`/upload/creative?t=...`)
+- The user uploads an image/video in the browser (multipart to R2)
+- The page shows an `assetId` which is then passed back to Claude
+- Claude calls `prepare_meta_creative` with `assetId`
+
+### Required environment
+
+- `R2_BUCKET_NAME`: bucket where uploads land
+- `R2_PUBLIC_BASE_URL`: public base URL for that bucket (used for **video** ingestion by Meta when using `assetId`)
+  - Example: `https://pub-<id>.r2.dev`
+
+### Required Cloudflare R2 settings
+
+- **Public access**: enable public access for the uploaded objects (videos are ingested by Meta via `file_url`)
+- **CORS (browser multipart uploads)**: allow cross-origin `PUT` to the R2 S3 endpoint and expose `ETag`
+  - The browser must be able to read each part upload response `ETag` header to complete the multipart upload.
