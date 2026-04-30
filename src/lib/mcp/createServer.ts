@@ -1893,9 +1893,11 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
           return { content: [{ type: "text" as const, text: "Error: Ad set not found." }] };
         }
 
+        // If metaCreativeId is provided explicitly, trust it and skip DB lookup.
+        // This is useful when creativeDbId exists but the Graph creative id wasn't stored.
         let metaCreativeIdOut: string | null = metaCreativeId?.trim() || null;
         let creativeDbIdOut: string | null = creativeDbId?.trim() || null;
-        if (creativeDbIdOut) {
+        if (!metaCreativeIdOut && creativeDbIdOut) {
           const c = await prisma.metaCreative.findFirst({
             where: { id: creativeDbIdOut, metaIntegrationId: auth.integration.integrationId },
             select: { id: true, metaCreativeId: true },

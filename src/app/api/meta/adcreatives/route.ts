@@ -144,10 +144,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Meta did not return creative id" }, { status: 502 });
   }
 
-  console.log("[api/meta/adcreatives][POST] graphPost_response", { metaCreativeId });
+  console.log("[api/meta/adcreatives][POST] meta_response", {
+    ok: true,
+    metaCreativeId,
+  });
 
-  const row = await prisma.metaCreative.create({
-    data: {
+  const row = await prisma.metaCreative.upsert({
+    where: {
+      metaIntegrationId_metaCreativeId: {
+        metaIntegrationId: loaded.integrationId,
+        metaCreativeId,
+      },
+    },
+    create: {
       metaIntegrationId: loaded.integrationId,
       metaCampaignId: null,
       metaCreativeId,
@@ -160,6 +169,21 @@ export async function POST(req: Request) {
       imageUrl: media.imageUrl,
       aiGenerated: false,
     },
+    update: {
+      imageHash: media.imageHash,
+      headline,
+      primaryText,
+      description: description || null,
+      ctaType,
+      landingUrl,
+      imageUrl: media.imageUrl,
+    },
+  });
+
+  console.log("[api/meta/adcreatives][POST] db_upsert", {
+    ok: true,
+    creativeDbId: row.id,
+    metaCreativeId: row.metaCreativeId,
   });
 
   console.log("[api/meta/adcreatives][POST] response", {
