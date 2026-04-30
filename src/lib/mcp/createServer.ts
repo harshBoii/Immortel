@@ -514,7 +514,7 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
     type FinalizeTheScriptInput = z.infer<typeof finalizeTheScriptInputSchema>;
 
     server.registerTool(
-      "finalize the script",
+      "finalize_the_script",
       {
         title: "Finalize the script",
         description:
