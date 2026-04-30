@@ -499,6 +499,140 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
       }) as any
     );
 
+    // ─── finalize the script ────────────────────────────────────────────────
+    // Rewrites a brief into a highly explicit, video-generator-friendly prompt.
+    const finalizeTheScriptInputSchema = z.object({
+      scriptBrief: z
+        .string()
+        .min(1)
+        .describe("Short script/story/ad brief to expand into a video-generation-ready prompt."),
+      language: z
+        .string()
+        .min(1)
+        .describe('Output language for the final prompt (e.g. "English", "Hindi", "Tamil").'),
+    });
+    type FinalizeTheScriptInput = z.infer<typeof finalizeTheScriptInputSchema>;
+
+    server.registerTool(
+      "finalize the script",
+      {
+        title: "Finalize the script",
+        description:
+          "Rewrite a script brief into a highly explicit, explanatory, video-generation-ready prompt in the requested language, including timecoded beats, VO/dialogue guidance, on-screen text, audio cues, negatives, and deliverables.",
+        inputSchema: (finalizeTheScriptInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const { scriptBrief, language } = input as FinalizeTheScriptInput;
+
+        const defaults = {
+          aspectRatio: "9:16",
+          resolution: "1080x1920",
+          durationSeconds: 25,
+          fps: 30,
+        };
+
+        const sections = {
+          intent:
+            "Turn the brief into a clear, production-ready video generation prompt. Be explicit and reduce ambiguity. Assume the generator can follow structured instructions.",
+          constraints: [
+            `Write everything in ${language}.`,
+            "Use simple, unambiguous sentences. Prefer concrete visual actions over abstract feelings.",
+            "If the brief is missing details, make reasonable assumptions and state them explicitly (do not ask questions).",
+            "Avoid meta commentary. Output only the final video-generation prompt.",
+          ],
+          cinematicSpec: {
+            style:
+              "Short-form cinematic ad/story with strong emotional pacing, clear subject, and a satisfying end beat.",
+            camera:
+              "Mix of wide establishing shots + medium action shots + close-ups for emotion and product detail. Smooth handheld or gimbal; avoid chaotic motion.",
+            lighting:
+              "Naturalistic, soft key light; motivated practicals. Keep faces well-lit and readable.",
+            artDirection:
+              "Clean compositions, readable product/brand moments, minimal clutter, consistent wardrobe and props.",
+          },
+          scenePlan: [
+            "0–3s: Hook. Show the problem in one striking visual moment.",
+            "3–6s: Escalate. Make the pain point feel real and relatable.",
+            "6–9s: Reveal. Introduce the solution/product/service clearly.",
+            "9–12s: Proof. Show how it works (one key feature visually).",
+            "12–15s: Transformation. Before/after contrast.",
+            "15–18s: Payoff. Emotional relief or confidence moment.",
+            "18–22s: Brand moment. Logo/product in-frame; benefit statement on-screen.",
+            "22–25s: CTA end card. Clear next step.",
+          ],
+          voiceoverAndDialogue: [
+            "Voiceover: concise, conversational, and aligned to each beat. Prefer short lines that match the visuals.",
+            "Dialogue (optional): only if it increases clarity; keep it minimal and natural.",
+          ],
+          onScreenText: [
+            "Use 3–7 words per on-screen text line.",
+            "Keep text high-contrast, large, and within safe margins (avoid edges).",
+            "Only show one message at a time; sync with the scene beat.",
+          ],
+          audio: [
+            "Music: starts curious/tense, resolves uplifting after the solution reveal.",
+            "SFX: subtle UI taps, whooshes for transitions, light ambience matching location.",
+          ],
+          negatives: [
+            "No distorted faces, extra limbs, melted hands, or warped text.",
+            "No unreadable logos or misspelled brand/product names.",
+            "No sudden character/wardrobe changes between shots.",
+            "No jump cuts that break continuity; keep consistent environment.",
+            "Avoid crowded frames; keep the main subject centered and readable.",
+          ],
+          deliverables: {
+            aspectRatio: defaults.aspectRatio,
+            resolution: defaults.resolution,
+            durationSeconds: defaults.durationSeconds,
+            fps: defaults.fps,
+            captioning: "If captions are used, they must match the spoken language and be perfectly readable.",
+          },
+        } as const;
+
+        const videoPrompt = [
+          `LANGUAGE: ${language}`,
+          "",
+          "TASK:",
+          "Rewrite the following script brief into a single, extremely clear prompt for a video-generating AI.",
+          "The goal is that a video model can produce the video without guessing what to show.",
+          "",
+          "SCRIPT_BRIEF:",
+          scriptBrief.trim(),
+          "",
+          "OUTPUT_REQUIREMENTS:",
+          "- Output ONLY the final video-generation prompt (no analysis).",
+          `- Everything must be written in ${language}.`,
+          `- Assume vertical video (${defaults.aspectRatio}), ${defaults.resolution}, ~${defaults.durationSeconds}s, ${defaults.fps}fps.`,
+          "- Include timecoded beats (0–3s, 3–6s, ...). For each beat specify: shot type + camera motion + what is on-screen + action + emotion cue.",
+          "- Include VO/dialogue lines aligned to beats (optional but recommended).",
+          "- Include on-screen text per beat (keep it short).",
+          "- Include music + SFX guidance.",
+          "- Include a short end-card/CTA spec.",
+          "- Include a 'NEGATIVE PROMPT / AVOID' list.",
+          "",
+          "STRUCTURE_TO_FOLLOW:",
+          "1) One-line summary",
+          "2) Style & cinematic direction",
+          "3) Characters & setting (make assumptions explicit if missing)",
+          "4) Timecoded shot list (0–3s, 3–6s, ...)",
+          "5) Voiceover/dialogue",
+          "6) On-screen text",
+          "7) Music & SFX",
+          "8) End card / CTA",
+          "9) NEGATIVE PROMPT / AVOID",
+        ].join("\n");
+
+        return {
+          content: [{ type: "text" as const, text: videoPrompt }],
+          structuredContent: {
+            language,
+            videoPrompt,
+            sections,
+          },
+        };
+      }) as any
+    );
+
     // ─── heygen_agent_generate_video ─────────────────────────────────────────
 
     const heygenAgentGenerateVideoInputSchema = z.object({
