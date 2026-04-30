@@ -52,6 +52,7 @@ export function middleware(request: NextRequest) {
   const isAssetDownloadApi = pathname.startsWith('/api/assets') 
   const isWinningFormulaWebhook = pathname.startsWith('/api/meta/winning-formula/webhook');
   const isHeygenWebhook = pathname.startsWith('/api/meta/heygen/webhook');
+  const isUploadCreativePage = pathname === '/upload/creative';
 
   const isPublic =
     isLoginPage ||
@@ -84,6 +85,7 @@ export function middleware(request: NextRequest) {
     isAssetDownloadApi||
     isWinningFormulaWebhook||
     isHeygenWebhook||
+    isUploadCreativePage||
     isCallingAgentWebhook;
 
   if (isPublic) {
