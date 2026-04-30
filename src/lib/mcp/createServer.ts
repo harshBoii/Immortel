@@ -10,6 +10,7 @@ import {
   import { z } from "zod";
   import { prisma } from "@/lib/prisma";
   import { resolveCompanyByPassword } from "@/lib/mcp/companyPasswordAuth";
+  import { createCreativeUploadToken } from "@/lib/mcp/creativeUploadToken";
   import { decrypt } from "@/lib/meta/crypto";
   import { graphPost } from "@/lib/meta/graph";
   import {
@@ -35,6 +36,59 @@ import {
   
     const productListResourceUri = "ui://product-list/mcp-app.html";
     const checkoutResourceUri = "ui://checkout/mcp-app.html";
+
+    // ─── get_creative_upload_link ───────────────────────────────────────────
+
+    const getCreativeUploadLinkInputSchema = z.object({
+      password: z.string().min(1).describe("Company account password. Required."),
+      email: z.string().optional().describe("Optional company email to narrow lookup."),
+      companyName: z.string().optional().describe("Optional company name/slug to narrow lookup."),
+      userName: z.string().optional().describe("Optional company userName to narrow lookup."),
+      ttlMinutes: z.number().int().optional().default(20).describe("Link expiry in minutes (default 20)."),
+    });
+    type GetCreativeUploadLinkInput = z.infer<typeof getCreativeUploadLinkInputSchema>;
+
+    server.registerTool(
+      "get_creative_upload_link",
+      {
+        title: "Get creative upload link",
+        description:
+          "Authenticate by company password and return a time-limited link where the user can upload a creative (image/video) from their device. After upload, the page shows an assetId to paste back into Claude for prepare_meta_creative.",
+        inputSchema: (getCreativeUploadLinkInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const parsed = getCreativeUploadLinkInputSchema.safeParse(input);
+        if (!parsed.success) {
+          return { content: [{ type: "text" as const, text: "Error: Invalid input." }] };
+        }
+        const { password, email, companyName, userName, ttlMinutes } = parsed.data as GetCreativeUploadLinkInput;
+        const company = await resolveCompanyByPassword(password, { email, companyName, userName });
+        if (!company) {
+          return { content: [{ type: "text" as const, text: "Error: Invalid credentials." }] };
+        }
+
+        const ttlSeconds = Math.max(5, Math.min(60, ttlMinutes)) * 60;
+        const token = createCreativeUploadToken({
+          companyId: company.id,
+          ttlSeconds,
+          allowedTypes: ["IMAGE", "VIDEO"],
+        });
+
+        const uploadUrl = `${IMMORTEL_BASE_URL.replace(/\/$/, "")}/upload/creative?t=${encodeURIComponent(token)}`;
+        const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+
+        const instructions =
+          `1) Open this link and upload your image/video creative: ${uploadUrl}\n` +
+          `2) After upload completes, copy the assetId shown on the page.\n` +
+          `3) Paste it back here and call prepare_meta_creative with assetId.\n` +
+          `Link expires at: ${expiresAt}`;
+
+        return {
+          content: [{ type: "text" as const, text: instructions }],
+          structuredContent: { uploadUrl, expiresAt },
+        };
+      }) as any
+    );
   
     // ─── list_products ──────────────────────────────────────────────────────
   
@@ -757,6 +811,580 @@ End card line: “The hands that held everyone deserve holding too. Putchi.”"
       }
       return null;
     }
+
+    // ─── prepare_meta_creative (unified: image | video) ──────────────────────
+
+    const prepareMetaCreativeInputSchema = passwordAuthSchema.extend({
+      // For Claude large uploads: user uploads via /upload/creative and pastes assetId here.
+      assetId: z.string().optional().describe("Existing Asset id to use (recommended for large uploads)."),
+      // For small files: still allow direct base64.
+      kind: z
+        .enum(["video", "image"])
+        .optional()
+        .describe('Creative kind: "video" uses Stream+advideos; "image" uses adimages image_hash. If omitted with assetId, inferred from Asset.assetType.'),
+      fileBase64: z
+        .string()
+        .optional()
+        .describe("Base64-encoded file bytes (optionally a data: URL). Use only for small files."),
+      filename: z.string().optional().describe("Original filename (e.g. ad.mp4 or ad.jpg). Required with fileBase64."),
+      mimeType: z.string().optional().describe("MIME type (e.g. video/mp4, image/jpeg)."),
+      headline: z.string().optional().describe("Creative headline."),
+      primaryText: z.string().optional().describe("Creative primary text."),
+      description: z.string().optional().describe("Creative description (optional)."),
+      ctaType: z.string().optional().default("LEARN_MORE").describe("CTA type (e.g. LEARN_MORE)."),
+      landingUrl: z.string().optional().describe("Landing page URL."),
+      name: z.string().optional().describe("Creative name override (optional)."),
+      scenePreset: z.string().optional().describe("Harshboii scene preset (default sensitive)."),
+    });
+    type PrepareMetaCreativeInput = z.infer<typeof prepareMetaCreativeInputSchema>;
+
+    server.registerTool(
+      "prepare_meta_creative",
+      {
+        title: "Prepare Meta creative (image or video)",
+        description:
+          "Authenticate by company password and prepare a Meta creative from an uploaded file. For video: upload to R2 + Cloudflare Stream, upload to Meta advideos, then create a video ad creative. For image: upload to R2, upload to Meta adimages to obtain image_hash, then create an image ad creative. Enqueues Harshboii analysis and returns ad set options + tracking ids.",
+        inputSchema: (prepareMetaCreativeInputSchema as any).shape,
+      },
+      (async (input: unknown) => {
+        const auth = await loadMetaIntegrationByPassword(input);
+        if ("error" in auth) {
+          return { content: [{ type: "text" as const, text: auth.error }] };
+        }
+
+        const parsed = prepareMetaCreativeInputSchema.safeParse(input);
+        if (!parsed.success) {
+          return { content: [{ type: "text" as const, text: "Error: Invalid input." }] };
+        }
+        const opts = parsed.data as PrepareMetaCreativeInput;
+
+        const bucket = process.env.R2_BUCKET_NAME ?? "";
+        if (!bucket) {
+          return { content: [{ type: "text" as const, text: "Error: R2_BUCKET_NAME must be set." }] };
+        }
+
+        // Resolve input source: assetId (preferred) vs base64.
+        const hasAssetId = typeof opts.assetId === "string" && opts.assetId.trim().length > 0;
+        const hasBase64 = typeof opts.fileBase64 === "string" && opts.fileBase64.trim().length > 0;
+        if (!hasAssetId && !hasBase64) {
+          return { content: [{ type: "text" as const, text: "Error: Provide `assetId` or `fileBase64`." }] };
+        }
+
+        let kind: "video" | "image";
+        let mimeType: string;
+        let fileName: string;
+        let r2Key: string;
+        let bytes: Buffer | null = null;
+        /** Loaded row when caller passed assetId */
+        let existingAssetRow: {
+          id: string;
+          assetType: string;
+          filename: string;
+          mimeType: string | null;
+          r2Key: string;
+          r2Bucket: string;
+          streamId: string | null;
+          playbackUrl: string | null;
+          thumbnailUrl: string | null;
+          originalSize: bigint;
+        } | null = null;
+
+        if (hasAssetId) {
+          const asset = await prisma.asset.findFirst({
+            where: { id: opts.assetId!.trim(), companyId: auth.company.id },
+            select: {
+              id: true,
+              assetType: true,
+              filename: true,
+              mimeType: true,
+              r2Key: true,
+              r2Bucket: true,
+              streamId: true,
+              playbackUrl: true,
+              thumbnailUrl: true,
+              status: true,
+              intelligenceStatus: true,
+              metadata: true,
+              originalSize: true,
+            },
+          });
+          if (!asset) {
+            return { content: [{ type: "text" as const, text: "Error: Asset not found." }] };
+          }
+          if (asset.r2Bucket !== bucket) {
+            // We only support the main bucket for now; keep it explicit.
+            return { content: [{ type: "text" as const, text: "Error: Asset bucket mismatch." }] };
+          }
+          if (asset.assetType !== "VIDEO" && asset.assetType !== "IMAGE") {
+            return {
+              content: [{ type: "text" as const, text: "Error: Only VIDEO or IMAGE assets are supported." }],
+            };
+          }
+
+          kind =
+            opts.kind ??
+            (asset.assetType === "VIDEO" ? "video" : "image");
+          mimeType =
+            (opts.mimeType?.trim() || asset.mimeType?.trim() || (kind === "video" ? "video/mp4" : "image/jpeg")) as string;
+          fileName = safeFilename(opts.filename ?? asset.filename);
+          r2Key = asset.r2Key;
+          existingAssetRow = asset;
+
+          // For images we need bytes to send to Meta adimages; download from our R2-backed asset download route.
+          if (kind === "image") {
+            const appUrl = requireEnv("NEXT_PUBLIC_APP_URL").replace(/\/$/, "");
+            const dl = await fetch(`${appUrl}/api/assets/${asset.id}/download`);
+            if (!dl.ok) {
+              return { content: [{ type: "text" as const, text: `Error: Failed to download asset bytes (HTTP ${dl.status}).` }] };
+            }
+            const ab = await dl.arrayBuffer();
+            bytes = Buffer.from(ab);
+          }
+
+          // For videos we do not download bytes; rely on Cloudflare Stream once processing finished.
+          if (kind === "video") {
+            const playback =
+              asset.playbackUrl ?? (asset.streamId ? streamMp4PlaybackUrl(asset.streamId) : null);
+            if (!playback || !asset.streamId) {
+              const queue = await prisma.streamQueue.findFirst({
+                where: { assetId: asset.id },
+                orderBy: { createdAt: "desc" },
+                select: { id: true, status: true, streamId: true, lastError: true },
+              });
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text:
+                      "Video is not stream-ready yet. Please retry after Stream processing completes.\n" +
+                      `assetId=${asset.id}\n` +
+                      `streamQueueStatus=${queue?.status ?? "unknown"}\n` +
+                      (queue?.lastError ? `lastError=${queue.lastError}\n` : ""),
+                  },
+                ],
+                structuredContent: {
+                  ok: false,
+                  reason: "STREAM_NOT_READY",
+                  assetId: asset.id,
+                  streamQueue: queue ?? null,
+                },
+              };
+            }
+
+            const polled = await pollStreamReady(asset.streamId, { maxAttempts: 25, delayMs: 3000 });
+            if (!polled.ready) {
+              const queue = await prisma.streamQueue.findFirst({
+                where: { assetId: asset.id },
+                orderBy: { createdAt: "desc" },
+                select: { id: true, status: true, streamId: true, lastError: true },
+              });
+              return {
+                content: [
+                  {
+                    type: "text" as const,
+                    text:
+                      "Video Stream encoding is not ready yet. Please retry in a minute.\n" +
+                      `assetId=${asset.id}\n` +
+                      `streamQueueStatus=${queue?.status ?? "unknown"}\n` +
+                      (queue?.lastError ? `lastError=${queue.lastError}\n` : ""),
+                  },
+                ],
+                structuredContent: {
+                  ok: false,
+                  reason: "STREAM_ENCODING",
+                  assetId: asset.id,
+                  streamQueue: queue ?? null,
+                },
+              };
+            }
+          }
+        } else {
+          // Base64 path (small files)
+          if (!opts.kind || !opts.filename) {
+            return { content: [{ type: "text" as const, text: "Error: With fileBase64, you must provide `kind` and `filename`." }] };
+          }
+          kind = opts.kind;
+          mimeType =
+            (typeof opts.mimeType === "string" && opts.mimeType.trim()) ||
+            (kind === "video" ? "video/mp4" : "image/jpeg");
+          fileName = safeFilename(opts.filename);
+          bytes = Buffer.from(stripDataUrlBase64(opts.fileBase64!), "base64");
+          if (!bytes.length) {
+            return { content: [{ type: "text" as const, text: "Error: Empty file bytes." }] };
+          }
+          r2Key = `assets/${auth.company.id}/uploads/${Date.now()}-${fileName}`;
+        }
+
+        console.log("[mcp][prepare_meta_creative] start", {
+          companyId: auth.company.id,
+          kind,
+          filename: fileName,
+          bytes: bytes?.length ?? null,
+          r2Key,
+        });
+
+        // If this call started from base64, we need to store bytes to R2.
+        if (bytes && !hasAssetId) {
+          await streamToR2({
+            body: bytes,
+            key: r2Key,
+            contentType: mimeType,
+            bucket,
+          });
+        }
+
+        const landingUrl =
+          (typeof opts.landingUrl === "string" && opts.landingUrl.trim()) ||
+          (auth.company.website?.trim() ?? "") ||
+          "https://immortel.vercel.app";
+        const headline = (opts.headline?.trim() || fileName.replace(/\.[^.]+$/, "") || "Ad").slice(0, 255);
+        const primaryText = opts.primaryText?.trim() || "";
+        const description = opts.description?.trim() || "";
+        const ctaType = opts.ctaType?.trim() || "LEARN_MORE";
+        const creativeName = (opts.name?.trim() || headline || "Creative").slice(0, 255);
+
+        // Create Asset row
+        // If input is base64, create the Asset row here. If assetId was provided, reuse it.
+        const asset =
+          hasAssetId
+            ? { id: opts.assetId!.trim() }
+            : await prisma.asset.create({
+                data: {
+                  companyId: auth.company.id,
+                  assetType: kind === "video" ? "VIDEO" : "IMAGE",
+                  title: headline,
+                  filename: fileName,
+                  originalSize: BigInt(bytes!.length),
+                  status: kind === "video" ? "PROCESSING" : "READY",
+                  r2Key,
+                  r2Bucket: bucket,
+                  mimeType,
+                  intelligenceStatus: "PENDING",
+                  metadata: { source: "mcp_meta_ad", kind },
+                  uploadSource: "NATIVE",
+                },
+                select: { id: true },
+              });
+
+        let streamId: string | null = null;
+        let playbackUrl: string | null = null;
+        let thumbnailUrl: string | null = null;
+
+        let metaMediaId: string | null = null;
+        let metaVideoId: string | null = null;
+        let metaVideoStatus: "ready" | "processing" | null = null;
+        let imageHash: string | null = null;
+        let imageUrl: string | null = null;
+
+        if (kind === "video") {
+          if (!hasAssetId) {
+            const streamUpload = await streamToCloudflareStream({
+              body: new Blob([new Uint8Array(bytes!)], { type: mimeType }),
+              filename: fileName,
+              metadata: {
+                source: "mcp_meta_ad",
+                companyId: auth.company.id,
+                assetId: asset.id,
+              },
+            });
+
+            await pollStreamReady(streamUpload.uid, { maxAttempts: 20, delayMs: 2000 });
+            streamId = streamUpload.uid;
+            playbackUrl = streamMp4PlaybackUrl(streamUpload.uid);
+            thumbnailUrl = streamUpload.thumbnail ?? null;
+
+            await prisma.asset.update({
+              where: { id: asset.id },
+              data: {
+                status: "READY",
+                streamId,
+                playbackUrl,
+                thumbnailUrl,
+              },
+            });
+          } else if (existingAssetRow?.streamId) {
+            streamId = existingAssetRow.streamId;
+            thumbnailUrl = existingAssetRow.thumbnailUrl;
+            playbackUrl =
+              existingAssetRow.playbackUrl ?? streamMp4PlaybackUrl(existingAssetRow.streamId);
+            if (!playbackUrl) {
+              return {
+                content: [{ type: "text" as const, text: "Error: Video asset missing Stream playback URL." }],
+              };
+            }
+            if (!existingAssetRow.playbackUrl) {
+              await prisma.asset.update({
+                where: { id: asset.id },
+                data: { playbackUrl },
+              });
+            }
+          } else {
+            return {
+              content: [{ type: "text" as const, text: "Error: Video asset has no Stream id." }],
+            };
+          }
+
+          metaVideoStatus = "ready";
+          try {
+            const adv = (await graphPost(
+              `${auth.integration.actId}/advideos`,
+              { file_url: playbackUrl },
+              { accessToken: auth.integration.accessToken },
+            )) as { id?: string };
+            metaVideoId = adv.id ?? null;
+          } catch (e) {
+            metaVideoStatus = "processing";
+            console.log("[mcp][prepare_meta_creative] advideos error", {
+              error: e instanceof Error ? e.message : String(e),
+              payload: (e as any)?.payload ?? null,
+            });
+          }
+
+          const metaMediaBytes =
+            hasAssetId && existingAssetRow
+              ? Number(existingAssetRow.originalSize)
+              : bytes!.length;
+
+          const metaMedia = await prisma.metaMedia.create({
+            data: {
+              metaIntegrationId: auth.integration.integrationId,
+              kind: "video",
+              videoId: metaVideoId,
+              assetId: asset.id,
+              videoUrl: playbackUrl,
+              videoStreamId: streamId,
+              thumbnailUrl,
+              r2Key,
+              filename: fileName,
+              mimeType,
+              bytes: metaMediaBytes,
+              status: metaVideoStatus ?? "processing",
+            },
+            select: { id: true },
+          });
+          metaMediaId = metaMedia.id;
+        } else {
+          if (!bytes) {
+            return { content: [{ type: "text" as const, text: "Error: Missing image bytes." }] };
+          }
+          // Meta adimages upload (multipart) to obtain image_hash
+          const graphVersion = (process.env.META_GRAPH_VERSION?.trim() || "v25.0").startsWith("v")
+            ? (process.env.META_GRAPH_VERSION?.trim() || "v25.0")
+            : `v${process.env.META_GRAPH_VERSION?.trim() || "25.0"}`;
+          const graphBase = `https://graph.facebook.com/${graphVersion}`;
+          const graphUrl = `${graphBase}/${auth.integration.actId}/adimages?access_token=${encodeURIComponent(
+            auth.integration.accessToken,
+          )}`;
+
+          const metaForm = new FormData();
+          const uint8 = new Uint8Array(bytes);
+          const filePart =
+            typeof File !== "undefined"
+              ? new File([uint8], fileName, { type: mimeType })
+              : new Blob([uint8], { type: mimeType });
+          metaForm.append("filename", filePart);
+
+          const metaRes = await fetch(graphUrl, { method: "POST", body: metaForm });
+          const graphRes = await metaRes.json().catch(() => ({}));
+          if (!metaRes.ok || (graphRes as any)?.error) {
+            const msg =
+              (graphRes as any)?.error?.message ?? `Meta adimages HTTP ${metaRes.status}`;
+            return {
+              content: [{ type: "text" as const, text: `Error: ${msg}` }],
+              structuredContent: { error: msg, graphRes },
+            };
+          }
+
+          const images = (graphRes as any)?.images as
+            | Record<string, { hash?: string; url?: string; permalink_url?: string; width?: number; height?: number }>
+            | undefined;
+          const first = images ? Object.values(images)[0] : undefined;
+          imageHash = typeof first?.hash === "string" ? first.hash : null;
+          imageUrl =
+            (typeof first?.url === "string" && first.url) ||
+            (typeof first?.permalink_url === "string" && first.permalink_url) ||
+            null;
+
+          if (!imageHash) {
+            return {
+              content: [{ type: "text" as const, text: "Error: Meta did not return an image hash." }],
+              structuredContent: { graphRes },
+            };
+          }
+
+          const metaMedia = await prisma.metaMedia.create({
+            data: {
+              metaIntegrationId: auth.integration.integrationId,
+              kind: "image",
+              imageHash,
+              assetId: asset.id,
+              r2Key,
+              imageUrl,
+              mimeType,
+              bytes: bytes.length,
+              filename: fileName,
+              width: first?.width ?? null,
+              height: first?.height ?? null,
+              status: "ready",
+            },
+            select: { id: true },
+          });
+          metaMediaId = metaMedia.id;
+        }
+
+        // Create Meta adcreative (video_id or image_hash)
+        let metaCreativeId: string | null = null;
+        try {
+          const link_data: Record<string, unknown> = {
+            message: primaryText,
+            link: landingUrl,
+            name: headline,
+            ...(description ? { description } : {}),
+            call_to_action: {
+              type: ctaType,
+              value: { link: landingUrl },
+            },
+          };
+          if (kind === "video" && metaVideoId) link_data.video_id = metaVideoId;
+          if (kind === "image" && imageHash) link_data.image_hash = imageHash;
+
+          const object_story_spec = {
+            page_id: auth.integration.fbPageId,
+            link_data,
+          };
+
+          const created = (await graphPost(
+            `${auth.integration.actId}/adcreatives`,
+            { name: creativeName, object_story_spec },
+            { accessToken: auth.integration.accessToken },
+          )) as { id?: string };
+          metaCreativeId = created.id ?? null;
+        } catch (e) {
+          console.log("[mcp][prepare_meta_creative] adcreatives error", {
+            error: e instanceof Error ? e.message : String(e),
+            payload: (e as any)?.payload ?? null,
+          });
+        }
+
+        const creativeRow = await prisma.metaCreative.create({
+          data: {
+            metaIntegrationId: auth.integration.integrationId,
+            metaCampaignId: null,
+            metaCreativeId,
+            imageHash: kind === "image" ? imageHash : null,
+            videoId: kind === "video" ? metaVideoId : null,
+            headline,
+            primaryText,
+            description: description || null,
+            ctaType,
+            landingUrl,
+            imageUrl: kind === "image" ? imageUrl : null,
+            videoUrl: kind === "video" ? playbackUrl : null,
+            videoStreamId: kind === "video" ? streamId : null,
+            thumbnailUrl: kind === "video" ? thumbnailUrl : null,
+            aiGenerated: false,
+          },
+          select: { id: true },
+        });
+
+        // Enqueue Harshboii analysis.
+        const appUrl = requireEnv("NEXT_PUBLIC_APP_URL").replace(/\/$/, "");
+        const baseUrl = processingBaseUrl();
+        const api_url =
+          kind === "video"
+            ? `${appUrl}/api/videos/${asset.id}/download`
+            : `${appUrl}/api/assets/${asset.id}/download`;
+        const harshPayload = {
+          api_url,
+          asset_Id: asset.id,
+          asset_type: kind === "video" ? "VIDEO" : "IMAGE",
+          scene_preset: opts.scenePreset ?? "sensitive",
+        };
+
+        const harshRes = await fetch(`${baseUrl}/process-from-api`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(harshPayload),
+        });
+        const harshJson = await harshRes.json().catch(() => null);
+        if (!harshRes.ok) {
+          const errText =
+            typeof harshJson === "object" && harshJson && "error" in harshJson
+              ? String((harshJson as any).error)
+              : `process-from-api HTTP ${harshRes.status}`;
+          return { content: [{ type: "text" as const, text: `Error: ${errText}` }], structuredContent: harshJson };
+        }
+
+        const analysisJobId = extractJobId(harshJson);
+
+        await prisma.asset.update({
+          where: { id: asset.id },
+          data: {
+            intelligenceStatus: "PROCESSING",
+            metadata: {
+              source: "mcp_meta_ad",
+              kind,
+              harshboii: { baseUrl, jobId: analysisJobId, response: harshJson },
+              meta: {
+                metaMediaId,
+                metaVideoId,
+                metaImageHash: imageHash,
+                metaCreativeId,
+                creativeDbId: creativeRow.id,
+              },
+            },
+          },
+        });
+
+        const adSets = await prisma.metaAdSet.findMany({
+          where: { metaIntegrationId: auth.integration.integrationId },
+          orderBy: { updatedAt: "desc" },
+          take: 50,
+          select: {
+            id: true,
+            metaAdSetId: true,
+            name: true,
+            campaign: { select: { name: true, metaCampaignId: true } },
+          },
+        });
+
+        const structuredContent = {
+          kind,
+          assetId: asset.id,
+          r2Key,
+          r2Bucket: bucket,
+          streamId,
+          playbackUrl,
+          thumbnailUrl,
+          metaMediaDbId: metaMediaId,
+          metaVideoId,
+          metaVideoStatus,
+          metaImageHash: imageHash,
+          imageUrl,
+          creativeDbId: creativeRow.id,
+          metaCreativeId,
+          analysis: { baseUrl, enqueued: true, api_url, response: harshJson },
+          analysisJobId,
+          adSets: adSets.map((a) => ({
+            adSetDbId: a.id,
+            metaAdSetId: a.metaAdSetId,
+            name: a.name,
+            campaignName: a.campaign?.name ?? null,
+            metaCampaignId: a.campaign?.metaCampaignId ?? null,
+          })),
+          next: {
+            tool: "list_post_ad_options",
+            required: ["assetId"],
+            confirmMessage: "Next: list selectable ad sets (the creative will be the same uploaded asset).",
+          },
+        };
+
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(structuredContent) }],
+          structuredContent,
+        };
+      }) as any
+    );
 
     const prepareMetaVideoCreativeInputSchema = passwordAuthSchema.extend({
       videoBase64: z.string().min(1).describe("Base64-encoded video bytes (optionally a data: URL)."),
