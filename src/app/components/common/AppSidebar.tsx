@@ -5,10 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Zap, Megaphone, Radar, PhoneCall, Users, BellRing, PhoneOff, MessagesSquare, BarChart3 } from 'lucide-react';
-import { SiMeta, SiGoogle } from 'react-icons/si';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Radar } from 'lucide-react';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
+
 
 /* ============================================
    ICONS
@@ -85,13 +85,6 @@ const IconChartBars = ({ className }: { className?: string }) => (
     <line x1="6" y1="20" x2="6" y2="14" />
   </svg>
 );
-const IconShop = ({ className }: { className?: string }) => (
-  <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9l1-5h16l1 5" />
-    <path d="M5 9l1 11h12l1-11" />
-    <path d="M9 13h6" />
-  </svg>
-);
 const IconDatabase = ({ className }: { className?: string }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <ellipse cx="12" cy="5" rx="8" ry="3" />
@@ -116,6 +109,7 @@ const IconHelp = ({ className }: { className?: string }) => (
   </svg>
 );
 
+
 /* ============================================
    SECTIONS CONFIG
 ============================================ */
@@ -124,20 +118,17 @@ type MainSection = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   hasSecondary: boolean;
-  isAgent?: boolean;
   /** When true, section is excluded from the primary nav icons but still resolves secondary nav. */
   hidden?: boolean;
 };
 
 const MAIN_SECTIONS: MainSection[] = [
-  { id: 'home',         label: 'Home',     icon: IconHome,   hasSecondary: true },
-  { id: 'geo',          label: 'GEO',      icon: IconGlobe,  hasSecondary: true, isAgent: true },
-  { id: 'calls',        label: 'Calls',    icon: PhoneCall,  hasSecondary: true, isAgent: true },
-  // { id: 'shop',     label: 'Shop Intel', icon: IconShop,  hasSecondary: true },
-  { id: 'adManagement', label: 'Ads',      icon: Megaphone,  hasSecondary: true, isAgent: true },
+  { id: 'home',      label: 'Home',      icon: IconHome,   hasSecondary: true },
+  { id: 'geo',       label: 'GEO',       icon: IconGlobe,  hasSecondary: true },
   // Workspace lives in the bottom utilities strip but still owns a secondary nav.
-  { id: 'Workspace',    label: 'Workspace', icon: Settings,  hasSecondary: true, hidden: true },
+  { id: 'Workspace', label: 'Workspace', icon: Settings,   hasSecondary: true, hidden: true },
 ];
+
 
 /* ============================================
    PRIMARY SIDEBAR ICON
@@ -180,18 +171,6 @@ const PrimarySidebarIcon = ({
   </div>
 );
 
-/* ============================================
-   PRIMARY SIDEBAR GROUP LABEL
-   — narrow uppercase label with divider rule for grouping icons
-============================================ */
-const PrimaryGroupLabel = ({ label }: { label: string }) => (
-  <div className="w-full flex flex-col items-center gap-1.5 mt-4 mb-1 select-none">
-    <div className="w-6 h-px bg-[var(--sidebar-glass-border)] opacity-60" />
-    <span className="text-[8.5px] font-bold uppercase tracking-[0.16em] leading-none text-[var(--sibling-primary)]/80">
-      {label}
-    </span>
-  </div>
-);
 
 /* ============================================
    SECONDARY NAV ITEM
@@ -218,6 +197,7 @@ const DisabledSecondaryNavItem = ({
     </span>
   </div>
 );
+
 
 const SecondaryNavItem = ({
   icon: Icon,
@@ -255,6 +235,7 @@ const SecondaryNavItem = ({
   );
 };
 
+
 /* ============================================
    SECTION LABEL
 ============================================ */
@@ -265,6 +246,7 @@ const SectionLabel = ({ label }: { label: string }) => (
     </span>
   </div>
 );
+
 
 /* ============================================
    NOTIFICATIONS — deal copy helpers
@@ -294,14 +276,11 @@ function idHash(id: string): number {
 
 /**
  * Builds urgency + insight copy assembled from the prompt's own data.
- * Concatenates revenue, topic signal, and a rotating urgency hook
- * so each card reads like a human wrote a quick deal brief.
  */
 function buildDealCopy(p: NotificationPrompt): { hook: string; insight: string } {
   const rev = formatUsdCompact(p.estimatedRevenueUsd);
   const hash = idHash(p.id);
 
-  // Urgency hooks — rotate by hash so each card feels distinct
   const hooks = [
     "Buyers are searching this right now",
     "Live queries — no one's claiming this",
@@ -311,11 +290,8 @@ function buildDealCopy(p: NotificationPrompt): { hook: string; insight: string }
     "Unclaimed traffic sitting on the table",
   ];
   const baseHook = hooks[hash % hooks.length];
-
-  // Concatenate revenue into the hook line naturally
   const hook = rev ? `${baseHook} · ${rev} in reach` : baseHook;
 
-  // Distill the reason into a tight one-liner by taking first sentence ≤ 90 chars
   const rawReason = typeof p.reason === 'string' ? p.reason.trim() : '';
   const firstSentence = rawReason.split(/(?<=[.!?])\s/)[0].trim();
   const insight =
@@ -327,6 +303,7 @@ function buildDealCopy(p: NotificationPrompt): { hook: string; insight: string }
 
   return { hook, insight };
 }
+
 
 /* ============================================
    NOTIFICATIONS PANEL
@@ -355,19 +332,17 @@ const NotificationsPanel = () => {
 
   return (
     <div className="px-2 pt-3">
-      {/* Panel header */}
-      <div className="flex items-center gap-2 px-1 mb-5 border-b border-gray-200 pb-3 ">
+      <div className="flex items-center gap-2 px-1 mb-5 border-b border-gray-200 pb-3">
         <div className="flex h-5 w-5 items-center justify-center rounded-md bg-amber-500/15 flex-shrink-0">
           <Bell className="h-3 w-3 text-amber-500" />
         </div>
-        <span className="text-[18px] font-semibold text-foreground flex-1  ">Notifications</span>
+        <span className="text-[18px] font-semibold text-foreground flex-1">Notifications</span>
         {loading && (
           <span className="text-[10px] text-muted-foreground/40 animate-pulse">Loading…</span>
         )}
       </div>
 
       <div className="space-y-2">
-        {/* Empty state */}
         {items.length === 0 && !loading && (
           <div className="flex flex-col items-center gap-2 py-6 rounded-xl border border-dashed border-[var(--glass-border)] text-center">
             <Bell className="h-4 w-4 text-muted-foreground/20" />
@@ -386,7 +361,6 @@ const NotificationsPanel = () => {
               key={p.id}
               className="rounded-xl border border-[var(--glass-border)] overflow-hidden hover:border-amber-500/30 transition-all duration-200 group"
             >
-              {/* Urgency strip — assembled from revenue + hook */}
               <div className="flex items-center gap-1.5 bg-amber-500/8 border-b border-amber-500/12 px-2.5 py-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 animate-pulse" />
                 <span className="text-[9.5px] font-semibold text-amber-600 dark:text-amber-400 leading-none truncate">
@@ -394,21 +368,15 @@ const NotificationsPanel = () => {
                 </span>
               </div>
 
-              {/* Card body */}
               <div className="p-2.5 bg-[var(--glass)]/40 space-y-1.5">
-                {/* Query — this IS the deal, make it prominent */}
                 <p className="text-[11px] font-semibold text-foreground leading-snug">
                   {p.query}
                 </p>
-
-                {/* Distilled insight — first sentence of reason */}
                 {insight && (
                   <p className="text-[10px] text-muted-foreground/60 leading-snug">
                     {insight}
                   </p>
                 )}
-
-                {/* Chips row */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                   <span className="inline-flex items-center rounded-md border border-[var(--glass-border)] px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground/50 uppercase tracking-wide leading-none">
                     {p.topic}
@@ -429,18 +397,15 @@ const NotificationsPanel = () => {
   );
 };
 
+
 /* ============================================
    SECONDARY SIDEBAR CONTENT
 ============================================ */
 const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) => {
   switch (activeSection) {
     case 'home':
-      return (
-        <>
-          {/* <SecondaryNavItem icon={IconLayoutDashboard} label="Dashboard" href="/" /> */}
-          <NotificationsPanel />
-        </>
-      );
+      return <NotificationsPanel />;
+
     case 'ingestion':
       return (
         <>
@@ -449,6 +414,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconHistory} label="History" href="/ingestion/history" />
         </>
       );
+
     case 'geo':
       return (
         <>
@@ -461,36 +427,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SecondaryNavItem icon={IconDatabase}  label="Data Mine"              href="/geo/data-mine" />
         </>
       );
-    case 'calls':
-      return (
-        <>
-          <SectionLabel label="Calling Agent" />
-          <SecondaryNavItem icon={Users}           label="Leads"          href="/calls/leads" />
-          <SecondaryNavItem icon={PhoneCall}       label="AI Calls"       href="/calls/ai-calls" />
-          <SecondaryNavItem icon={Megaphone}       label="Campaigns"      href="/calls/campaigns" />
-          <SecondaryNavItem icon={BellRing}        label="Follow-ups"     href="/calls/follow-ups" />
-          <SecondaryNavItem icon={PhoneOff}        label="Dropped Calls"  href="/calls/dropped" />
-          <SecondaryNavItem icon={MessagesSquare}  label="Conversations"  href="/calls/conversations" />
-          <SecondaryNavItem icon={BarChart3}       label="Reports"        href="/calls/reports" />
-          <SecondaryNavItem icon={Settings}        label="Config"         href="/calls/config" />
-        </>
-      );
-    // case 'shop':
-    //   return (
-    //     <>
-    //       <SectionLabel label="Shop Intel" />
-    //       <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify"     href="/shop/products" />
-    //       <SecondaryNavItem icon={ShoppingBag}         label="WooCommerce" href="/shop/woocommerce-products" />
-    //     </>
-    //   );
-    case 'adManagement':
-      return (
-        <>
-          <SectionLabel label="Ad Management" />
-          <SecondaryNavItem icon={SiMeta} label="Meta" href="/ad-management/meta" />
-          <DisabledSecondaryNavItem icon={SiGoogle} label="Google" badge="Coming Soon" />
-        </>
-      );
+
     case 'Workspace':
       return (
         <>
@@ -501,11 +438,12 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
           <SectionLabel label="Enrichment Services" />
           <SecondaryNavItem icon={Clock} label="Job Timing"  href="/jobs/time" />
           <SectionLabel label="Shop Data" />
-          <SecondaryNavItem icon={ShoppingBag} label="WooCommerce" href="/shop/woocommerce-products" />
+          <SecondaryNavItem icon={ShoppingBag}         label="WooCommerce" href="/shop/woocommerce-products" />
           <SecondaryNavItem icon={IconLayoutDashboard} label="Shopify"     href="/shop/products" />
-          <SecondaryNavItem icon={Globe}         label="WordPress" href="/shop/wordpress-products" />
+          <SecondaryNavItem icon={Globe}               label="WordPress"   href="/shop/wordpress-products" />
         </>
       );
+
     default:
       return (
         <>
@@ -515,6 +453,7 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
       );
   }
 };
+
 
 /* ============================================
    MAIN APP SIDEBAR
@@ -545,14 +484,11 @@ export default function AppSidebar() {
 
   const getFirstRoute = (sectionId: string) => {
     switch (sectionId) {
-      case 'home':     return '/';
-      case 'ingestion':return '/ingestion';
-      case 'geo':      return '/geo/radar';
-      case 'calls':    return '/calls/leads';
-      // case 'shop':     return '/shop/products';
-      case 'adManagement': return '/ad-management/meta';
+      case 'home':      return '/';
+      case 'ingestion': return '/ingestion';
+      case 'geo':       return '/geo/radar';
       case 'Workspace': return '/connection';
-      default:         return '/';
+      default:          return '/';
     }
   };
 
@@ -576,9 +512,6 @@ export default function AppSidebar() {
     if      (pathname === '/' || pathname?.startsWith('/hq')) setActiveSection('home');
     else if (pathname?.startsWith('/ingestion'))              setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo'))                    setActiveSection('geo');
-    else if (pathname?.startsWith('/calls') || pathname?.startsWith('/call-center')) setActiveSection('calls');
-    else if (pathname?.startsWith('/shop'))                   setActiveSection('shop');
-    else if (pathname?.startsWith('/ad-management'))            setActiveSection('adManagement');
     else if (pathname?.startsWith('/connection'))             setActiveSection('Workspace');
     else if (pathname?.startsWith('/jobs'))                   setActiveSection('Workspace');
     else                                                      setActiveSection('home');
@@ -658,19 +591,9 @@ export default function AppSidebar() {
 
         <div className="w-8 h-px bg-[var(--sidebar-glass-border)] mb-4 opacity-50" />
 
-        {/* Main nav */}
+        {/* Main nav — flat list, no agent group */}
         <nav className="flex-1 flex flex-col items-center gap-1.5 w-full px-2">
-          {MAIN_SECTIONS.filter((s) => !s.isAgent && !s.hidden).map((section) => (
-            <PrimarySidebarIcon
-              key={section.id}
-              icon={section.icon}
-              label={section.label}
-              isActive={activeSection === section.id}
-              onClick={() => handleSectionClick(section.id)}
-            />
-          ))}
-          {MAIN_SECTIONS.some((s) => s.isAgent && !s.hidden) && <PrimaryGroupLabel label="Agents" />}
-          {MAIN_SECTIONS.filter((s) => s.isAgent && !s.hidden).map((section) => (
+          {MAIN_SECTIONS.filter((s) => !s.hidden).map((section) => (
             <PrimarySidebarIcon
               key={section.id}
               icon={section.icon}
