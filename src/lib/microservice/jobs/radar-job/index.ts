@@ -55,7 +55,8 @@ export async function runRadarJob(companyId: string) {
       prisma.llmTopic.findMany({
         where: { companyId },
         orderBy: { createdAt: "desc" },
-        take: 5,
+        // take: 5,
+        take: 3,
         include: { prompts: { where: { isActive: true }, select: { query: true } } },
       }),
       prisma.shopifyProduct.findMany({
