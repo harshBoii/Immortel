@@ -48,6 +48,7 @@ export const PLAN_OPTIONS: Array<{
     priceLabel: formatPrice(PLAN_CONFIG.STARTER.priceAmount),
     highlights: [
       `${PLAN_CONFIG.STARTER.radarScansQuota} radar scans`,
+      `${PLAN_CONFIG.STARTER.bountyGeneratorQuota} bounty generations`,
       `${PLAN_CONFIG.STARTER.seoPageGenerationQuota} SEO pages`,
       `${PLAN_CONFIG.STARTER.rivalsAnalysisQuota} rival analyses`,
     ],
@@ -58,6 +59,7 @@ export const PLAN_OPTIONS: Array<{
     priceLabel: formatPrice(PLAN_CONFIG.GROWTH.priceAmount),
     highlights: [
       `${PLAN_CONFIG.GROWTH.radarScansQuota} radar scans`,
+      `${PLAN_CONFIG.GROWTH.bountyGeneratorQuota} bounty generations`,
       `${PLAN_CONFIG.GROWTH.seoPageGenerationQuota} SEO pages`,
       `${PLAN_CONFIG.GROWTH.rivalsAnalysisQuota} rival analyses`,
     ],
@@ -68,6 +70,7 @@ export const PLAN_OPTIONS: Array<{
     priceLabel: formatPrice(PLAN_CONFIG.SCALE.priceAmount),
     highlights: [
       `${PLAN_CONFIG.SCALE.radarScansQuota} radar scans`,
+      `${PLAN_CONFIG.SCALE.bountyGeneratorQuota} bounty generations`,
       `${PLAN_CONFIG.SCALE.seoPageGenerationQuota} SEO pages`,
       `${PLAN_CONFIG.SCALE.rivalsAnalysisQuota} rival analyses`,
     ],

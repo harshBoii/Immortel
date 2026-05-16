@@ -118,13 +118,19 @@ async function processEvent(
   }
 
   const isActivation = type === "subscription.active";
+  const isPlanChange = type === "subscription.plan_changed";
   const periodStart =
     isActivation && data.created_at ? new Date(data.created_at) : undefined;
 
   const statusUnchanged =
     company.subscription?.status === newStatus && type !== "subscription.renewed";
 
-  if (!statusUnchanged) {
+  const shouldSyncSubscription =
+    !statusUnchanged ||
+    isPlanChange ||
+    Object.keys(planFields).length > 0;
+
+  if (shouldSyncSubscription) {
     const subscription = await prisma.subscription.upsert({
       where: { companyId: company.id },
       create: {
@@ -162,7 +168,7 @@ async function processEvent(
 
     console.log(
       `[dodo/webhook] ✓ company ${company.id} → ${newStatus} ` +
-        `(event: ${type}, sub: ${subscriptionId})`
+        `(event: ${type}, sub: ${subscriptionId}, plan: ${planRaw ?? "—"})`
     );
   } else if (isActivation) {
     const subscription = await prisma.subscription.findUnique({
@@ -192,7 +198,10 @@ async function processEvent(
     );
   }
 
-  if (isActivation) {
+  const isNewSignup =
+    isActivation && data.metadata?.intent !== "plan_change";
+
+  if (isNewSignup) {
     await triggerGeoAutoSeed(company.id);
   }
 }

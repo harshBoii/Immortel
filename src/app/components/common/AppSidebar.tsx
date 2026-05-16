@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { Bell, Globe, ShoppingBag, Store, Clock, Settings, Radar } from 'lucide-react';
+import { Bell, Globe, ShoppingBag, Store, Clock, Settings, CreditCard } from 'lucide-react';
 import { ThemePicker } from './ThemePicker';
 import { useCurrentContext } from './useCurrentContext';
 
@@ -431,6 +431,8 @@ const SecondarySidebarContent = ({ activeSection }: { activeSection: string }) =
     case 'Workspace':
       return (
         <>
+          <SectionLabel label="Billing" />
+          <SecondaryNavItem icon={CreditCard} label="Plan & usage" href="/workspace/plan" />
           <SectionLabel label="Connection" />
           <SecondaryNavItem icon={Globe}  label="Connectors" href="/connection" />
           <SectionLabel label="Integration Tutorials" />
@@ -487,7 +489,7 @@ export default function AppSidebar() {
       case 'home':      return '/';
       case 'ingestion': return '/ingestion';
       case 'geo':       return '/geo/geoknight';
-      case 'Workspace': return '/connection';
+      case 'Workspace': return '/workspace/plan';
       default:          return '/';
     }
   };
@@ -512,8 +514,10 @@ export default function AppSidebar() {
     if      (pathname === '/' || pathname?.startsWith('/hq')) setActiveSection('home');
     else if (pathname?.startsWith('/ingestion'))              setActiveSection('ingestion');
     else if (pathname?.startsWith('/geo'))                    setActiveSection('geo');
+    else if (pathname?.startsWith('/workspace'))              setActiveSection('Workspace');
     else if (pathname?.startsWith('/connection'))             setActiveSection('Workspace');
     else if (pathname?.startsWith('/jobs'))                   setActiveSection('Workspace');
+    else if (pathname?.startsWith('/shop'))                   setActiveSection('Workspace');
     else                                                      setActiveSection('home');
   }, [pathname]);
 
