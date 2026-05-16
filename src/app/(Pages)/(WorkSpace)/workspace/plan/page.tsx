@@ -140,7 +140,7 @@ function PlanCard({
 
 function WorkspacePlanContent() {
   const searchParams = useSearchParams();
-  const checkoutSuccess = searchParams.get("checkout") === "success";
+  const checkoutSuccess = searchParams?.get("checkout") === "success";
 
   const [data, setData] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
