@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { setAuthCookie } from "@/lib/auth";
 import bcrypt from "bcryptjs";
-import DodoPayments from 'dodopayments'
+import DodoPayments from "dodopayments";
+import {
+  getDodoProductId,
+  getSubscriptionFieldsForPlan,
+  isPlanId,
+} from "@/lib/subscription/plans";
 
 type CmsChoice = "Shopify" | "WordPress" | "Other";
 
@@ -40,12 +44,12 @@ function normalizeShopDomain(input: string): string {
 
 export async function POST(request: Request) {
   try {
-
     const dodo = new DodoPayments({
       bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
-      environment: "test_mode",
+      environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
+        | "test_mode"
+        | "live_mode",
     });
-    console.log(dodo);
 
     const body = await request.json();
     const {
@@ -58,6 +62,7 @@ export async function POST(request: Request) {
       requestedCmsName,
       shopDomain,
       wordpressSiteUrl,
+      plan: planRaw,
     }: {
       email?: unknown;
       password?: unknown;
@@ -68,6 +73,7 @@ export async function POST(request: Request) {
       requestedCmsName?: unknown;
       shopDomain?: unknown;
       wordpressSiteUrl?: unknown;
+      plan?: unknown;
     } = body ?? {};
 
     if (typeof email !== "string" || !email.trim()) {
@@ -95,6 +101,23 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Website URL is required" },
         { status: 400 }
+      );
+    }
+    if (typeof planRaw !== "string" || !isPlanId(planRaw)) {
+      return NextResponse.json(
+        { error: "A valid subscription plan is required" },
+        { status: 400 }
+      );
+    }
+    const plan = planRaw;
+
+    let productId: string;
+    try {
+      productId = getDodoProductId(plan);
+    } catch {
+      return NextResponse.json(
+        { error: "Payment configuration is incomplete. Please contact support." },
+        { status: 500 }
       );
     }
 
@@ -165,6 +188,7 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const subscriptionFields = getSubscriptionFieldsForPlan(plan);
 
     const company = await prisma.company.create({
       data: {
@@ -179,12 +203,13 @@ export async function POST(request: Request) {
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
         subscription: {
           create: {
+            ...subscriptionFields,
             status: SubscriptionStatus.PENDING,
             provider: "dodopayments",
           },
         },
       },
-      select: { id: true , name: true, email: true },
+      select: { id: true, name: true, email: true },
     });
 
     if (cms === "Shopify" && shopDomainNormalized) {
@@ -207,12 +232,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // await setAuthCookie(company.id);
-
     const session = await dodo.checkoutSessions.create({
       product_cart: [
         {
-          product_id: process.env.DODO_SUBSCRIPTION_PRODUCT_ID!,
+          product_id: productId,
           quantity: 1,
         },
       ],
@@ -221,15 +244,13 @@ export async function POST(request: Request) {
         name: companyName.trim(),
       },
       metadata: {
-        companyId: company.id, // ← webhook uses this to find the company
+        companyId: company.id,
+        plan,
       },
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup/success`,
     });
 
-
-    // return NextResponse.json({ success: true });
     return NextResponse.json({ checkoutUrl: session.checkout_url });
-  
   } catch (err) {
     console.error("Register error:", err);
     return NextResponse.json(
@@ -238,4 +259,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { PLAN_OPTIONS, getPlanOption, type PlanId } from '@/lib/subscription/plans';
 
 type CmsChoice = 'Shopify' | 'WordPress' | 'Other';
 
-type StepId = 'account' | 'company' | 'cms' | 'site' | 'launch' | 'payment';
+type StepId = 'account' | 'company' | 'cms' | 'site' | 'plan' | 'launch' | 'payment';
 
 const easeMist = [0.17, 0.99, 0.28, 1] as const;
 const AUTH_SUBMIT_GLASS_CLASS =
@@ -31,6 +32,8 @@ export default function RegisterPage() {
   const [shopDomain, setShopDomain] = useState('');
   const [wordpressSiteUrl, setWordpressSiteUrl] = useState('');
 
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>('STARTER');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -41,14 +44,14 @@ export default function RegisterPage() {
   // payment step is the last real step but we don't include it in the
   // progress bar denominator — it's a "done, now pay" confirmation screen.
   const stepOrder: StepId[] = useMemo(
-    () => ['account', 'company', 'cms', 'site', 'launch', 'payment'],
+    () => ['account', 'company', 'cms', 'site', 'plan', 'launch', 'payment'],
     []
   );
   const stepIndex = stepOrder.indexOf(step);
 
-  // Progress only counts the first 5 steps (account → launch).
+  // Progress only counts the first 6 steps (account → launch).
   // The payment step shows 100% progress.
-  const PROGRESS_STEPS = 5;
+  const PROGRESS_STEPS = 6;
   const progressIndex = Math.min(stepIndex, PROGRESS_STEPS - 1);
   const progress = progressIndex / (PROGRESS_STEPS - 1);
 
@@ -69,6 +72,10 @@ export default function RegisterPage() {
       site: {
         title: 'Connect the dots',
         subtitle: "Drop your website. If you're using a store/CMS, add the domain too.",
+      },
+      plan: {
+        title: 'Pick your plan',
+        subtitle: 'Choose the tier that fits your team. You can change later.',
       },
       launch: {
         title: 'Ready to start the setup?',
@@ -116,6 +123,9 @@ export default function RegisterPage() {
       if (cmsChoice === 'WordPress' && !wordpressSiteUrl.trim())
         return 'Site URL is required for WordPress.';
     }
+    if (current === 'plan') {
+      if (!selectedPlan) return 'Please select a subscription plan.';
+    }
     return null;
   }
 
@@ -149,6 +159,7 @@ export default function RegisterPage() {
           requestedCmsName: cmsChoice === 'Other' ? requestedCmsName : undefined,
           shopDomain: cmsChoice === 'Shopify' ? shopDomain : undefined,
           wordpressSiteUrl: cmsChoice === 'WordPress' ? wordpressSiteUrl : undefined,
+          plan: selectedPlan,
         }),
       });
 
@@ -177,13 +188,17 @@ export default function RegisterPage() {
     window.location.href = checkoutUrl;
   }
 
+  const selectedPlanOption = getPlanOption(selectedPlan);
+
   const review = useMemo(() => {
     const cmsLabel =
       cmsChoice === 'Other' ? (requestedCmsName.trim() || 'Other') : cmsChoice;
+    const planLabel = `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`;
     return [
       { k: 'Email', v: email.trim() || '—' },
       { k: 'Company', v: companyName.trim() || '—' },
       { k: 'Domain', v: companyDomain.trim() || '—' },
+      { k: 'Plan', v: planLabel },
       { k: 'CMS', v: cmsLabel },
       { k: 'Website', v: websiteUrl.trim() || '—' },
       ...(cmsChoice === 'Shopify'
@@ -193,7 +208,18 @@ export default function RegisterPage() {
         ? [{ k: 'WP site', v: wordpressSiteUrl.trim() || '—' }]
         : []),
     ];
-  }, [cmsChoice, requestedCmsName, email, companyName, companyDomain, websiteUrl, shopDomain, wordpressSiteUrl]);
+  }, [
+    cmsChoice,
+    requestedCmsName,
+    email,
+    companyName,
+    companyDomain,
+    websiteUrl,
+    shopDomain,
+    wordpressSiteUrl,
+    selectedPlanOption.name,
+    selectedPlanOption.priceLabel,
+  ]);
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -444,6 +470,43 @@ export default function RegisterPage() {
                     </div>
                   ) : null}
 
+                  {step === 'plan' ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {PLAN_OPTIONS.map((option) => {
+                        const selected = selectedPlan === option.id;
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => setSelectedPlan(option.id)}
+                            className={`rounded-xl border p-4 text-left transition-all ${
+                              selected
+                                ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
+                                : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
+                            }`}
+                          >
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="text-base font-semibold text-foreground">
+                                {option.name}
+                              </span>
+                              <span className="text-sm font-semibold text-[var(--sibling-primary)]">
+                                {option.priceLabel}
+                              </span>
+                            </div>
+                            <ul className="mt-3 grid gap-1.5 text-sm text-muted-foreground">
+                              {option.highlights.map((line) => (
+                                <li key={line} className="flex items-center gap-2">
+                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                                  {line}
+                                </li>
+                              ))}
+                            </ul>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
                   {step === 'launch' ? (
                     <div className="grid gap-4">
                       <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
@@ -496,6 +559,7 @@ export default function RegisterPage() {
                         <div className="text-sm font-semibold mb-3">What you're activating</div>
                         <ul className="grid gap-2 text-sm text-muted-foreground">
                           {[
+                            `${selectedPlanOption.name} plan (${selectedPlanOption.priceLabel})`,
                             'Full GEO workspace for ' + (companyName.trim() || 'your company'),
                             'Auto-seed from your website',
                             'CMS integration (' + (cmsChoice === 'Other' ? requestedCmsName.trim() || 'Custom' : cmsChoice) + ')',
@@ -530,7 +594,11 @@ export default function RegisterPage() {
                   </button>
 
                   <div className="flex flex-col sm:flex-row gap-3 sm:items-center w-30">
-                    {step === 'account' || step === 'company' || step === 'cms' || step === 'site' ? (
+                    {step === 'account' ||
+                    step === 'company' ||
+                    step === 'cms' ||
+                    step === 'site' ||
+                    step === 'plan' ? (
                       <m.button
                         type="button"
                         onClick={handleContinue}

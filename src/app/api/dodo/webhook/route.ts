@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import DodoPayments from "dodopayments";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionStatus } from "@prisma/client";
+import {
+  getSubscriptionFieldsForPlan,
+  isPlanId,
+} from "@/lib/subscription/plans";
 
-// Initialise the Dodo client with your webhook key so .unwrap() can verify
-// signatures for you automatically.
 const dodo = new DodoPayments({
   bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
   environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
@@ -13,29 +15,30 @@ const dodo = new DodoPayments({
   webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
 });
 
-// Map every Dodo subscription event type → your Prisma enum value.
 const EVENT_STATUS_MAP: Record<string, SubscriptionStatus> = {
-  "subscription.active":       SubscriptionStatus.ACTIVE,
-  "subscription.renewed":      SubscriptionStatus.ACTIVE,
+  "subscription.active": SubscriptionStatus.ACTIVE,
+  "subscription.renewed": SubscriptionStatus.ACTIVE,
   "subscription.plan_changed": SubscriptionStatus.ACTIVE,
-  "subscription.on_hold":      SubscriptionStatus.ON_HOLD,
-  "subscription.cancelled":    SubscriptionStatus.CANCELLED,
-  "subscription.failed":       SubscriptionStatus.FAILED,
-  "subscription.expired":      SubscriptionStatus.EXPIRED,
+  "subscription.on_hold": SubscriptionStatus.ON_HOLD,
+  "subscription.cancelled": SubscriptionStatus.CANCELLED,
+  "subscription.failed": SubscriptionStatus.FAILED,
+  "subscription.expired": SubscriptionStatus.EXPIRED,
 };
 
+function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
 export async function POST(req: Request) {
-  // ─── 1. Read raw body ────────────────────────────────────────────────────
-  // Must be a raw string for HMAC verification — do NOT call req.json() first.
   const rawBody = await req.text();
 
-  // ─── 2. Verify signature + parse payload ─────────────────────────────────
-  // .unwrap() throws if the signature is invalid. Catch → 401.
   let event: ReturnType<typeof dodo.webhooks.unwrap>;
   try {
     event = dodo.webhooks.unwrap(rawBody, {
       headers: {
-        "webhook-id":        req.headers.get("webhook-id") ?? "",
+        "webhook-id": req.headers.get("webhook-id") ?? "",
         "webhook-signature": req.headers.get("webhook-signature") ?? "",
         "webhook-timestamp": req.headers.get("webhook-timestamp") ?? "",
       },
@@ -45,8 +48,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
-  // ─── 3. Acknowledge immediately (Dodo requires 2xx within 15 s) ──────────
-  // We kick off processing asynchronously so we never time out.
   processEvent(event, req.headers.get("webhook-id") ?? "").catch((err) =>
     console.error("[dodo/webhook] async processing error:", err)
   );
@@ -54,9 +55,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ received: true });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Async processor — runs after 200 is already sent to Dodo
-// ─────────────────────────────────────────────────────────────────────────────
 async function processEvent(
   event: ReturnType<typeof dodo.webhooks.unwrap>,
   webhookId: string
@@ -72,8 +70,6 @@ async function processEvent(
     };
   };
 
-  // ── Idempotency guard ────────────────────────────────────────────────────
-  // Only subscription events are relevant here — skip everything else early.
   if (!EVENT_STATUS_MAP[type]) {
     console.log(`[dodo/webhook] ignoring event type: ${type}`);
     return;
@@ -82,31 +78,38 @@ async function processEvent(
   const newStatus = EVENT_STATUS_MAP[type];
   const subscriptionId = data.subscription_id;
   const companyId = data.metadata?.companyId;
+  const planRaw = data.metadata?.plan;
+  const planFields =
+    typeof planRaw === "string" && isPlanId(planRaw)
+      ? getSubscriptionFieldsForPlan(planRaw)
+      : {};
 
-  // ── Resolve the company ───────────────────────────────────────────────────
-  // Primary:  metadata.companyId  (set at checkout session creation)
-  // Fallback: customer.email       (in case metadata was lost)
   let company: {
     id: string;
-    subscription: { status: SubscriptionStatus } | null;
+    subscription: { id: string; status: SubscriptionStatus } | null;
   } | null = null;
 
   if (companyId) {
     company = await prisma.company.findUnique({
       where: { id: companyId },
-      select: { id: true, subscription: { select: { status: true } } },
+      select: {
+        id: true,
+        subscription: { select: { id: true, status: true } },
+      },
     });
   }
 
   if (!company && data.customer?.email) {
     company = await prisma.company.findUnique({
       where: { email: data.customer.email },
-      select: { id: true, subscription: { select: { status: true } } },
+      select: {
+        id: true,
+        subscription: { select: { id: true, status: true } },
+      },
     });
   }
 
   if (!company) {
-    // This can happen for external/rival companies — safe to ignore.
     console.warn(
       `[dodo/webhook] no company found for event ${type} | ` +
         `companyId=${companyId} | webhookId=${webhookId}`
@@ -114,56 +117,86 @@ async function processEvent(
     return;
   }
 
-  // ── Skip redundant writes ─────────────────────────────────────────────────
-  // Dodo may retry the same event. If the status is already correct, skip.
-  if (company.subscription?.status === newStatus && type !== "subscription.renewed") {
+  const isActivation = type === "subscription.active";
+  const periodStart =
+    isActivation && data.created_at ? new Date(data.created_at) : undefined;
+
+  const statusUnchanged =
+    company.subscription?.status === newStatus && type !== "subscription.renewed";
+
+  if (!statusUnchanged) {
+    const subscription = await prisma.subscription.upsert({
+      where: { companyId: company.id },
+      create: {
+        companyId: company.id,
+        status: newStatus,
+        provider: "dodopayments",
+        externalId: subscriptionId ?? null,
+        ...planFields,
+        ...(periodStart ? { currentPeriodStart: periodStart } : {}),
+      },
+      update: {
+        status: newStatus,
+        provider: "dodopayments",
+        externalId: subscriptionId ?? undefined,
+        ...(Object.keys(planFields).length > 0 ? planFields : {}),
+        ...(periodStart ? { currentPeriodStart: periodStart } : {}),
+      },
+    });
+
+    if (isActivation) {
+      const start = periodStart ?? subscription.currentPeriodStart ?? new Date();
+      const end = addMonths(start, 1);
+
+      await prisma.subscriptionUsage.upsert({
+        where: { companyId: company.id },
+        create: {
+          companyId: company.id,
+          subscriptionId: subscription.id,
+          periodStart: start,
+          periodEnd: end,
+        },
+        update: {},
+      });
+    }
+
+    console.log(
+      `[dodo/webhook] ✓ company ${company.id} → ${newStatus} ` +
+        `(event: ${type}, sub: ${subscriptionId})`
+    );
+  } else if (isActivation) {
+    const subscription = await prisma.subscription.findUnique({
+      where: { companyId: company.id },
+      select: { id: true, currentPeriodStart: true },
+    });
+    if (subscription) {
+      const start = periodStart ?? subscription.currentPeriodStart ?? new Date();
+      const end = addMonths(start, 1);
+      await prisma.subscriptionUsage.upsert({
+        where: { companyId: company.id },
+        create: {
+          companyId: company.id,
+          subscriptionId: subscription.id,
+          periodStart: start,
+          periodEnd: end,
+        },
+        update: {},
+      });
+    }
+    console.log(
+      `[dodo/webhook] status already ${newStatus} for company ${company.id} — ensured usage row`
+    );
+  } else {
     console.log(
       `[dodo/webhook] status already ${newStatus} for company ${company.id} — skipping`
     );
-    return;
   }
 
-  // ── Update the database ───────────────────────────────────────────────────
-  await prisma.subscription.upsert({
-    where: { companyId: company.id },
-    create: {
-      companyId: company.id,
-      status: newStatus,
-      provider: "dodopayments",
-      externalId: subscriptionId ?? null,
-      ...(type === "subscription.active" && data.created_at
-        ? { currentPeriodStart: new Date(data.created_at) }
-        : {}),
-    },
-    update: {
-      status: newStatus,
-      provider: "dodopayments",
-      externalId: subscriptionId ?? undefined,
-      ...(type === "subscription.active" && data.created_at
-        ? { currentPeriodStart: new Date(data.created_at) }
-        : {}),
-    },
-  });
-
-  console.log(
-    `[dodo/webhook] ✓ company ${company.id} → ${newStatus} ` +
-      `(event: ${type}, sub: ${subscriptionId})`
-  );
-
-  // ── Post-activation side effects ──────────────────────────────────────────
-  // Trigger geo/auto-seed internally when a company activates for the first time.
-  // This replaces the auto-seed call that was previously in the register route.
-  if (type === "subscription.active") {
+  if (isActivation) {
     await triggerGeoAutoSeed(company.id);
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Internal geo auto-seed trigger
-// Called server-side so it doesn't need an auth cookie.
-// Replace the body with a direct service call if you have one; this approach
-// calls the existing REST endpoint with a secret service key.
-// ─────────────────────────────────────────────────────────────────────────────
 async function triggerGeoAutoSeed(companyId: string) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -171,9 +204,6 @@ async function triggerGeoAutoSeed(companyId: string) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Use a shared secret so the endpoint knows this is a trusted internal call.
-        // Add `if (req.headers.get('x-internal-secret') !== process.env.INTERNAL_SECRET) return 401`
-        // inside /api/geo/auto-seed to verify it.
         "x-internal-secret": process.env.INTERNAL_SECRET ?? "",
         "x-company-id": companyId,
       },
@@ -185,7 +215,6 @@ async function triggerGeoAutoSeed(companyId: string) {
       console.log(`[dodo/webhook] geo/auto-seed triggered for ${companyId}`);
     }
   } catch (err) {
-    // Non-fatal — auto-seed can be retried from the dashboard
     console.error(`[dodo/webhook] geo/auto-seed error for ${companyId}:`, err);
   }
 }
