@@ -5,6 +5,8 @@ import {
   buildRivalAnalyzeMicroPayload,
   type InsightTopicInput,
 } from "@/lib/geo/geoknight/buildRivalAnalyzeMicroPayload";
+import { checkLimit } from "@/lib/subscription/check-limit";
+import { incrementUsage } from "@/lib/subscription/increment-usage";
 
 type FocusBody =
   | { kind: "self"; displayName: string }
@@ -151,6 +153,20 @@ export async function POST(req: NextRequest) {
     JSON.stringify(microPayload, null, 2)
   );
 
+  const limit = await checkLimit(requesterCompanyId, "rivalsAnalysis");
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "reason" in limit ? limit.reason : "Quota exceeded",
+        ...("used" in limit
+          ? { used: limit.used, quota: limit.quota, remaining: limit.remaining }
+          : {}),
+      },
+      { status: 403 }
+    );
+  }
+
   const url = `${base.replace(/\/+$/, "")}/rival/analyze`;
   try {
     const res = await fetch(url, {
@@ -178,6 +194,8 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
+
+    await incrementUsage(requesterCompanyId, "rivalsAnalysis");
 
     return NextResponse.json({ success: true, result: json });
   } catch (err) {

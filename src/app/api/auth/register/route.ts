@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { setAuthCookie } from "@/lib/auth";
 import bcrypt from "bcryptjs";
@@ -176,8 +177,12 @@ export async function POST(request: Request) {
         password: hashedPassword,
         requestedCmsIntegrations,
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
-        subscriptionStatus: "PENDING", 
-        
+        subscription: {
+          create: {
+            status: SubscriptionStatus.PENDING,
+            provider: "dodopayments",
+          },
+        },
       },
       select: { id: true , name: true, email: true },
     });

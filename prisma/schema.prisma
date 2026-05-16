@@ -50,10 +50,13 @@ model Company {
   autoRefreshLastRunAt DateTime?  @map("auto_refresh_last_run_at")
 
   // Subscription fields
-  subscriptionId        String?            @map("subscription_id")
-  subscriptionStatus    SubscriptionStatus @default(PENDING) @map("subscription_status")
-  subscriptionCreatedAt DateTime?          @map("subscription_created_at")
-  subscriptionUpdatedAt DateTime?          @map("subscription_updated_at")
+  subscription Subscription?
+  subscriptionUsage SubscriptionUsage?
+
+  // subscriptionId        String?            @map("subscription_id")
+  // subscriptionStatus    SubscriptionStatus @default(PENDING) @map("subscription_status")
+  // subscriptionCreatedAt DateTime?          @map("subscription_created_at")
+  // subscriptionUpdatedAt DateTime?          @map("subscription_updated_at")
 
   CallFeedbacks           CallFeedback[]
   CallFeedbackTokens      CallFeedbackToken[]
@@ -1841,6 +1844,115 @@ model WebhookEvent {
   @@map("webhook_events")
 }
 
+
+// ========================================================================
+// SUBSCRIPTION DOMAIN — Billing, Plans, Add-ons
+// ========================================================================
+
+/// Subscription and billing record for each company.
+model Subscription {
+  id         String             @id @default(cuid())
+  companyId  String             @unique
+
+  /// External provider subscription ID (e.g. Razorpay sub_XXXX, Stripe sub_XXXX)
+  externalId String?            @db.VarChar(255) @map("external_id")
+  provider   String?            @default("razorpay") @db.VarChar(50)
+
+  plan       SubscriptionPlan   @default(STARTER)
+  status     SubscriptionStatus @default(PENDING)
+  cycle      BillingCycle       @default(MONTHLY) 
+
+  /// Price charged in smallest currency unit (paise for INR, cents for USD)
+  priceAmount Int               @default(4900) @map("price_amount") // 49.00 USD in cents
+  currency    String            @default("USD") @db.VarChar(10)
+
+  /// Quota limits (set by plan tier; can be overridden for custom deals)
+  radarScansQuota         Int   @default(40)  @map("radar_scans_quota")
+  bountyGeneratorQuota    Int   @default(30)  @map("bounty_generator_quota")
+  seoPageGenerationQuota  Int   @default(20)  @map("seo_page_generation_quota")
+  rivalsAnalysisQuota     Int   @default(10)  @map("rivals_analysis_quota")
+
+  trialEndsAt        DateTime? @map("trial_ends_at") @db.Timestamptz(3)
+  currentPeriodStart DateTime? @map("current_period_start") @db.Timestamptz(3)
+  currentPeriodEnd   DateTime? @map("current_period_end") @db.Timestamptz(3)
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz(3)
+
+  /// Raw webhook payload storage for reconciliation / debugging
+  metadata   Json?     @default("{}")
+
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  usage      SubscriptionUsage[]
+  addOns     SubscriptionAddOn[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([plan])
+  @@index([externalId])
+  @@map("subscriptions")
+}
+
+/// Active add-ons attached to a subscription.
+model SubscriptionAddOn {
+  id             String          @id @default(cuid())
+  subscriptionId String          @map("subscription_id")
+
+  addOnType      AddOnType       @map("add_on_type")
+
+  /// External provider add-on ID (e.g. Razorpay addon_XXXX)
+  externalId     String?         @db.VarChar(255) @map("external_id")
+
+  /// Price in smallest currency unit
+  priceAmount    Int             @map("price_amount")
+  currency       String          @default("USD") @db.VarChar(10)
+
+  isActive       Boolean         @default(true) @map("is_active")
+  activatedAt    DateTime        @default(now()) @map("activated_at") @db.Timestamptz(3)
+  cancelledAt    DateTime?       @map("cancelled_at") @db.Timestamptz(3)
+
+  createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
+
+  subscription   Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, addOnType])  // one of each add-on type per subscription
+  @@index([subscriptionId])
+  @@index([addOnType])
+  @@map("subscription_add_ons")
+}
+
+model SubscriptionUsage {
+  id             String   @id @default(cuid())
+  companyId      String   @unique  // one active usage record per company
+  subscriptionId String   @map("subscription_id")
+
+  /// Resets to 0 at the start of each billing period
+  radarScansUsed        Int @default(0) @map("radar_scans_used")
+  bountyGeneratorUsed   Int @default(0) @map("bounty_generator_used")
+  seoPageGenerationUsed Int @default(0) @map("seo_page_generation_used")
+  rivalsAnalysisUsed    Int @default(0) @map("rivals_analysis_used")
+
+  /// The period this usage belongs to
+  periodStart DateTime @map("period_start") @db.Timestamptz(3)
+  periodEnd   DateTime @map("period_end") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([subscriptionId])
+  @@map("subscription_usage")
+}
+
+// ========================================================================
+// ENUMS
+// ========================================================================
+
 enum AssetType {
   VIDEO
   IMAGE
@@ -2125,4 +2237,21 @@ enum FollowUpStatus {
 enum MessageDirection {
   IN
   OUT
+}
+
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum AddOnType {
+  AEO_CONTENT_BOOST          // +$29/mo — doubles SEO page quota
+  ALTERNATE_DAY_AUTOMATION   // +$19/mo — Growth plan only
+  EXTRA_RIVALS_PACK          // +$25/mo — +10 Rivals Analysis runs
 }

@@ -5,6 +5,8 @@ import {
   applyRadarOutput,
   parseRadarMicroservicePayload,
 } from "@/lib/geo/radar/applyRadarOutput"
+import { requireLimit } from "@/lib/subscription/check-limit"
+import { incrementUsage } from "@/lib/subscription/increment-usage"
 
 const radarDispatcher = new Agent({
   headersTimeout: 420_000,
@@ -128,6 +130,8 @@ export async function runRadarJob(companyId: string) {
   const base = process.env.MICROSERVICE_URL
   if (!base) throw new Error("MICROSERVICE_URL is not configured")
 
+  await requireLimit(companyId, "radarScans")
+
   const res = await fetchRadarWithRetry(`${base.replace(/\/$/, "")}/company/radar`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
@@ -141,6 +145,8 @@ export async function runRadarJob(companyId: string) {
 
   const radarOutput = parseRadarMicroservicePayload(await res.json())
   if (!radarOutput) throw new Error("Invalid radar response")
+
+  await incrementUsage(companyId, "radarScans")
 
   const { normalizedMetrics } = await applyRadarOutput(prisma, company, radarOutput)
   return { input, topics: radarOutput.topics, prompts: radarOutput.prompts,

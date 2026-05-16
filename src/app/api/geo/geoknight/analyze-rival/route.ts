@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { seedCompanyFromWebsite } from "@/lib/geo/enrichment/seedCompanyFromWebsite";
 import { parseRadarMicroservicePayload, applyRadarOutput } from "@/lib/geo/radar/applyRadarOutput";
+import { checkLimit } from "@/lib/subscription/check-limit";
+import { incrementUsage } from "@/lib/subscription/increment-usage";
 
 const radarDispatcher = new Agent({
   headersTimeout: 420_000,
@@ -215,6 +217,20 @@ export async function POST(req: NextRequest) {
     models: ["gpt-5.4-nano", "claude-haiku-4-5-20251001", "gemini-3.1-flash-lite-preview"],
   };
 
+  const limit = await checkLimit(requesterCompanyId, "radarScans");
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "reason" in limit ? limit.reason : "Quota exceeded",
+        ...("used" in limit
+          ? { used: limit.used, quota: limit.quota, remaining: limit.remaining }
+          : {}),
+      },
+      { status: 403 }
+    );
+  }
+
   // STEP 2: radar
   const radarUrl = `${base.replace(/\/$/, "")}/company/radar`;
   let payload: unknown;
@@ -253,6 +269,8 @@ export async function POST(req: NextRequest) {
     { id: rivalCompanyId, name: rivalName },
     radarOutput
   );
+
+  await incrementUsage(requesterCompanyId, "radarScans");
 
   return NextResponse.json({
     success: true,

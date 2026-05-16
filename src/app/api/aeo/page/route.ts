@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkLimit } from "@/lib/subscription/check-limit";
+import { incrementUsage } from "@/lib/subscription/increment-usage";
 
 type MicroserviceAeoPageInput = {
   base_url: string;
@@ -117,6 +119,22 @@ export async function POST(request: NextRequest) {
         })
       : [];
 
+  if (companyId) {
+    const limit = await checkLimit(companyId, "seoPageGeneration");
+    if (!limit.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "reason" in limit ? limit.reason : "Quota exceeded",
+          ...("used" in limit
+            ? { used: limit.used, quota: limit.quota, remaining: limit.remaining }
+            : {}),
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   const formattedProducts = products.map((p) => ({
     name: p.title,
     description: buildProductDescriptionWithPrice({
@@ -163,6 +181,10 @@ export async function POST(request: NextRequest) {
         },
         { status: 502 }
       );
+    }
+
+    if (companyId) {
+      await incrementUsage(companyId, "seoPageGeneration");
     }
 
     return NextResponse.json({

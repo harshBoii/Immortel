@@ -1,6 +1,8 @@
 // lib/jobs/run-bounty.ts
 import { prisma }          from "@/lib/prisma"
 import type { Difficulty } from "@prisma/client"
+import { requireLimit } from "@/lib/subscription/check-limit"
+import { incrementUsage } from "@/lib/subscription/increment-usage"
 
 // ─── Types (move out of route file) ──────────────────────────────────────────
 type BountyRequest = {
@@ -92,6 +94,8 @@ export async function runBountyJob(companyId: string) {
   const base = process.env.MICROSERVICE_URL
   if (!base) throw new Error("MICROSERVICE_URL is not configured")
 
+  await requireLimit(companyId, "bountyGenerator")
+
   const res = await fetch(`${base.replace(/\/$/, "")}/company/bounty`, {
     method:  "POST",
     headers: { "Content-Type": "application/json" },
@@ -105,6 +109,8 @@ export async function runBountyJob(companyId: string) {
 
   const raw: BountyServiceOutput = await res.json()
   const data: BountyServiceOutput = raw?.niches || raw?.topic_prompt_analysis ? raw as BountyServiceOutput : (raw?.output ?? raw) as BountyServiceOutput
+
+  await incrementUsage(companyId, "bountyGenerator")
 
   const topicPromptAnalysis = Array.isArray(data?.topic_prompt_analysis) ? data.topic_prompt_analysis : []
   const revenueByPrompt     = data?.revenue_by_prompt && typeof data.revenue_by_prompt === "object" ? data.revenue_by_prompt : {}

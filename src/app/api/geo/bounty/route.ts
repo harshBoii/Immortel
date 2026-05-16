@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession }   from "@/lib/auth"
 import { runBountyJob } from "@/lib/microservice/jobs/bounty-jobs"
+import { SubscriptionLimitError } from "@/lib/subscription/check-limit"
 import { prisma } from "@/lib/prisma"
 
 export async function POST() {
@@ -12,6 +13,12 @@ export async function POST() {
     const result = await runBountyJob(session.companyId)
     return NextResponse.json({ success: true, ...result })
   } catch (err) {
+    if (err instanceof SubscriptionLimitError) {
+      return NextResponse.json(
+        { success: false, error: err.message, usage: err.usage },
+        { status: 403 }
+      )
+    }
     console.error("Bounty error:", err)
     return NextResponse.json({ success: false, error: String(err) }, { status: 502 })
   }

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { loadIntegrationForSession } from "@/lib/meta/loadIntegration";
+import { checkLimit } from "@/lib/subscription/check-limit";
+import { incrementUsage } from "@/lib/subscription/increment-usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -286,6 +288,21 @@ export async function POST() {
   };
 
   console.log("[meta/winning-formula/build] POST payload", JSON.stringify(payload, null, 2));
+
+  const limit = await checkLimit(loaded.companyId, "bountyGenerator");
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "reason" in limit ? limit.reason : "Quota exceeded",
+        ...("used" in limit
+          ? { used: limit.used, quota: limit.quota, remaining: limit.remaining }
+          : {}),
+      },
+      { status: 403 }
+    );
+  }
+
   const microserviceBase = requireEnv("MICROSERVICE_URL").replace(/\/$/, "");
   const res = await fetch(`${microserviceBase}/winning-formula/from-meta-analyzed-assets`, {
     method: "POST",
@@ -300,6 +317,8 @@ export async function POST() {
       { status: 502 },
     );
   }
+
+  await incrementUsage(loaded.companyId, "bountyGenerator");
 
   return NextResponse.json({
     ok: true,

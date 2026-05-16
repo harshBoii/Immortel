@@ -86,19 +86,22 @@ async function processEvent(
   // ── Resolve the company ───────────────────────────────────────────────────
   // Primary:  metadata.companyId  (set at checkout session creation)
   // Fallback: customer.email       (in case metadata was lost)
-  let company: { id: string; subscriptionStatus: SubscriptionStatus } | null = null;
+  let company: {
+    id: string;
+    subscription: { status: SubscriptionStatus } | null;
+  } | null = null;
 
   if (companyId) {
     company = await prisma.company.findUnique({
       where: { id: companyId },
-      select: { id: true, subscriptionStatus: true },
+      select: { id: true, subscription: { select: { status: true } } },
     });
   }
 
   if (!company && data.customer?.email) {
     company = await prisma.company.findUnique({
       where: { email: data.customer.email },
-      select: { id: true, subscriptionStatus: true },
+      select: { id: true, subscription: { select: { status: true } } },
     });
   }
 
@@ -113,7 +116,7 @@ async function processEvent(
 
   // ── Skip redundant writes ─────────────────────────────────────────────────
   // Dodo may retry the same event. If the status is already correct, skip.
-  if (company.subscriptionStatus === newStatus && type !== "subscription.renewed") {
+  if (company.subscription?.status === newStatus && type !== "subscription.renewed") {
     console.log(
       `[dodo/webhook] status already ${newStatus} for company ${company.id} — skipping`
     );
@@ -121,15 +124,23 @@ async function processEvent(
   }
 
   // ── Update the database ───────────────────────────────────────────────────
-  await prisma.company.update({
-    where: { id: company.id },
-    data: {
-      subscriptionId:        subscriptionId ?? undefined,
-      subscriptionStatus:    newStatus,
-      subscriptionUpdatedAt: new Date(),
-      // Only set subscriptionCreatedAt the first time (when going ACTIVE)
+  await prisma.subscription.upsert({
+    where: { companyId: company.id },
+    create: {
+      companyId: company.id,
+      status: newStatus,
+      provider: "dodopayments",
+      externalId: subscriptionId ?? null,
       ...(type === "subscription.active" && data.created_at
-        ? { subscriptionCreatedAt: new Date(data.created_at) }
+        ? { currentPeriodStart: new Date(data.created_at) }
+        : {}),
+    },
+    update: {
+      status: newStatus,
+      provider: "dodopayments",
+      externalId: subscriptionId ?? undefined,
+      ...(type === "subscription.active" && data.created_at
+        ? { currentPeriodStart: new Date(data.created_at) }
         : {}),
     },
   });

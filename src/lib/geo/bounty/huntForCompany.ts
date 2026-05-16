@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { syncBountyRevenueForCompany } from "@/lib/geo/radar/bountySync";
+import { requireLimit } from "@/lib/subscription/check-limit";
+import { incrementUsage } from "@/lib/subscription/increment-usage";
 
 function buildPriceString(params: {
   priceMinAmount?: string | null;
@@ -240,6 +242,8 @@ export async function huntBountyForCompany(opts: {
     existing_slugs: existingSlugs,
   };
 
+  await requireLimit(opts.companyId, "seoPageGeneration");
+
   await prisma.citationBounty.update({
     where: { id: bounty.id },
     data: { status: "IN_PROGRESS" },
@@ -283,6 +287,8 @@ export async function huntBountyForCompany(opts: {
     if (!page) {
       throw new Error("Generator response missing page field");
     }
+
+    await incrementUsage(opts.companyId, "seoPageGeneration");
 
     const slug: string = page.slug ?? result.slug ?? "";
     const title: string = page.seoTitle ?? page.headline ?? bounty.query;
