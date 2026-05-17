@@ -2,97 +2,23 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { PromptView } from "@/app/(Pages)/(WorkSpace)/geo/geoknight/client";
 import type { GeoKnightWorkspaceData } from "@/lib/geo/geoknight/loadGeoKnightTopicViews";
-import {
-  buildSelfFocusRegex,
-  cleanCompanyNameForMatch,
-  promptMatchesCompanyFocus,
-} from "@/lib/geo/geoknight/companyNameMatch";
+import { promptMatchesCompanyFocus } from "@/lib/geo/geoknight/companyNameMatch";
 import { RadarCompareCharts } from "../radar/sov-charts";
+import { buildReportDocumentData } from "./build-report-document-data";
+import { ExportPdfDialog } from "./ExportPdfDialog";
 import { MiniSpark } from "./metric-sparklines";
 import type { HighlightPrompt } from "./pick-highlight-prompts";
+import {
+  buildBrandFocusRegex,
+  buildBrandMentionRows,
+  formatMetric,
+  matchesSearch,
+} from "./report-utils";
 
 type RadarPayload = Awaited<
   ReturnType<typeof import("@/lib/geo/radar/buildRadarGetPayload").buildRadarGetPayload>
 >;
-
-function formatMetric(
-  value: number | null | undefined,
-  opts: { suffix?: string; prefix?: string; digits?: number } = {}
-) {
-  const { suffix = "", prefix = "", digits = 1 } = opts;
-  if (value == null || Number.isNaN(value)) return "—";
-  return `${prefix}${Number(value).toFixed(digits)}${suffix}`;
-}
-
-/** Compile the search input as a case-insensitive regex; fall back to literal includes on invalid patterns. */
-function buildSearchRegex(q: string): RegExp | null {
-  const t = q.trim();
-  if (!t) return null;
-  try {
-    return new RegExp(t, "i");
-  } catch {
-    return new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-  }
-}
-
-function matchesSearch(q: string, ...parts: (string | null | undefined)[]) {
-  const re = buildSearchRegex(q);
-  if (!re) return true;
-  return parts.some((p) => re.test(p ?? ""));
-}
-
-function collectOtherBrandsWithRanks(prompt: PromptView, ourRegex: RegExp) {
-  const map = new Map<string, number | null>();
-  const isOurs = (name: string) => ourRegex.test(cleanCompanyNameForMatch(name));
-  const bump = (name: string, r: number | null) => {
-    const key = name.trim();
-    if (!key) return;
-    const prev = map.get(key);
-    if (r == null) {
-      if (!map.has(key)) map.set(key, null);
-      return;
-    }
-    const next = prev == null ? r : Math.min(prev, r);
-    map.set(key, next);
-  };
-  for (const c of prompt.consensus ?? []) {
-    if (isOurs(c.companyName)) continue;
-    bump(c.companyName, c.avgRank);
-  }
-  for (const c of prompt.byModel ?? []) {
-    if (isOurs(c.companyName)) continue;
-    bump(c.companyName, c.rank);
-  }
-  return [...map.entries()]
-    .map(([companyName, bestRank]) => ({ companyName, bestRank }))
-    .sort((a, b) => {
-      const ar = a.bestRank ?? 999;
-      const br = b.bestRank ?? 999;
-      if (ar !== br) return ar - br;
-      return a.companyName.localeCompare(b.companyName);
-    });
-}
-
-function ourBestRanks(prompt: PromptView, ourRegex: RegExp) {
-  let consensusBest: number | null = null;
-  for (const c of prompt.consensus ?? []) {
-    if (!ourRegex.test(cleanCompanyNameForMatch(c.companyName))) continue;
-    if (c.avgRank != null && !Number.isNaN(c.avgRank)) {
-      consensusBest =
-        consensusBest == null ? c.avgRank : Math.min(consensusBest, c.avgRank);
-    }
-  }
-  let modelBest: number | null = null;
-  for (const c of prompt.byModel ?? []) {
-    if (!ourRegex.test(cleanCompanyNameForMatch(c.companyName))) continue;
-    if (c.rank != null && !Number.isNaN(c.rank)) {
-      modelBest = modelBest == null ? c.rank : Math.min(modelBest, c.rank);
-    }
-  }
-  return { consensusBest, modelBest };
-}
 
 function rankChipPalette(rank: number | null): {
   bg: string;
@@ -143,6 +69,7 @@ export default function IntelligenceReport({
   highlightPrompts: HighlightPrompt[];
 }) {
   const [search, setSearch] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
 
   const ourName = payload.company?.name?.trim() ?? "Your company";
   const latest = payload.latest;
@@ -163,8 +90,8 @@ export default function IntelligenceReport({
 
   /** Same semantics as GeoKnight “Show: Your company” — normalized names + escaped regex. */
   const brandFocusRegex = useMemo(
-    () => buildSelfFocusRegex(geoKnight.companyName ?? ourName),
-    [geoKnight.companyName, ourName]
+    () => buildBrandFocusRegex(geoKnight, ourName),
+    [geoKnight, ourName]
   );
 
   /** Rival comparison highlights: subset of spotlight prompts where the brand appears (GeoKnight match). */
@@ -177,37 +104,21 @@ export default function IntelligenceReport({
   );
 
   /** All active prompts where rival rows mention the brand (full list for Report). */
-  const brandMentionRows = useMemo(() => {
-    if (!brandFocusRegex) return [];
-    const out: Array<{
-      promptId: string;
-      query: string;
-      topicName: string;
-      topicDifficulty: "EASY" | "MEDIUM" | "HARD";
-      prompt: PromptView;
-      otherBrands: ReturnType<typeof collectOtherBrandsWithRanks>;
-      consensusBest: number | null;
-      modelBest: number | null;
-    }> = [];
-    for (const topic of geoKnight.topicViews) {
-      for (const prompt of topic.prompts) {
-        if (!promptMatchesCompanyFocus(prompt, brandFocusRegex)) continue;
-        const { consensusBest, modelBest } = ourBestRanks(prompt, brandFocusRegex);
-        out.push({
-          promptId: prompt.id,
-          query: prompt.query,
-          topicName: topic.name,
-          topicDifficulty: topic.difficulty,
-          prompt,
-          otherBrands: collectOtherBrandsWithRanks(prompt, brandFocusRegex),
-          consensusBest,
-          modelBest,
-        });
-      }
-    }
-    out.sort((a, b) => a.query.localeCompare(b.query));
-    return out;
-  }, [geoKnight.topicViews, brandFocusRegex]);
+  const brandMentionRows = useMemo(
+    () => buildBrandMentionRows(geoKnight, brandFocusRegex),
+    [geoKnight, brandFocusRegex]
+  );
+
+  const documentData = useMemo(
+    () =>
+      buildReportDocumentData({
+        payload,
+        geoKnight,
+        bountyPages,
+        highlightPrompts,
+      }),
+    [payload, geoKnight, bountyPages, highlightPrompts]
+  );
 
   const filteredBrandMentions = useMemo(() => {
     return brandMentionRows.filter((row) =>
@@ -251,7 +162,7 @@ export default function IntelligenceReport({
           />
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => setExportOpen(true)}
             className="rounded-lg border border-[var(--glass-border)] bg-[var(--sibling-accent)]/10 px-3 py-2 text-xs font-semibold text-[var(--sibling-accent)] hover:bg-[var(--sibling-accent)]/16"
           >
             Download PDF / Print
@@ -363,7 +274,7 @@ export default function IntelligenceReport({
                 </Link>
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => setExportOpen(true)}
                   className="inline-flex items-center rounded-lg border border-[var(--glass-border)] bg-[var(--glass)]/80 px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-[var(--glass-hover)] print:hidden"
                 >
                   Download PDF
@@ -770,6 +681,12 @@ export default function IntelligenceReport({
           </div>
         </section>
       )}
+
+      <ExportPdfDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        documentData={documentData}
+      />
     </div>
   );
 }
