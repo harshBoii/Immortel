@@ -1459,6 +1459,16 @@ html {
   gap: 4px;
 }
 
+.landing-page .pricing-grid.pricing-grid--four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 1200px) {
+  .landing-page .pricing-grid.pricing-grid--four {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .landing-page .price-card {
   padding: 52px 44px;
   background: var(--page);

@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { activateFreePlan } from "@/lib/subscription/activate-free";
+import { createPlanCheckoutSession } from "@/lib/subscription/dodo-checkout";
 import {
-  createPlanCheckoutSession,
   getSubscriptionFieldsForPlan,
-} from "@/lib/subscription/dodo-checkout";
-import { isPlanId } from "@/lib/subscription/plans";
+  isFreePlan,
+  isPaidPlan,
+  isPlanId,
+} from "@/lib/subscription/plans";
 
 export async function POST(request: Request) {
   const session = await getSession();
@@ -57,6 +60,23 @@ export async function POST(request: Request) {
       { error: "You are already on this plan" },
       { status: 400 }
     );
+  }
+
+  if (isFreePlan(plan)) {
+    try {
+      await activateFreePlan(companyId);
+      return NextResponse.json({ freePlan: true });
+    } catch (err) {
+      console.error("[subscription/checkout] free plan", err);
+      return NextResponse.json(
+        { error: "Could not switch to the free plan. Please try again." },
+        { status: 500 }
+      );
+    }
+  }
+
+  if (!isPaidPlan(plan)) {
+    return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";

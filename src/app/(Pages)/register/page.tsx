@@ -1,10 +1,16 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
-import { PLAN_OPTIONS, getPlanOption, type PlanId } from '@/lib/subscription/plans';
+import {
+  PLAN_OPTIONS,
+  getPlanOption,
+  isFreePlan,
+  isPlanId,
+  type PlanId,
+} from '@/lib/subscription/plans';
 
 type CmsChoice = 'Shopify' | 'WordPress' | 'Other';
 
@@ -14,8 +20,9 @@ const easeMist = [0.17, 0.99, 0.28, 1] as const;
 const AUTH_SUBMIT_GLASS_CLASS =
   'relative w-full overflow-hidden rounded-xl border border-white/35 bg-gradient-to-r from-[var(--sibling-primary)]/78 to-[var(--sibling-primary-dark)]/82 py-3.5 font-semibold text-primary-foreground backdrop-blur-[var(--glass-blur)] backdrop-saturate-[var(--glass-saturate)] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_6px_24px_-2px_rgba(21,29,53,0.12)] transition-all hover:border-white/45 hover:from-[var(--sibling-primary)]/88 hover:to-[var(--sibling-primary-dark)]/90 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_32px_-2px_rgba(21,29,53,0.16)] dark:border-white/15 dark:from-[var(--sibling-primary)]/72 dark:to-[var(--sibling-primary-dark)]/76 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_6px_28px_-2px_rgba(0,0,0,0.45)] dark:hover:border-white/25 disabled:cursor-not-allowed disabled:opacity-50 [text-shadow:0_1px_2px_rgba(0,0,0,0.18)]';
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<StepId>('account');
 
@@ -32,7 +39,14 @@ export default function RegisterPage() {
   const [shopDomain, setShopDomain] = useState('');
   const [wordpressSiteUrl, setWordpressSiteUrl] = useState('');
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>('STARTER');
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>('FREE');
+
+  useEffect(() => {
+    const planParam = searchParams?.get('plan');
+    if (planParam && isPlanId(planParam)) {
+      setSelectedPlan(planParam);
+    }
+  }, [searchParams]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -165,13 +179,23 @@ export default function RegisterPage() {
 
       const registerData = await registerRes.json().catch(() => ({}));
 
-      if (!registerRes.ok || !registerData?.checkoutUrl) {
+      if (!registerRes.ok) {
         setError(registerData?.error ?? 'Signup failed. Please try again.');
         setLoading(false);
         return;
       }
 
-      // Store the Dodo checkout URL and advance to the payment step
+      if (registerData?.freePlan) {
+        router.push('/login?registered=1');
+        return;
+      }
+
+      if (!registerData?.checkoutUrl) {
+        setError(registerData?.error ?? 'Signup failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
       setCheckoutUrl(registerData.checkoutUrl);
       goNext(); // → 'payment'
     } catch (e) {
@@ -471,7 +495,7 @@ export default function RegisterPage() {
                   ) : null}
 
                   {step === 'plan' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {PLAN_OPTIONS.map((option) => {
                         const selected = selectedPlan === option.id;
                         return (
@@ -528,8 +552,10 @@ export default function RegisterPage() {
                       <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4 text-sm text-muted-foreground">
                         When you hit{' '}
                         <span className="font-semibold text-foreground">Start setup</span>, we'll
-                        create your workspace and take you to the payment step to activate your
-                        subscription.
+                        create your workspace
+                        {isFreePlan(selectedPlan)
+                          ? ' — no payment required on the free plan.'
+                          : ' and take you to the payment step to activate your subscription.'}
                       </div>
                     </div>
                   ) : null}
@@ -654,6 +680,20 @@ export default function RegisterPage() {
         </div>
       </div>
     </LazyMotion>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">
+          Loading…
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }
 

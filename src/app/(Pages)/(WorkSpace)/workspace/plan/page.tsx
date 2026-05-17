@@ -204,7 +204,17 @@ function WorkspacePlanContent() {
         body: JSON.stringify({ plan: selectedPlan }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok || !json.checkoutUrl) {
+      if (!res.ok) {
+        setCheckoutError(json.error ?? "Could not start checkout");
+        return;
+      }
+      if (json.freePlan) {
+        setManagingPlans(false);
+        setSuccessBanner(true);
+        await load();
+        return;
+      }
+      if (!json.checkoutUrl) {
         setCheckoutError(json.error ?? "Could not start checkout");
         return;
       }

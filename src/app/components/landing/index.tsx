@@ -12,7 +12,10 @@ import {
   HiSignal,
   HiShoppingBag,
 } from 'react-icons/hi2';
+import { getLandingPlanCards } from '@/lib/subscription/plans';
 import './ac-landing.css';
+
+const LANDING_PLANS = getLandingPlanCards();
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -930,65 +933,40 @@ export default function ImmortelLanding() {
               <span>Scale fast.</span>
             </h2>
           </m.div>
-          <m.div className="pricing-grid" {...priceStagger}>
-            <PricingCard
-              tier="Starter"
-              amount={
-                <>
-                  <sup>$</sup>0
-                </>
-              }
-              per="Free forever · No card required"
-              feats={[
-                '3 AI engine scans per month',
-                '1 domain tracked',
-                '50 prompts in Bounty List',
-                '2 AEO pages generated',
-                'Citation velocity dashboard',
-                'No protocol access',
-              ]}
-              cta="Get Started Free"
-              href="/register"
-            />
-            <PricingCard
-              featured
-              tier="Growth — Most Popular"
-              amount={
-                <>
-                  <sup>$</sup>499
-                </>
-              }
-              per="per month · billed monthly"
-              feats={[
-                'Unlimited AI engine scans',
-                '3 domains tracked',
-                '1,000 prompts in Bounty List',
-                '20 AEO pages/month',
-                'Citation Authority Protocol (CAP)',
-                'Answer Graph Protocol (AGP)',
-                'CMS & blog native integration',
-                'Full citation attribution dashboard',
-              ]}
-              cta="Start 14-Day Trial"
-              href="#cta"
-            />
-            <PricingCard
-              tier="Enterprise"
-              amount="Custom"
-              amountIsCustom
-              per="Annual · Volume pricing"
-              feats={[
-                'Unlimited domains & content',
-                'Full protocol stack (AES/CAP/AGP)',
-                'Answer Engine Schema API',
-                'Custom Knowledge Graph builds',
-                'SSO, audit logs, GDPR DPA',
-                'Dedicated solutions engineer',
-                'SLA + white-glove onboarding',
-              ]}
-              cta="Talk to Sales"
-              href="#cta"
-            />
+          <m.div className="pricing-grid pricing-grid--four" {...priceStagger}>
+            {LANDING_PLANS.map((plan) => (
+              <PricingCard
+                key={plan.id}
+                featured={plan.featured}
+                tier={
+                  plan.featured ? `${plan.name} — Most Popular` : plan.name
+                }
+                amount={
+                  plan.priceAmount === 0 ? (
+                    <>
+                      <sup>$</sup>0
+                    </>
+                  ) : (
+                    <>
+                      <sup>$</sup>
+                      {plan.priceAmount / 100}
+                    </>
+                  )
+                }
+                per={
+                  plan.priceAmount === 0
+                    ? 'Free forever · No card required'
+                    : 'per month · billed monthly'
+                }
+                feats={plan.features}
+                cta={
+                  plan.priceAmount === 0
+                    ? 'Get Started Free'
+                    : `Get ${plan.name}`
+                }
+                href={`/register?plan=${plan.id}`}
+              />
+            ))}
           </m.div>
         </section>
 

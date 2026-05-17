@@ -3,9 +3,12 @@ import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import DodoPayments from "dodopayments";
+import { activateFreePlan } from "@/lib/subscription/activate-free";
 import {
   getDodoProductId,
   getSubscriptionFieldsForPlan,
+  isFreePlan,
+  isPaidPlan,
   isPlanId,
 } from "@/lib/subscription/plans";
 
@@ -44,13 +47,6 @@ function normalizeShopDomain(input: string): string {
 
 export async function POST(request: Request) {
   try {
-    const dodo = new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
-      environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
-        | "test_mode"
-        | "live_mode",
-    });
-
     const body = await request.json();
     const {
       email,
@@ -110,15 +106,21 @@ export async function POST(request: Request) {
       );
     }
     const plan = planRaw;
+    const freePlan = isFreePlan(plan);
 
-    let productId: string;
-    try {
-      productId = getDodoProductId(plan);
-    } catch {
-      return NextResponse.json(
-        { error: "Payment configuration is incomplete. Please contact support." },
-        { status: 500 }
-      );
+    let productId: string | undefined;
+    if (isPaidPlan(plan)) {
+      try {
+        productId = getDodoProductId(plan);
+      } catch {
+        return NextResponse.json(
+          {
+            error:
+              "Payment configuration is incomplete. Please contact support.",
+          },
+          { status: 500 }
+        );
+      }
     }
 
     const cms = (typeof cmsChoice === "string" ? cmsChoice : "Other") as CmsChoice;
@@ -201,13 +203,17 @@ export async function POST(request: Request) {
         password: hashedPassword,
         requestedCmsIntegrations,
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
-        subscription: {
-          create: {
-            ...subscriptionFields,
-            status: SubscriptionStatus.PENDING,
-            provider: "dodopayments",
-          },
-        },
+        ...(freePlan
+          ? {}
+          : {
+              subscription: {
+                create: {
+                  ...subscriptionFields,
+                  status: SubscriptionStatus.PENDING,
+                  provider: "dodopayments",
+                },
+              },
+            }),
       },
       select: { id: true, name: true, email: true },
     });
@@ -232,10 +238,22 @@ export async function POST(request: Request) {
       },
     });
 
+    if (freePlan) {
+      await activateFreePlan(company.id);
+      return NextResponse.json({ success: true, freePlan: true });
+    }
+
+    const dodo = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
+      environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
+        | "test_mode"
+        | "live_mode",
+    });
+
     const session = await dodo.checkoutSessions.create({
       product_cart: [
         {
-          product_id: productId,
+          product_id: productId!,
           quantity: 1,
         },
       ],

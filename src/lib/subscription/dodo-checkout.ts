@@ -1,9 +1,5 @@
 import DodoPayments from "dodopayments";
-import {
-  getDodoProductId,
-  getSubscriptionFieldsForPlan,
-  type PlanId,
-} from "@/lib/subscription/plans";
+import { getDodoProductId, type PaidPlanId } from "@/lib/subscription/plans";
 
 function getDodoClient() {
   return new DodoPayments({
@@ -16,7 +12,7 @@ function getDodoClient() {
 
 export async function createPlanCheckoutSession(opts: {
   companyId: string;
-  plan: PlanId;
+  plan: PaidPlanId;
   customerEmail: string;
   customerName: string;
   returnUrl: string;
@@ -40,5 +36,3 @@ export async function createPlanCheckoutSession(opts: {
 
   return session.checkout_url;
 }
-
-export { getSubscriptionFieldsForPlan };

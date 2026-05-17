@@ -2240,6 +2240,7 @@ enum MessageDirection {
 }
 
 enum SubscriptionPlan {
+  FREE
   STARTER
   GROWTH
   SCALE

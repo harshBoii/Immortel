@@ -1,6 +1,13 @@
 import type { SubscriptionPlan } from "@prisma/client";
 
 export const PLAN_CONFIG = {
+  FREE: {
+    priceAmount: 0,
+    radarScansQuota: 10,
+    bountyGeneratorQuota: 10,
+    seoPageGenerationQuota: 5,
+    rivalsAnalysisQuota: 2,
+  },
   STARTER: {
     priceAmount: 4900, // $49.00
     radarScansQuota: 40,
@@ -26,14 +33,35 @@ export const PLAN_CONFIG = {
 
 export type PlanId = keyof typeof PLAN_CONFIG;
 
+export type PaidPlanId = Exclude<PlanId, "FREE">;
+
 const PLAN_IDS = Object.keys(PLAN_CONFIG) as PlanId[];
 
 export function isPlanId(value: string): value is PlanId {
   return (PLAN_IDS as string[]).includes(value);
 }
 
-function formatPrice(priceAmount: number): string {
+export function isFreePlan(plan: PlanId): plan is "FREE" {
+  return plan === "FREE";
+}
+
+export function isPaidPlan(plan: PlanId): plan is PaidPlanId {
+  return plan !== "FREE";
+}
+
+function formatPriceLabel(priceAmount: number): string {
+  if (priceAmount === 0) return "Free";
   return `$${(priceAmount / 100).toFixed(0)}/mo`;
+}
+
+function planQuotaFeatures(plan: PlanId): string[] {
+  const c = PLAN_CONFIG[plan];
+  return [
+    `${c.radarScansQuota} radar scans / month`,
+    `${c.bountyGeneratorQuota} bounty generations / month`,
+    `${c.seoPageGenerationQuota} SEO pages / month`,
+    `${c.rivalsAnalysisQuota} rival analyses / month`,
+  ];
 }
 
 export const PLAN_OPTIONS: Array<{
@@ -43,47 +71,56 @@ export const PLAN_OPTIONS: Array<{
   highlights: string[];
 }> = [
   {
+    id: "FREE",
+    name: "Free",
+    priceLabel: formatPriceLabel(PLAN_CONFIG.FREE.priceAmount),
+    highlights: planQuotaFeatures("FREE"),
+  },
+  {
     id: "STARTER",
     name: "Starter",
-    priceLabel: formatPrice(PLAN_CONFIG.STARTER.priceAmount),
-    highlights: [
-      `${PLAN_CONFIG.STARTER.radarScansQuota} radar scans`,
-      `${PLAN_CONFIG.STARTER.bountyGeneratorQuota} bounty generations`,
-      `${PLAN_CONFIG.STARTER.seoPageGenerationQuota} SEO pages`,
-      `${PLAN_CONFIG.STARTER.rivalsAnalysisQuota} rival analyses`,
-    ],
+    priceLabel: formatPriceLabel(PLAN_CONFIG.STARTER.priceAmount),
+    highlights: planQuotaFeatures("STARTER"),
   },
   {
     id: "GROWTH",
     name: "Growth",
-    priceLabel: formatPrice(PLAN_CONFIG.GROWTH.priceAmount),
-    highlights: [
-      `${PLAN_CONFIG.GROWTH.radarScansQuota} radar scans`,
-      `${PLAN_CONFIG.GROWTH.bountyGeneratorQuota} bounty generations`,
-      `${PLAN_CONFIG.GROWTH.seoPageGenerationQuota} SEO pages`,
-      `${PLAN_CONFIG.GROWTH.rivalsAnalysisQuota} rival analyses`,
-    ],
+    priceLabel: formatPriceLabel(PLAN_CONFIG.GROWTH.priceAmount),
+    highlights: planQuotaFeatures("GROWTH"),
   },
   {
     id: "SCALE",
     name: "Scale",
-    priceLabel: formatPrice(PLAN_CONFIG.SCALE.priceAmount),
-    highlights: [
-      `${PLAN_CONFIG.SCALE.radarScansQuota} radar scans`,
-      `${PLAN_CONFIG.SCALE.bountyGeneratorQuota} bounty generations`,
-      `${PLAN_CONFIG.SCALE.seoPageGenerationQuota} SEO pages`,
-      `${PLAN_CONFIG.SCALE.rivalsAnalysisQuota} rival analyses`,
-    ],
+    priceLabel: formatPriceLabel(PLAN_CONFIG.SCALE.priceAmount),
+    highlights: planQuotaFeatures("SCALE"),
   },
 ];
 
-const DODO_PRODUCT_ENV: Record<PlanId, string> = {
+/** Display order for marketing / landing pricing section */
+export const LANDING_PLAN_ORDER: PlanId[] = ["FREE", "STARTER", "GROWTH", "SCALE"];
+
+export function getLandingPlanCards() {
+  return LANDING_PLAN_ORDER.map((id) => {
+    const option = PLAN_OPTIONS.find((p) => p.id === id)!;
+    const config = PLAN_CONFIG[id];
+    return {
+      id,
+      name: option.name,
+      priceAmount: config.priceAmount,
+      priceLabel: option.priceLabel,
+      features: option.highlights,
+      featured: id === "GROWTH",
+    };
+  });
+}
+
+const DODO_PRODUCT_ENV: Record<PaidPlanId, string> = {
   STARTER: "DODO_STARTER_PRODUCT_ID",
   GROWTH: "DODO_GROWTH_PRODUCT_ID",
   SCALE: "DODO_SCALE_PRODUCT_ID",
 };
 
-export function getDodoProductId(plan: PlanId): string {
+export function getDodoProductId(plan: PaidPlanId): string {
   const envKey = DODO_PRODUCT_ENV[plan];
   const productId = process.env[envKey];
   if (!productId?.trim()) {
