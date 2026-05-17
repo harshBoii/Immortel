@@ -245,40 +245,43 @@ const priceStagger = {
   },
 };
 
+// ─── CHANGED: AEO-native ticker labels ───────────────────────────────────────
 const TICKER_LABELS = [
-  'Read · Write · Convert',
-  'UCP · ACP · AP2',
+  'Read · Write · Rank',
   'Citation Velocity',
-  'Agentic Checkout',
-  'Scoped Payment Tokens',
+  'Prompt Universe Mapping',
+  'Answer Engine Coverage',
+  'AEO Schema Layer',
   'Bounty Lists',
   'One-Click Publish',
   'Knowledge Graph',
 ] as const;
 
+// ─── CHANGED: AEO-native marquee phrases ─────────────────────────────────────
 const MARQUEE_PHRASES = [
-  'Answer Commerce',
-  'Be Bought',
-  'Not Just Cited',
-  'Instant Checkout',
-  'Inside the AI Answer',
+  'Answer Engine Optimization',
+  'Be Cited First',
+  'Own the AI Answer',
+  'Dominate Every Engine',
+  'Inside the AI Response',
 ] as const;
 
+// ─── CHANGED: AEO-focused proof testimonials ─────────────────────────────────
 const PROOF = [
   {
     result: '+340%',
-    label: 'AI-attributed pipeline in 90 days',
+    label: 'AI-attributed inbound leads in 90 days',
     quote:
-      '"Within 6 weeks of deploying the AEO Vault, we were the #1 cited brand in our category on Perplexity. The checkout conversion was the thing that floored the CFO."',
+      '"Within 6 weeks of deploying the AEO Vault, we were the #1 cited brand in our category on Perplexity. The quality of inbound completely changed — prospects arrived already sold."',
     initials: 'PN',
     name: 'Priya Nair',
     role: 'VP Marketing, Series B SaaS',
   },
   {
-    result: '$84K',
-    label: 'Closed from a single AI answer session',
+    result: '84%',
+    label: 'Of demo requests now arrive AI-referred',
     quote:
-      '"A prospect asked ChatGPT what the best option was for their use case, got our product, and completed checkout inside the interface. I didn\'t even know it had happened until the Slack notification fired."',
+      '"A prospect told us they asked ChatGPT who the best option was for their use case — and we were the only name it gave. They booked a call the same day. Immortell made that happen."',
     initials: 'JL',
     name: 'James Liu',
     role: 'VP Sales, DTC Brand',
@@ -287,7 +290,7 @@ const PROOF = [
     result: '2×',
     label: 'Conversion rate vs. traditional search traffic',
     quote:
-      '"AI-referred visitors convert at double our Google rate because they arrive post-decision. Immortell\'s checkout layer means that intent doesn\'t go cold between AI and our site."',
+      '"AI-referred visitors convert at double our Google rate because they arrive post-decision. Immortell\'s AEO layer means our content is the one the engines trust and cite."',
     initials: 'ST',
     name: 'Sofia Torres',
     role: 'CMO, Consumer Brand',
@@ -438,6 +441,7 @@ export default function ImmortelLanding() {
           <div className="hero-bg" />
           <div className="hero-field" />
 
+          {/* ─── CHANGED: AEO hero slice text ─── */}
           <m.div
             className="hero-slice"
             initial={{ opacity: 0, x: 56, filter: 'blur(14px)', scale: 0.97 }}
@@ -447,27 +451,28 @@ export default function ImmortelLanding() {
           >
             <div className="hero-slice-inner">
               <div className="hero-slice-text">
-                ANSWER&nbsp;COMMERCE&nbsp;&nbsp;ANSWER&nbsp;COMMERCE&nbsp;&nbsp;ANSWER&nbsp;COMMERCE&nbsp;&nbsp;ANSWER&nbsp;COMMERCE&nbsp;&nbsp;
+                ANSWER&nbsp;ENGINE&nbsp;OPTIMIZATION&nbsp;&nbsp;ANSWER&nbsp;ENGINE&nbsp;OPTIMIZATION&nbsp;&nbsp;ANSWER&nbsp;ENGINE&nbsp;OPTIMIZATION&nbsp;&nbsp;
               </div>
             </div>
           </m.div>
 
+          {/* ─── CHANGED: AEO hero content ─── */}
           <m.div className="hero-content" {...heroParent}>
             <m.div className="hero-eyebrow" {...heroChild}>
-              Answer Commerce Engine
+              Answer Engine Optimization Platform
             </m.div>
             <m.h1 className="hero-h1" {...heroChild}>
               The future
               <br />
-              of commerce
+              of search
               <br />
               <em>is being</em>
               <br />
-              <span className="accent-line">written.</span>
+              <span className="accent-line">answered.</span>
             </m.h1>
             <m.p className="hero-sub" {...heroChild}>
-              From citation to checkout — inside the AI answer. Immortell turns AI
-              recommendations into instant transactions for your brand.
+              From prompt to citation — inside the AI answer. Immortell turns AI queries into
+              brand citations, traffic, and authority for your business.
             </m.p>
             <m.div className="hero-actions" {...heroChild}>
               <Link href="/register" className="btn-hero-main">
@@ -507,31 +512,32 @@ export default function ImmortelLanding() {
           </div>
         </div>
 
+        {/* ─── CHANGED: Problem section — AEO framing ─── */}
         <section id="problem">
           <m.div className="problem-left" {...sectionMist.problem}>
             <div className="problem-label">The Shift</div>
             <h2 className="problem-h2">
               AI is the new
               <br />
-              <strong>storefront.</strong>
+              <strong>search engine.</strong>
               <br />
               Are you in it?
             </h2>
             <p className="problem-body">
               800 million weekly queries across Perplexity, ChatGPT, and Gemini. Your
-              competitors are being recommended. Their products are being bought. The intent
-              is there — the question is whether you convert it or watch it walk out the
-              AI&apos;s door.
+              competitors are being cited as the authoritative answer. Their brands are being
+              recommended. The intent is there — the question is whether your content earns the
+              citation or your rival does.
             </p>
           </m.div>
           <m.div className="problem-right" {...statStagger}>
             <m.div className="stat-block" {...statItem}>
               <div className="stat-n">800M</div>
-              <div className="stat-l">Weekly AI product queries across all engines</div>
+              <div className="stat-l">Weekly AI queries across all major engines</div>
             </m.div>
             <m.div className="stat-block" {...statItem}>
-              <div className="stat-n">50%+</div>
-              <div className="stat-l">Queries now return AI Overviews, no click needed</div>
+              <div className="stat-n">60%+</div>
+              <div className="stat-l">Of searches now answered by AI with zero clicks</div>
             </m.div>
             <m.div className="stat-block" {...statItem}>
               <div className="stat-n">527%</div>
@@ -544,14 +550,15 @@ export default function ImmortelLanding() {
           </m.div>
         </section>
 
+        {/* ─── CHANGED: Framework section — Read / Write / Rank ─── */}
         <section id="framework">
-          <div className="framework-bg-text">RWC</div>
+          <div className="framework-bg-text">RWR</div>
           <m.div className="framework-header" {...sectionMist.framework}>
             <div className="framework-label">The Platform</div>
             <h2 className="framework-h2">
               Read. Write.
               <br />
-              <span>Convert.</span>
+              <span>Rank.</span>
             </h2>
           </m.div>
           <m.div className="rw-grid" {...rwGridStagger}>
@@ -561,7 +568,7 @@ export default function ImmortelLanding() {
               <div className="rw-sub">Radar Mapping &amp; Prompt Intel</div>
               <p className="rw-desc">
                 We map exactly how every major AI engine sees your brand and your competitors.
-                Find the gaps before they cost you deals.
+                Find the citation gaps before they cost you authority.
               </p>
               <ul className="rw-bullets">
                 <li>AI engine citation tracking across ChatGPT, Perplexity, Gemini</li>
@@ -580,29 +587,31 @@ export default function ImmortelLanding() {
               </p>
               <ul className="rw-bullets">
                 <li>AEO page generation targeting Bounty List prompts</li>
-                <li>Structured Knowledge Graph from your Shopify/Magento catalog</li>
-                <li>Commerce Assertion Layer — machine-readable SKU metadata</li>
+                <li>Structured Knowledge Graph built from your brand content</li>
+                <li>Answer Assertion Layer — machine-readable brand fact schemas</li>
                 <li>One-click publish to all answer engines simultaneously</li>
               </ul>
             </m.div>
             <m.div className="rw-card" variants={rwCard}>
               <div className="rw-num">03</div>
-              <div className="rw-stage">Convert</div>
-              <div className="rw-sub">Agentic Checkout Engine</div>
+              <div className="rw-stage">Rank</div>
+              <div className="rw-sub">Citation Authority Engine</div>
               <p className="rw-desc">
-                The moat. Don&apos;t just get recommended — get bought. Native checkout inside
-                the AI answer, no redirect, no friction.
+                The moat. Don&apos;t just get found — get cited first. Sustained citation
+                authority inside every major AI answer engine, with data loops that compound
+                your lead over time.
               </p>
               <ul className="rw-bullets">
-                <li>Native checkout within ChatGPT, Perplexity, Gemini answers</li>
-                <li>Scoped Payment Tokens via AP2 Trust Layer</li>
-                <li>Real-time inventory validation before every transaction</li>
-                <li>Conversion data loops back to strengthen the AEO Vault</li>
+                <li>Top-of-answer citation positioning in ChatGPT, Perplexity, Gemini</li>
+                <li>Answer Graph reinforcement via structured entity signals</li>
+                <li>Real-time citation rank tracking per prompt</li>
+                <li>Citation data loops back to strengthen the AEO Vault</li>
               </ul>
             </m.div>
           </m.div>
         </section>
 
+        {/* ─── CHANGED: Protocol section — AEO protocols ─── */}
         <section id="protocol">
           <m.div className="protocol-header" {...sectionMist.protocol}>
             <div className="protocol-label">The Protocol Layer</div>
@@ -615,33 +624,35 @@ export default function ImmortelLanding() {
           <div className="protocol-grid">
             <m.div className="protocol-stack" {...protoStagger}>
               <m.div className="proto-row" {...protoRowVar}>
-                <div className="proto-tag">UCP</div>
+                <div className="proto-tag">AES</div>
                 <div className="proto-body">
-                  <div className="proto-name">Universal Commerce Protocol</div>
+                  <div className="proto-name">Answer Engine Schema</div>
                   <div className="proto-desc">
-                    Translates your merchant data into Google&apos;s standard for Gemini Shopping
-                    and AI Search. Your SKUs, structured and ready for the world&apos;s most-used
-                    AI.
+                    Translates your brand content into machine-readable structured facts that
+                    Gemini, Perplexity, and ChatGPT can parse, trust, and cite. Your knowledge,
+                    formatted for the world&apos;s most-used AI engines.
                   </div>
                 </div>
               </m.div>
               <m.div className="proto-row" {...protoRowVar}>
-                <div className="proto-tag">ACP</div>
+                <div className="proto-tag">CAP</div>
                 <div className="proto-body">
-                  <div className="proto-name">Agentic Commerce Protocol</div>
+                  <div className="proto-name">Citation Authority Protocol</div>
                   <div className="proto-desc">
-                    The OpenAI/Stripe gateway standard. Enables native checkout completion inside
-                    ChatGPT&apos;s Operator framework — your Shopify store, inside the AI answer.
+                    The trust-signal standard. Continuously pushes authoritative brand signals
+                    and entity assertions to AI answer systems — so your brand is always the
+                    most-credible source in your category.
                   </div>
                 </div>
               </m.div>
               <m.div className="proto-row" {...protoRowVar}>
-                <div className="proto-tag">AP2</div>
+                <div className="proto-tag">AGP</div>
                 <div className="proto-body">
-                  <div className="proto-name">Agent Payments Protocol</div>
+                  <div className="proto-name">Answer Graph Protocol</div>
                   <div className="proto-desc">
-                    The Trust Layer. Cryptographic spend mandates and Scoped Payment Tokens let AI
-                    agents transact on behalf of users — securely, with defined limits.
+                    The Semantic Layer. Builds a structured entity graph linking your brand,
+                    products, claims, and use cases — so AI engines can reason about you with
+                    confidence and cite you with precision.
                   </div>
                 </div>
               </m.div>
@@ -649,14 +660,15 @@ export default function ImmortelLanding() {
                 <div className="proto-body">
                   <div className="proto-name ac-muted">Immortell is the Unified Middleware</div>
                   <div className="proto-desc">
-                    You connect once via our Shopify/Magento plugin. We handle all three protocol
-                    translations, keep your catalog in sync, and route transactions through the
-                    right standard per AI engine.
+                    You connect once via our platform. We handle all three protocol
+                    translations, keep your knowledge graph in sync, and route authority signals
+                    through the right standard per AI engine.
                   </div>
                 </div>
               </m.div>
             </m.div>
 
+            {/* ─── CHANGED: Code block — AEO Schema v1 ─── */}
             <m.div
               className="protocol-right"
               initial={{ opacity: 0, x: 40, filter: 'blur(12px)' }}
@@ -665,49 +677,49 @@ export default function ImmortelLanding() {
               transition={{ duration: 0.85, ease: easeMist, delay: 0.08 }}
             >
               <div className="cal-box">
-                <span className="cal-comment">// Commerce Assertion Layer — CAL v1</span>
+                <span className="cal-comment">// Answer Engine Schema — AES v1</span>
                 <br />
                 {'{'}
                 <br />
                 &nbsp;&nbsp;<span className="cal-key">&quot;@context&quot;</span>:{' '}
-                <span className="cal-str">&quot;immortell:commerce/v1&quot;</span>,
+                <span className="cal-str">&quot;immortell:aeo/v1&quot;</span>,
                 <br />
                 &nbsp;&nbsp;<span className="cal-key">&quot;assertionType&quot;</span>:{' '}
-                <span className="cal-str">&quot;purchasable_entity&quot;</span>,
+                <span className="cal-str">&quot;brand_authority_entity&quot;</span>,
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;sku_id&quot;</span>:{' '}
-                <span className="cal-str">&quot;BRAND-SKU-4421&quot;</span>,
+                &nbsp;&nbsp;<span className="cal-key">&quot;entity_id&quot;</span>:{' '}
+                <span className="cal-str">&quot;BRAND-ENT-4421&quot;</span>,
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;price_snapshot&quot;</span>: {'{'}
+                &nbsp;&nbsp;<span className="cal-key">&quot;citation_signal&quot;</span>: {'{'}
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-key">&quot;amount&quot;</span>:{' '}
-                <span className="cal-num">49.00</span>,
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-key">&quot;authority_score&quot;</span>:{' '}
+                <span className="cal-num">94</span>,
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-key">&quot;currency&quot;</span>:{' '}
-                <span className="cal-str">&quot;USD&quot;</span>,
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-key">&quot;category&quot;</span>:{' '}
+                <span className="cal-str">&quot;project-management-software&quot;</span>,
                 <br />
                 &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-key">&quot;ttl_seconds&quot;</span>:{' '}
-                <span className="cal-num">300</span>
+                <span className="cal-num">86400</span>
                 <br />
                 &nbsp;&nbsp;{'}'},
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;inventory_signal&quot;</span>:{' '}
-                <span className="cal-str">&quot;in_stock&quot;</span>,
+                &nbsp;&nbsp;<span className="cal-key">&quot;answer_coverage&quot;</span>:{' '}
+                <span className="cal-str">&quot;top_citation&quot;</span>,
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;checkout_endpoint&quot;</span>:{' '}
-                <span className="cal-str">&quot;acp://immortell/checkout/4421&quot;</span>,
+                &nbsp;&nbsp;<span className="cal-key">&quot;publish_endpoint&quot;</span>:{' '}
+                <span className="cal-str">&quot;aes://immortell/publish/4421&quot;</span>,
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;trust_scope&quot;</span>: [
+                &nbsp;&nbsp;<span className="cal-key">&quot;engine_scope&quot;</span>: [
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-str">&quot;read_price&quot;</span>,{' '}
-                <span className="cal-str">&quot;initiate_checkout&quot;</span>,
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-str">&quot;perplexity&quot;</span>,{' '}
+                <span className="cal-str">&quot;chatgpt&quot;</span>,
                 <br />
-                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-str">&quot;complete_purchase&quot;</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span className="cal-str">&quot;gemini&quot;</span>
                 <br />
                 &nbsp;&nbsp;],
                 <br />
-                &nbsp;&nbsp;<span className="cal-key">&quot;merchant_id&quot;</span>:{' '}
-                <span className="cal-str">&quot;shopify:brand-8821&quot;</span>
+                &nbsp;&nbsp;<span className="cal-key">&quot;brand_id&quot;</span>:{' '}
+                <span className="cal-str">&quot;immortell:brand-8821&quot;</span>
                 <br />
                 {'}'}
                 <span className="cal-cursor" />
@@ -716,16 +728,17 @@ export default function ImmortelLanding() {
           </div>
         </section>
 
+        {/* ─── CHANGED: "Checkout" → "Citation Loop" section ─── */}
         <section id="checkout">
-          <div className="checkout-bg-text">BUY</div>
+          <div className="checkout-bg-text">AEO</div>
           <m.div className="checkout-header" {...sectionMist.checkout}>
-            <div className="checkout-label">The Conversion Loop</div>
+            <div className="checkout-label">The Citation Loop</div>
             <h2 className="checkout-h2">
-              From AI answer to
+              From AI query to
               <br />
-              <strong>paid order.</strong>
+              <strong>top citation.</strong>
               <br />
-              Zero redirects.
+              Every engine.
             </h2>
           </m.div>
           <m.div className="flow-steps" {...flowStagger}>
@@ -735,7 +748,7 @@ export default function ImmortelLanding() {
               </div>
               <div className="flow-title">User Queries AI</div>
               <p className="flow-desc">
-                &quot;Best running shoes under $120&quot; — high-intent, ready to buy.
+                &quot;Best project management tool for remote teams&quot; — high-intent, ready to decide.
               </p>
               <div className="flow-badge">Perplexity · ChatGPT · Gemini</div>
             </m.div>
@@ -746,11 +759,12 @@ export default function ImmortelLanding() {
               <div className="flow-icon" aria-hidden>
                 <HiSignal />
               </div>
-              <div className="flow-title">Vault Fires CAL</div>
+              <div className="flow-title">Vault Fires AES</div>
               <p className="flow-desc">
-                Your AEO page is cited. Commerce Assertion Layer signals purchase availability.
+                Your AEO page is matched. Answer Engine Schema signals brand authority and
+                entity relevance.
               </p>
-              <div className="flow-badge">CAL Assertion</div>
+              <div className="flow-badge">AES Assertion</div>
             </m.div>
             <m.div className="flow-connector" aria-hidden {...flowConnVar}>
               →
@@ -761,9 +775,10 @@ export default function ImmortelLanding() {
               </div>
               <div className="flow-title">Engine Validates</div>
               <p className="flow-desc">
-                Price freshness check, inventory confirmation, mandate scope verified.
+                Freshness check, entity confidence score, authority signal scope verified
+                against query intent.
               </p>
-              <div className="flow-badge">AP2 Trust Layer</div>
+              <div className="flow-badge">CAP Trust Layer</div>
             </m.div>
             <m.div className="flow-connector" aria-hidden {...flowConnVar}>
               →
@@ -772,11 +787,12 @@ export default function ImmortelLanding() {
               <div className="flow-icon" aria-hidden>
                 <HiCreditCard />
               </div>
-              <div className="flow-title">Scoped Token Issued</div>
+              <div className="flow-title">Citation Ranked</div>
               <p className="flow-desc">
-                Time-bound SPT authorises the exact transaction amount. No card details shared.
+                Your brand is placed as the top-cited source in the AI answer. Position locked
+                for the prompt category.
               </p>
-              <div className="flow-badge">ACP / Stripe</div>
+              <div className="flow-badge">AGP / Answer Graph</div>
             </m.div>
             <m.div className="flow-connector" aria-hidden {...flowConnVar}>
               →
@@ -785,15 +801,17 @@ export default function ImmortelLanding() {
               <div className="flow-icon" aria-hidden>
                 <HiShoppingBag />
               </div>
-              <div className="flow-title">Order Confirmed</div>
+              <div className="flow-title">Authority Compounds</div>
               <p className="flow-desc">
-                Shopify fulfillment triggered. Conversion data loops to the AEO Vault.
+                Citation data loops back to the AEO Vault — your ranking strengthens with
+                every engine interaction.
               </p>
-              <div className="flow-badge">Zero Redirects</div>
+              <div className="flow-badge">Continuous Loop</div>
             </m.div>
           </m.div>
         </section>
 
+        {/* ─── CHANGED: Audience section — AEO role positioning ─── */}
         <m.section id="audience" {...sectionMist.audience}>
           <m.div className="aud-panel" {...audPanelMotion()}>
             <div className="aud-bg-num">01</div>
@@ -808,7 +826,7 @@ export default function ImmortelLanding() {
               </h3>
               <p className="aud-body aud-1">
                 Stop briefing three agencies for three platforms. Hit publish and Immortell deploys
-                your brand&apos;s truth to every answer engine simultaneously.
+                your brand&apos;s authority to every answer engine simultaneously.
               </p>
               <ul className="aud-features aud-1">
                 <li>Bounty List gap reports, weekly</li>
@@ -825,27 +843,27 @@ export default function ImmortelLanding() {
           <m.div className="aud-panel" {...audPanelMotion(0.06)}>
             <div className="aud-bg-num">02</div>
             <div>
-              <div className="aud-role">For DTC Founders</div>
+              <div className="aud-role">For Content Strategists</div>
               <h3 className="aud-h3">
-                Your Shopify
+                Your content
                 <br />
-                store inside
+                inside every
                 <br />
-                ChatGPT.
+                AI answer.
               </h3>
               <p className="aud-body aud-2">
-                Connect in 5 minutes. Your catalog gets structured, cited, and made purchasable
-                inside every major AI interface — no engineers needed.
+                Connect in 5 minutes. Your content gets structured, indexed, and cited inside
+                every major AI interface — no engineers, no guesswork, no waiting.
               </p>
               <ul className="aud-features aud-2">
-                <li>Shopify &amp; Magento native plugin</li>
-                <li>Automatic SKU-to-protocol mapping</li>
-                <li>Native checkout in AI answers</li>
-                <li>Revenue attribution per AI engine</li>
+                <li>CMS &amp; blog native integration</li>
+                <li>Automatic content-to-AEO-schema mapping</li>
+                <li>Prompt-level citation rank tracking</li>
+                <li>Traffic attribution per AI engine</li>
               </ul>
             </div>
             <Link href="#cta" className="aud-cta">
-              See founder features →
+              See strategist features →
             </Link>
           </m.div>
 
@@ -861,13 +879,13 @@ export default function ImmortelLanding() {
                 team skips.
               </h3>
               <p className="aud-body aud-3">
-                UCP, ACP, AP2 — three incompatible emerging standards, 18 months of engineering, or
+                AES, CAP, AGP — three emerging AEO standards, 18 months of engineering, or
                 one Immortell API call. We maintain the integrations as standards evolve.
               </p>
               <ul className="aud-features aud-3">
                 <li>REST API + Webhook architecture</li>
-                <li>UCP · ACP · AP2 protocol coverage</li>
-                <li>Commerce Assertion Layer (CAL) schema</li>
+                <li>AES · CAP · AGP protocol coverage</li>
+                <li>Answer Engine Schema (AES) spec</li>
                 <li>SSO, audit logs, GDPR compliance</li>
               </ul>
             </div>
@@ -902,6 +920,7 @@ export default function ImmortelLanding() {
           </m.div>
         </m.section>
 
+        {/* ─── CHANGED: Pricing — AEO feature descriptions ─── */}
         <section id="pricing">
           <m.div {...sectionMist.pricing}>
             <div className="pricing-label">Pricing</div>
@@ -926,7 +945,7 @@ export default function ImmortelLanding() {
                 '50 prompts in Bounty List',
                 '2 AEO pages generated',
                 'Citation velocity dashboard',
-                'No checkout / no protocol access',
+                'No protocol access',
               ]}
               cta="Get Started Free"
               href="/register"
@@ -945,10 +964,10 @@ export default function ImmortelLanding() {
                 '3 domains tracked',
                 '1,000 prompts in Bounty List',
                 '20 AEO pages/month',
-                'Agentic Checkout (UCP + ACP)',
-                'AP2 Trust Layer + Scoped Tokens',
-                'Shopify & Magento integration',
-                'Revenue attribution dashboard',
+                'Citation Authority Protocol (CAP)',
+                'Answer Graph Protocol (AGP)',
+                'CMS & blog native integration',
+                'Full citation attribution dashboard',
               ]}
               cta="Start 14-Day Trial"
               href="#cta"
@@ -959,9 +978,9 @@ export default function ImmortelLanding() {
               amountIsCustom
               per="Annual · Volume pricing"
               feats={[
-                'Unlimited domains & SKUs',
-                'Full protocol stack (UCP/ACP/AP2)',
-                'Commerce Assertion Layer API',
+                'Unlimited domains & content',
+                'Full protocol stack (AES/CAP/AGP)',
+                'Answer Engine Schema API',
                 'Custom Knowledge Graph builds',
                 'SSO, audit logs, GDPR DPA',
                 'Dedicated solutions engineer',
@@ -973,18 +992,19 @@ export default function ImmortelLanding() {
           </m.div>
         </section>
 
+        {/* ─── CHANGED: CTA section — AEO final pitch ─── */}
         <m.section id="cta" {...sectionMist.finalCta}>
           <div className="cta-field" />
           <div className="cta-eyebrow">The window is open</div>
           <h2 className="cta-h2">
-            Be bought.
+            Be cited.
             <br />
             <span>Not just</span>
             <br />
-            <em>cited.</em>
+            <em>found.</em>
           </h2>
           <p className="cta-sub">
-            The brands that win the next decade of commerce will be the ones that are purchasable
+            The brands that win the next decade of search will be the ones that are cited
             inside AI answers today. That&apos;s Immortell.
           </p>
           <div className="cta-actions">
@@ -1003,7 +1023,7 @@ export default function ImmortelLanding() {
 
           <div className="demo-block">
             <div className="demo-kicker">Want the 10-minute tour?</div>
-            <div className="demo-title">Book a demo. We’ll show you the “oh wow” parts.</div>
+            <div className="demo-title">Book a demo. We&apos;ll show you the "oh wow" parts.</div>
             <div className="demo-actions">
               <a
                 href={calendlyHref}
@@ -1017,6 +1037,7 @@ export default function ImmortelLanding() {
           </div>
         </m.section>
 
+        {/* ─── CHANGED: Footer — AEO platform labels ─── */}
         <m.footer {...sectionMist.footer}>
           <div className="footer-top">
             <Link href="/" className="footer-logo">
@@ -1033,7 +1054,7 @@ export default function ImmortelLanding() {
                     <Link href="#">Write — Vault</Link>
                   </li>
                   <li>
-                    <Link href="#">Convert — Checkout</Link>
+                    <Link href="#">Rank — Citation Engine</Link>
                   </li>
                   <li>
                     <Link href="#">Protocol Layer</Link>
@@ -1047,7 +1068,7 @@ export default function ImmortelLanding() {
                     <Link href="#audience">For CMOs</Link>
                   </li>
                   <li>
-                    <Link href="#audience">For DTC Founders</Link>
+                    <Link href="#audience">For Content Strategists</Link>
                   </li>
                   <li>
                     <Link href="#audience">For CTOs</Link>
@@ -1067,7 +1088,7 @@ export default function ImmortelLanding() {
                     <Link href="#">API Reference</Link>
                   </li>
                   <li>
-                    <Link href="#">CAL Schema</Link>
+                    <Link href="#">AES Schema</Link>
                   </li>
                   <li>
                     <Link href="#">Blog</Link>
@@ -1095,7 +1116,7 @@ export default function ImmortelLanding() {
           </div>
           <div className="footer-bottom">
             <div className="footer-copy">
-              © 2026 Immortell Inc. — <span>Answer Commerce Engine</span>
+              © 2026 Immortell Inc. — <span>Answer Engine Optimization Platform</span>
             </div>
             <div className="footer-status">
               <span className="status-dot" /> All systems operational
