@@ -6,13 +6,37 @@ import {
   promptMatchesCompanyFocus,
 } from "@/lib/geo/geoknight/companyNameMatch";
 
+/** Reject NaN/Infinity and absurd magnitudes that break @react-pdf layout or display. */
+export function sanitizeFiniteNumber(
+  value: number | null | undefined,
+  opts: { min?: number; max?: number } = {}
+): number | null {
+  if (value == null || typeof value !== "number") return null;
+  if (!Number.isFinite(value)) return null;
+  const { min = -1e6, max = 1e6 } = opts;
+  if (value < min || value > max) return null;
+  return value;
+}
+
 export function formatMetric(
   value: number | null | undefined,
   opts: { suffix?: string; prefix?: string; digits?: number } = {}
 ) {
   const { suffix = "", prefix = "", digits = 1 } = opts;
-  if (value == null || Number.isNaN(value)) return "—";
-  return `${prefix}${Number(value).toFixed(digits)}${suffix}`;
+  const n = sanitizeFiniteNumber(value);
+  if (n == null) return "—";
+  return `${prefix}${n.toFixed(digits)}${suffix}`;
+}
+
+export function formatRankValue(rank: number | null | undefined): string {
+  const n = sanitizeFiniteNumber(rank, { min: 0, max: 1000 });
+  return n != null ? `#${n.toFixed(1)}` : "—";
+}
+
+export function formatCount(value: number | null | undefined): string {
+  const n = sanitizeFiniteNumber(value, { min: 0, max: 1e9 });
+  if (n == null) return "—";
+  return String(Math.round(n));
 }
 
 /** Compile the search input as a case-insensitive regex; fall back to literal includes on invalid patterns. */

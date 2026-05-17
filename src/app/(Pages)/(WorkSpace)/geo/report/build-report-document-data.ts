@@ -1,8 +1,12 @@
 import type { HighlightPrompt } from "./pick-highlight-prompts";
+import { sanitizePdfText } from "./sanitize-pdf-text";
 import {
   buildBrandFocusRegex,
   buildBrandMentionRows,
+  formatCount,
   formatMetric,
+  formatRankValue,
+  sanitizeFiniteNumber,
 } from "./report-utils";
 import { promptMatchesCompanyFocus } from "@/lib/geo/geoknight/companyNameMatch";
 import type { GeoKnightWorkspaceData } from "@/lib/geo/geoknight/loadGeoKnightTopicViews";
@@ -29,7 +33,7 @@ export type ReportDocumentBrandMention = {
 export type ReportDocumentRivalHighlight = {
   query: string;
   topicName: string;
-  consensus: Array<{ companyName: string; rank: string; mentions: number }>;
+  consensus: Array<{ companyName: string; rank: string; mentions: string }>;
   byModel: Array<{ model: string; companyName: string; rank: string }>;
 };
 
@@ -51,20 +55,12 @@ export type ReportDocumentData = {
   hasData: boolean;
 };
 
-function formatRank(rank: number | null): string {
-  return rank != null ? `#${Number(rank).toFixed(1)}` : "—";
-}
-
 function formatOtherBrands(
   brands: Array<{ companyName: string; bestRank: number | null }>
 ): string {
   if (brands.length === 0) return "No other brands in rival rows.";
   return brands
-    .map((b) =>
-      b.bestRank != null
-        ? `${b.companyName} (${formatRank(b.bestRank)})`
-        : `${b.companyName} (—)`
-    )
+    .map((b) => `${b.companyName} (${formatRankValue(b.bestRank)})`)
     .join("; ");
 }
 
@@ -100,7 +96,7 @@ export function buildReportDocumentData(input: {
     {
       label: "Top-3 Mention Rate",
       value: formatMetric(latest?.top3Rate, { suffix: "%", digits: 0 }),
-      note: `Benchmark ~${payload.top3BenchmarkPct}%`,
+      note: `Benchmark ~${formatCount(payload.top3BenchmarkPct)}%`,
     },
     {
       label: "Query Coverage",
@@ -125,39 +121,45 @@ export function buildReportDocumentData(input: {
     hasGeoKnightTopics;
 
   return {
-    companyName: ourName,
+    companyName: sanitizePdfText(ourName, 120),
     generatedAt: new Date().toISOString(),
-    activePromptCount,
-    promptsTracked,
+    activePromptCount: sanitizeFiniteNumber(activePromptCount, { min: 0, max: 1e6 }) ?? 0,
+    promptsTracked: sanitizeFiniteNumber(promptsTracked, { min: 0, max: 1e6 }) ?? 0,
     radarCalculatedAt: latest?.calculatedAt
-      ? new Date(latest.calculatedAt).toLocaleString()
+      ? sanitizePdfText(new Date(latest.calculatedAt).toLocaleString())
       : null,
-    metrics: hasRadarMetrics ? metrics : [],
+    metrics: hasRadarMetrics
+      ? metrics.map((m) => ({
+          label: sanitizePdfText(m.label),
+          value: sanitizePdfText(m.value),
+          note: sanitizePdfText(m.note),
+        }))
+      : [],
     brandMentions: brandMentionRows.map((row) => ({
-      query: row.query,
-      topicName: row.topicName,
-      topicDifficulty: row.topicDifficulty,
-      consensusRank: formatRank(row.consensusBest),
-      modelRank: formatRank(row.modelBest),
+      query: sanitizePdfText(row.query),
+      topicName: sanitizePdfText(row.topicName),
+      topicDifficulty: sanitizePdfText(row.topicDifficulty),
+      consensusRank: formatRankValue(row.consensusBest),
+      modelRank: formatRankValue(row.modelBest),
       otherBrands: formatOtherBrands(row.otherBrands),
     })),
     rivalHighlights: companyHighlightPrompts.map((p) => ({
-      query: p.query,
-      topicName: p.topicName,
+      query: sanitizePdfText(p.query),
+      topicName: sanitizePdfText(p.topicName),
       consensus: (p.consensus ?? []).map((c) => ({
-        companyName: c.companyName,
-        rank: formatRank(c.avgRank),
-        mentions: c.mentions,
+        companyName: sanitizePdfText(c.companyName, 200),
+        rank: formatRankValue(c.avgRank),
+        mentions: formatCount(c.mentions),
       })),
       byModel: (p.byModel ?? []).map((row) => ({
-        model: row.model,
-        companyName: row.companyName,
-        rank: formatRank(row.rank),
+        model: sanitizePdfText(row.model, 80),
+        companyName: sanitizePdfText(row.companyName, 200),
+        rank: formatRankValue(row.rank),
       })),
     })),
     bountyPages: bountyPages.map((b) => ({
-      pageTitle: b.pageTitle,
-      query: b.query,
+      pageTitle: sanitizePdfText(b.pageTitle),
+      query: sanitizePdfText(b.query),
     })),
     hasData,
   };
