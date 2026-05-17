@@ -65,7 +65,13 @@ export default function IntelligenceReport({
   geoKnight: GeoKnightWorkspaceData;
   rivalsForCharts: Array<{ id: string; name: string }>;
   sparkSeries: { sov: number[]; top3: number[]; coverage: number[]; rank: number[] };
-  bountyPages: Array<{ bountyId: string; query: string; pageTitle: string; pageId: string }>;
+  bountyPages: Array<{
+    bountyId: string;
+    query: string;
+    pageTitle: string;
+    pageId: string;
+    createdAt: string;
+  }>;
   highlightPrompts: HighlightPrompt[];
 }) {
   const [search, setSearch] = useState("");

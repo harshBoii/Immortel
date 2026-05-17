@@ -26,6 +26,7 @@ export default async function IntelligenceReportPage() {
       select: {
         id: true,
         query: true,
+        createdAt: true,
         aeoPage: { select: { id: true, title: true } },
       },
     }),
@@ -38,6 +39,7 @@ export default async function IntelligenceReportPage() {
       query: b.query,
       pageTitle: b.aeoPage!.title,
       pageId: b.aeoPage!.id,
+      createdAt: b.createdAt.toISOString(),
     }));
 
   const rivalsForCharts = rivals
