@@ -495,33 +495,38 @@ function RegisterPageContent() {
                   ) : null}
 
                   {step === 'plan' ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {PLAN_OPTIONS.map((option) => {
+                    <div className="mx-auto grid max-w-[21rem] grid-cols-3 gap-2.5 justify-items-center sm:max-w-[23rem] sm:gap-3">
+                      {PLAN_OPTIONS.map((option, index) => {
                         const selected = selectedPlan === option.id;
+                        const isLastAlone =
+                          PLAN_OPTIONS.length % 3 === 1 && index === PLAN_OPTIONS.length - 1;
                         return (
                           <button
                             key={option.id}
                             type="button"
                             onClick={() => setSelectedPlan(option.id)}
-                            className={`rounded-xl border p-4 text-left transition-all ${
+                            className={`flex aspect-square w-[6.25rem] flex-col rounded-lg border p-2 text-center transition-all sm:w-[6.75rem] ${
+                              isLastAlone ? 'col-start-2' : ''
+                            } ${
                               selected
                                 ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
                                 : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
                             }`}
                           >
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="text-base font-semibold text-foreground">
-                                {option.name}
-                              </span>
-                              <span className="text-sm font-semibold text-[var(--sibling-primary)]">
-                                {option.priceLabel}
-                              </span>
-                            </div>
-                            <ul className="mt-3 grid gap-1.5 text-sm text-muted-foreground">
+                            <span className="text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
+                              {option.name}
+                            </span>
+                            <span className="mt-0.5 text-[10px] font-semibold text-[var(--sibling-primary)] sm:text-[11px]">
+                              {option.priceLabel}
+                            </span>
+                            <ul className="mt-1.5 flex flex-1 flex-col justify-end gap-0.5 overflow-hidden text-left">
                               {option.highlights.map((line) => (
-                                <li key={line} className="flex items-center gap-2">
-                                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
-                                  {line}
+                                <li
+                                  key={line}
+                                  className="flex items-start gap-1 text-[8px] leading-tight text-muted-foreground sm:text-[9px]"
+                                >
+                                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                                  <span className="line-clamp-2">{line}</span>
                                 </li>
                               ))}
                             </ul>
