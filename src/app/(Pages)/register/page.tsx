@@ -328,7 +328,9 @@ function RegisterPageContent() {
             transition={{ duration: 0.75, ease: easeMist, delay: 0.05 }}
             className="flex min-h-[72vh] items-center justify-center"
           >
-            <div className="w-full max-w-xl">
+            <div
+              className={`w-full ${step === 'plan' ? 'max-w-5xl' : 'max-w-xl'}`}
+            >
               <div className="mb-5 flex items-center justify-between gap-4">
                 <div className="flex flex-col">
                   <div className="text-sm text-muted-foreground">Immortell onboarding</div>
@@ -495,38 +497,33 @@ function RegisterPageContent() {
                   ) : null}
 
                   {step === 'plan' ? (
-                    <div className="mx-auto grid max-w-[21rem] grid-cols-3 gap-2.5 justify-items-center sm:max-w-[23rem] sm:gap-3">
-                      {PLAN_OPTIONS.map((option, index) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {PLAN_OPTIONS.map((option) => {
                         const selected = selectedPlan === option.id;
-                        const isLastAlone =
-                          PLAN_OPTIONS.length % 3 === 1 && index === PLAN_OPTIONS.length - 1;
                         return (
                           <button
                             key={option.id}
                             type="button"
                             onClick={() => setSelectedPlan(option.id)}
-                            className={`flex aspect-square w-[6.25rem] flex-col rounded-lg border p-2 text-center transition-all sm:w-[6.75rem] ${
-                              isLastAlone ? 'col-start-2' : ''
-                            } ${
+                            className={`rounded-xl border px-4 py-2.5 text-left transition-all ${
                               selected
                                 ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
                                 : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
                             }`}
                           >
-                            <span className="text-[11px] font-semibold leading-tight text-foreground sm:text-xs">
-                              {option.name}
-                            </span>
-                            <span className="mt-0.5 text-[10px] font-semibold text-[var(--sibling-primary)] sm:text-[11px]">
-                              {option.priceLabel}
-                            </span>
-                            <ul className="mt-1.5 flex flex-1 flex-col justify-end gap-0.5 overflow-hidden text-left">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-semibold text-foreground">
+                                {option.name}
+                              </span>
+                              <span className="shrink-0 text-xs font-semibold text-[var(--sibling-primary)]">
+                                {option.priceLabel}
+                              </span>
+                            </div>
+                            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs leading-snug text-muted-foreground">
                               {option.highlights.map((line) => (
-                                <li
-                                  key={line}
-                                  className="flex items-start gap-1 text-[8px] leading-tight text-muted-foreground sm:text-[9px]"
-                                >
-                                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
-                                  <span className="line-clamp-2">{line}</span>
+                                <li key={line} className="flex items-center gap-1.5">
+                                  <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                                  {line}
                                 </li>
                               ))}
                             </ul>
