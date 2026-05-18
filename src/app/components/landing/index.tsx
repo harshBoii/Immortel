@@ -1018,9 +1018,22 @@ export default function ImmortelLanding() {
         {/* ─── CHANGED: Footer — AEO platform labels ─── */}
         <m.footer {...sectionMist.footer}>
           <div className="footer-top">
-            <Link href="/" className="footer-logo">
-              Imm<span>◉</span>rtell
-            </Link>
+            <div className="footer-brand">
+              <Link href="/" className="footer-logo">
+                Imm<span>◉</span>rtell
+              </Link>
+              <div className="footer-company">
+                <p className="footer-company-name">Immortell Inc.</p>
+                <p className="footer-company-line">Chennai, Tamil Nadu — India</p>
+                <p className="footer-company-line">
+                  <a href="tel:+919080866203">9080866203</a>
+                  <span className="footer-company-sep" aria-hidden>
+                    ·
+                  </span>
+                  <a href="mailto:srithebuilder@gmail.com">srithebuilder@gmail.com</a>
+                </p>
+              </div>
+            </div>
             <div className="footer-cols">
               <div className="footer-col">
                 <h5>Platform</h5>
@@ -1095,6 +1108,22 @@ export default function ImmortelLanding() {
           <div className="footer-bottom">
             <div className="footer-copy">
               © 2026 Immortell Inc. — <span>Answer Engine Optimization Platform</span>
+            </div>
+            <div className="footer-badges">
+              <img
+                src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=light"
+                width={120}
+                height={32}
+                alt="Fazier badge"
+                className="footer-badge-fazier"
+              />
+              <img
+                src="https://aixcollection.com/assets/images/badge.png"
+                height={54}
+                width={160}
+                alt="AI X Collection"
+                className="footer-badge-aix"
+              />
             </div>
             <div className="footer-status">
               <span className="status-dot" /> All systems operational
