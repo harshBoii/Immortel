@@ -344,9 +344,9 @@ html {
 
 .landing-page .hero-h1 {
   font-family: var(--cond);
-  font-size: clamp(72px, 9vw, 140px);
+  font-size: clamp(65px, 7.5vw, 120px);
   font-weight: 900;
-  line-height: 0.92;
+  line-height: 0.72;
   letter-spacing: -0.01em;
   text-transform: uppercase;
   color: var(--ink);
