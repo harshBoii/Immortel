@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "static.heygen.ai" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/robust/:path*',
+        destination: `https://robust-neon.vercel.app/:path*`,
+      },
+    ]
+  }
 };
 
 export default nextConfig;
