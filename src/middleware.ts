@@ -13,6 +13,10 @@ function hasValidAuthCookie(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname.startsWith('/robust')) {
+    return NextResponse.next();
+  }
+
   const isLoginPage = pathname === '/login';
   const isRegisterPage = pathname === '/register';
   const isDevLoginPage = pathname === '/dev/login';
@@ -110,6 +114,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!robust|_next/static|_next/image|favicon.ico|images|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
