@@ -513,7 +513,7 @@ export default function DataMinePageClient({ initialSources, initialCompany, ini
       if (!res.ok || !data?.success) { setAutoFillMessage(data?.error ?? (data?.missing ? "Website URL is required before auto-filling." : "Failed to auto-fill company data.")); return; }
       if (data.company) setCompany(data.company); if (data.brandEntity) setBrandEntity(data.brandEntity);
       if (Array.isArray(data.offerings)) setOfferings(data.offerings); if (data.branding) setBranding(data.branding);
-      setAutoFillMessage("Company profile, brand entity, offerings, and branding were updated from GEO.");
+      setAutoFillMessage("Company profile, brand entity, offerings, and branding were updated from GEO.Refresh The page once to see the changes.");
     } catch (err) { console.error("Auto-fill error", err); setAutoFillMessage("Something went wrong while auto-filling. Please try again."); }
     finally { setIsAutoFilling(false); }
   }, []);
