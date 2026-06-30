@@ -46,6 +46,7 @@ export function middleware(request: NextRequest) {
   const isPublicBountyHuntArticle =
     pathname.startsWith('/geo/bounty/') && pathname.endsWith('/hunt');
   const isDodoWebhook = pathname.startsWith('/api/dodo/webhook');
+  const isCouponValidateApi = pathname === '/api/subscription/coupon/validate';
   const isQstashCallback = pathname.startsWith('/api/qstash/callback');
   const isJobsSeed = pathname.startsWith('/api/jobs/seed');
   const isJobsRadar = pathname.startsWith('/api/jobs/radar');
@@ -79,6 +80,7 @@ export function middleware(request: NextRequest) {
     isWidgetApi ||
     isPublicBountyHuntArticle||
     isRegisterPage||
+    isCouponValidateApi||
     isDodoWebhook||
     isQstashCallback||
     isJobsSeed||
