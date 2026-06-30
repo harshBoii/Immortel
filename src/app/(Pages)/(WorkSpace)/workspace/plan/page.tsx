@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CreditCard, RefreshCw, ArrowLeft } from "lucide-react";
-import type { PlanId } from "@/lib/subscription/plans";
+import { isDealifyPlan, type PlanId } from "@/lib/subscription/plans";
 
 type FeatureUsage = {
   key: string;
@@ -392,14 +392,18 @@ function WorkspacePlanContent() {
               </p>
             ) : null}
 
-            {data.usage ? (
+            {data.usage && sub.plan && !isDealifyPlan(sub.plan) ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 Billing period:{" "}
                 <span className="text-foreground font-medium">
                   {formatPeriodDate(data.usage.periodStart)} – {formatPeriodDate(data.usage.periodEnd)}
                 </span>
               </p>
-            ) : sub.status === "ACTIVE" ? (
+            ) : null}
+
+            {sub.status === "ACTIVE" &&
+            !data.usage &&
+            (!sub.plan || !isDealifyPlan(sub.plan)) ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 Usage counters will appear after your first billing period is recorded.
               </p>

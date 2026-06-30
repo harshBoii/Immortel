@@ -318,7 +318,7 @@ function RegisterPageContent() {
           ? 'None'
           : cmsChoice;
     const planLabel = couponValidation
-      ? `${couponValidation.planName} (${couponValidation.termYears}-year · $0)`
+      ? `${couponValidation.planName} ($0)`
       : `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`;
     return [
       { k: 'Email', v: email.trim() || '—' },
@@ -678,7 +678,7 @@ function RegisterPageContent() {
                         <span className="font-semibold text-foreground">Start setup</span>, we'll
                         create your workspace
                         {couponValidation
-                          ? ` and activate your ${couponValidation.planName} subscription (${couponValidation.termYears}-year · $0).`
+                          ? ` and activate your ${couponValidation.planName} subscription ($0).`
                           : isFreePlan(selectedPlan)
                             ? ' — no payment required on the free plan.'
                             : ' and take you to the payment step to activate your subscription.'}
@@ -714,7 +714,6 @@ function RegisterPageContent() {
                           <ul className="grid gap-2 text-sm text-muted-foreground">
                             {[
                               `${couponValidation.planName} plan`,
-                              `${couponValidation.termYears}-year subscription`,
                               '$0 due today',
                               'Full GEO workspace for ' + (companyName.trim() || 'your company'),
                               'Auto-seed from your website',
@@ -943,7 +942,7 @@ function CouponField({
             <p className="text-sm text-destructive">{error}</p>
           ) : validation ? (
             <p className="text-sm text-emerald-600 dark:text-emerald-400">
-              Valid coupon for {validation.planName} — {validation.termYears}-year term, $0 due.
+              Valid coupon for {validation.planName} — $0 due.
             </p>
           ) : null}
         </div>

@@ -128,13 +128,13 @@ export const PLAN_OPTIONS: Array<{
   {
     id: "DEALIFY_STARTER",
     name: "Dealify Starter",
-    priceLabel: "$90 / 2yr",
+    priceLabel: "$90",
     highlights: planQuotaFeatures("DEALIFY_STARTER"),
   },
   {
     id: "DEALIFY_PRO",
     name: "Dealify Pro",
-    priceLabel: "$140 / 2yr",
+    priceLabel: "$140",
     highlights: planQuotaFeatures("DEALIFY_PRO"),
   },
 ];
