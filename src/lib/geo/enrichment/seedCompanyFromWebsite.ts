@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { normalizeOfferingType } from "@/lib/geo/normalizeOfferingType";
 
 type SeedPayload = {
   company?: {
@@ -227,8 +228,8 @@ export async function seedCompanyFromWebsite(
         createData.description = o.description;
         updateData.description = o.description;
       }
-      if (o.offeringType !== undefined) {
-        const t = o.offeringType as any;
+      if (o.offeringType !== undefined && o.offeringType !== null) {
+        const t = normalizeOfferingType(o.offeringType);
         createData.offeringType = t;
         updateData.offeringType = t;
       }
