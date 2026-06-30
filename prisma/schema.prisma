@@ -52,6 +52,7 @@ model Company {
   // Subscription fields
   subscription Subscription?
   subscriptionUsage SubscriptionUsage?
+  redeemedCoupons SubscriptionCoupon[]
 
   // subscriptionId        String?            @map("subscription_id")
   // subscriptionStatus    SubscriptionStatus @default(PENDING) @map("subscription_status")
@@ -1894,6 +1895,21 @@ model Subscription {
   @@map("subscriptions")
 }
 
+/// Single-use coupon codes for Dealify plan signup (100% off, 3-year term).
+model SubscriptionCoupon {
+  id                  String           @id @default(cuid())
+  code                String           @unique @db.VarChar(64)
+  plan                SubscriptionPlan
+  expiresAt           DateTime?        @db.Timestamptz(3)
+  redeemedAt          DateTime?        @db.Timestamptz(3)
+  redeemedByCompanyId String?          @map("redeemed_by_company_id")
+  redeemedByCompany   Company?         @relation(fields: [redeemedByCompanyId], references: [id], onDelete: SetNull)
+  createdAt           DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([plan, redeemedAt])
+  @@map("subscription_coupons")
+}
+
 /// Active add-ons attached to a subscription.
 model SubscriptionAddOn {
   id             String          @id @default(cuid())
@@ -2244,11 +2260,15 @@ enum SubscriptionPlan {
   STARTER
   GROWTH
   SCALE
+  DEALIFY_STARTER
+  DEALIFY_PRO
 }
 
 enum BillingCycle {
   MONTHLY
   YEARLY
+  TWO_YEAR
+  THREE_YEAR
 }
 
 enum AddOnType {

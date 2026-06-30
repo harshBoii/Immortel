@@ -29,13 +29,33 @@ export const PLAN_CONFIG = {
     seoPageGenerationQuota: 200,
     rivalsAnalysisQuota: 50,
   },
+  DEALIFY_STARTER: {
+    priceAmount: 9000, // $90 / 2yr
+    radarScansQuota: 5,
+    bountyGeneratorQuota: 4,
+    seoPageGenerationQuota: 16,
+    rivalsAnalysisQuota: 0,
+  },
+  DEALIFY_PRO: {
+    priceAmount: 14000, // $140 / 2yr
+    radarScansQuota: 9,
+    bountyGeneratorQuota: 8,
+    seoPageGenerationQuota: 24,
+    rivalsAnalysisQuota: 2,
+  },
 } as const;
 
 export type PlanId = keyof typeof PLAN_CONFIG;
 
-export type PaidPlanId = Exclude<PlanId, "FREE">;
+export type PaidPlanId = Exclude<PlanId, "FREE" | "DEALIFY_STARTER" | "DEALIFY_PRO">;
+
+export type DealifyPlanId = "DEALIFY_STARTER" | "DEALIFY_PRO";
 
 const PLAN_IDS = Object.keys(PLAN_CONFIG) as PlanId[];
+
+const DEALIFY_PLAN_IDS: DealifyPlanId[] = ["DEALIFY_STARTER", "DEALIFY_PRO"];
+
+const SIGNUP_PLAN_IDS: PlanId[] = ["FREE", "STARTER", "GROWTH", "SCALE"];
 
 export function isPlanId(value: string): value is PlanId {
   return (PLAN_IDS as string[]).includes(value);
@@ -45,8 +65,16 @@ export function isFreePlan(plan: PlanId): plan is "FREE" {
   return plan === "FREE";
 }
 
+export function isDealifyPlan(plan: PlanId): plan is DealifyPlanId {
+  return (DEALIFY_PLAN_IDS as string[]).includes(plan);
+}
+
 export function isPaidPlan(plan: PlanId): plan is PaidPlanId {
-  return plan !== "FREE";
+  return plan !== "FREE" && !isDealifyPlan(plan);
+}
+
+export function isDodoCheckoutPlan(plan: PlanId): plan is PaidPlanId {
+  return isPaidPlan(plan);
 }
 
 function formatPriceLabel(priceAmount: number): string {
@@ -56,12 +84,15 @@ function formatPriceLabel(priceAmount: number): string {
 
 function planQuotaFeatures(plan: PlanId): string[] {
   const c = PLAN_CONFIG[plan];
-  return [
+  const features = [
     `${c.radarScansQuota} radar scans / month`,
     `${c.bountyGeneratorQuota} bounty generations / month`,
     `${c.seoPageGenerationQuota} SEO pages / month`,
-    `${c.rivalsAnalysisQuota} rival analyses / month`,
   ];
+  if (c.rivalsAnalysisQuota > 0) {
+    features.push(`${c.rivalsAnalysisQuota} rival analyses / month`);
+  }
+  return features;
 }
 
 export const PLAN_OPTIONS: Array<{
@@ -94,7 +125,24 @@ export const PLAN_OPTIONS: Array<{
     priceLabel: formatPriceLabel(PLAN_CONFIG.SCALE.priceAmount),
     highlights: planQuotaFeatures("SCALE"),
   },
+  {
+    id: "DEALIFY_STARTER",
+    name: "Dealify Starter",
+    priceLabel: "$90 / 2yr",
+    highlights: planQuotaFeatures("DEALIFY_STARTER"),
+  },
+  {
+    id: "DEALIFY_PRO",
+    name: "Dealify Pro",
+    priceLabel: "$140 / 2yr",
+    highlights: planQuotaFeatures("DEALIFY_PRO"),
+  },
 ];
+
+/** Plans shown on the public signup plan picker (excludes coupon-only Dealify tiers). */
+export const SIGNUP_PLAN_OPTIONS = PLAN_OPTIONS.filter((p) =>
+  (SIGNUP_PLAN_IDS as string[]).includes(p.id)
+);
 
 /** Display order for marketing / landing pricing section */
 export const LANDING_PLAN_ORDER: PlanId[] = ["FREE", "STARTER", "GROWTH", "SCALE"];
@@ -145,6 +193,8 @@ export function getSubscriptionFieldsForPlan(plan: PlanId) {
 export function getPlanOption(plan: PlanId) {
   return PLAN_OPTIONS.find((p) => p.id === plan)!;
 }
+
+export const COUPON_TERM_YEARS = 2;
 
 export const ADD_ON_CONFIG = {
   AEO_CONTENT_BOOST: { priceAmount: 2900 }, // $29/mo

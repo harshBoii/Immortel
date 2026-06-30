@@ -6,6 +6,7 @@ import { activateFreePlan } from "@/lib/subscription/activate-free";
 import { createPlanCheckoutSession } from "@/lib/subscription/dodo-checkout";
 import {
   getSubscriptionFieldsForPlan,
+  isDealifyPlan,
   isFreePlan,
   isPaidPlan,
   isPlanId,
@@ -29,6 +30,14 @@ export async function POST(request: Request) {
   }
 
   const plan = body.plan;
+
+  if (isDealifyPlan(plan)) {
+    return NextResponse.json(
+      { error: "Dealify plans are activated with a coupon code during signup." },
+      { status: 400 }
+    );
+  }
+
   const companyId = session.companyId;
 
   const company = await prisma.company.findUnique({

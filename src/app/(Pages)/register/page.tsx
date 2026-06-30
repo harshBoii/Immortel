@@ -5,12 +5,20 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import {
-  PLAN_OPTIONS,
+  SIGNUP_PLAN_OPTIONS,
   getPlanOption,
   isFreePlan,
   isPlanId,
   type PlanId,
 } from '@/lib/subscription/plans';
+
+type CouponValidation = {
+  valid: true;
+  plan: string;
+  planName: string;
+  termYears: number;
+  amountDue: 0;
+};
 
 type CmsChoice = 'Shopify' | 'WordPress' | 'Other';
 
@@ -54,6 +62,13 @@ function RegisterPageContent() {
 
   // Stored after successful registration — used by payment step
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValidation, setCouponValidation] = useState<CouponValidation | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponRedeeming, setCouponRedeeming] = useState(false);
 
   // payment step is the last real step but we don't include it in the
   // progress bar denominator — it's a "done, now pay" confirmation screen.
@@ -152,6 +167,44 @@ function RegisterPageContent() {
     goNext();
   }
 
+  async function validateCouponInput(code: string) {
+    const trimmed = code.trim();
+    if (!trimmed) {
+      setCouponValidation(null);
+      setCouponError(null);
+      return;
+    }
+
+    setCouponValidating(true);
+    setCouponError(null);
+    try {
+      const res = await fetch('/api/subscription/coupon/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.valid) {
+        setCouponValidation(data as CouponValidation);
+        setCouponError(null);
+      } else {
+        setCouponValidation(null);
+        setCouponError(data?.error ?? 'Invalid coupon code.');
+      }
+    } catch {
+      setCouponValidation(null);
+      setCouponError('Could not validate coupon. Please try again.');
+    } finally {
+      setCouponValidating(false);
+    }
+  }
+
+  function clearCoupon() {
+    setCouponCode('');
+    setCouponValidation(null);
+    setCouponError(null);
+  }
+
   // Called at the 'launch' review step.
   // Creates the company (status: PENDING) and gets back a Dodo checkoutUrl.
   async function handleStartSetup() {
@@ -174,6 +227,7 @@ function RegisterPageContent() {
           shopDomain: cmsChoice === 'Shopify' ? shopDomain : undefined,
           wordpressSiteUrl: cmsChoice === 'WordPress' ? wordpressSiteUrl : undefined,
           plan: selectedPlan,
+          ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
         }),
       });
 
@@ -182,6 +236,11 @@ function RegisterPageContent() {
       if (!registerRes.ok) {
         setError(registerData?.error ?? 'Signup failed. Please try again.');
         setLoading(false);
+        return;
+      }
+
+      if (registerData?.couponActivated) {
+        router.push('/login?registered=1');
         return;
       }
 
@@ -212,12 +271,41 @@ function RegisterPageContent() {
     window.location.href = checkoutUrl;
   }
 
+  async function handleRedeemCoupon() {
+    if (!couponValidation || !couponCode.trim()) return;
+    setCouponRedeeming(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/subscription/coupon/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ code: couponCode.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCouponError(data?.error ?? 'Could not redeem coupon. Please try again.');
+        return;
+      }
+      router.push('/login?registered=1');
+    } catch {
+      setCouponError('Could not redeem coupon. Please try again.');
+    } finally {
+      setCouponRedeeming(false);
+    }
+  }
+
   const selectedPlanOption = getPlanOption(selectedPlan);
+  const displayPlanOption = couponValidation
+    ? { name: couponValidation.planName, priceLabel: '$0' }
+    : selectedPlanOption;
 
   const review = useMemo(() => {
     const cmsLabel =
       cmsChoice === 'Other' ? (requestedCmsName.trim() || 'Other') : cmsChoice;
-    const planLabel = `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`;
+    const planLabel = couponValidation
+      ? `${couponValidation.planName} (${couponValidation.termYears}-year · $0)`
+      : `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`;
     return [
       { k: 'Email', v: email.trim() || '—' },
       { k: 'Company', v: companyName.trim() || '—' },
@@ -243,6 +331,7 @@ function RegisterPageContent() {
     wordpressSiteUrl,
     selectedPlanOption.name,
     selectedPlanOption.priceLabel,
+    couponValidation,
   ]);
 
   return (
@@ -498,7 +587,7 @@ function RegisterPageContent() {
 
                   {step === 'plan' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {PLAN_OPTIONS.map((option) => {
+                      {SIGNUP_PLAN_OPTIONS.map((option) => {
                         const selected = selectedPlan === option.id;
                         return (
                           <button
@@ -555,10 +644,23 @@ function RegisterPageContent() {
                         When you hit{' '}
                         <span className="font-semibold text-foreground">Start setup</span>, we'll
                         create your workspace
-                        {isFreePlan(selectedPlan)
-                          ? ' — no payment required on the free plan.'
-                          : ' and take you to the payment step to activate your subscription.'}
+                        {couponValidation
+                          ? ` and activate your ${couponValidation.planName} subscription (${couponValidation.termYears}-year · $0).`
+                          : isFreePlan(selectedPlan)
+                            ? ' — no payment required on the free plan.'
+                            : ' and take you to the payment step to activate your subscription.'}
                       </div>
+                      <CouponField
+                        open={couponOpen}
+                        onOpenChange={setCouponOpen}
+                        code={couponCode}
+                        onCodeChange={setCouponCode}
+                        error={couponError}
+                        validating={couponValidating}
+                        validation={couponValidation}
+                        onApply={() => void validateCouponInput(couponCode)}
+                        onClear={clearCoupon}
+                      />
                     </div>
                   ) : null}
 
@@ -582,30 +684,70 @@ function RegisterPageContent() {
                         </span>
                       </div>
 
-                      {/* What's included */}
-                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
-                        <div className="text-sm font-semibold mb-3">What you're activating</div>
-                        <ul className="grid gap-2 text-sm text-muted-foreground">
-                          {[
-                            `${selectedPlanOption.name} plan (${selectedPlanOption.priceLabel})`,
-                            'Full GEO workspace for ' + (companyName.trim() || 'your company'),
-                            'Auto-seed from your website',
-                            'CMS integration (' + (cmsChoice === 'Other' ? requestedCmsName.trim() || 'Custom' : cmsChoice) + ')',
-                            'Recurring billing — cancel anytime',
-                          ].map((item) => (
-                            <li key={item} className="flex items-center gap-2">
-                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--sibling-primary)] shrink-0" />
-                              {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      <CouponField
+                        open={couponOpen}
+                        onOpenChange={setCouponOpen}
+                        code={couponCode}
+                        onCodeChange={setCouponCode}
+                        error={couponError}
+                        validating={couponValidating}
+                        validation={couponValidation}
+                        onApply={() => void validateCouponInput(couponCode)}
+                        onClear={clearCoupon}
+                      />
 
-                      {/* Info note */}
-                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground">
-                        You'll be redirected to our secure payment page. Once payment is confirmed,
-                        you can log in and your workspace will be ready.
-                      </div>
+                      {couponValidation ? (
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                          <div className="text-sm font-semibold text-foreground mb-3">
+                            Coupon applied — confirm activation
+                          </div>
+                          <ul className="grid gap-2 text-sm text-muted-foreground">
+                            {[
+                              `${couponValidation.planName} plan`,
+                              `${couponValidation.termYears}-year subscription`,
+                              '$0 due today',
+                              'Full GEO workspace for ' + (companyName.trim() || 'your company'),
+                              'Auto-seed from your website',
+                            ].map((item) => (
+                              <li key={item} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                {item}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <>
+                          {/* What's included */}
+                          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
+                            <div className="text-sm font-semibold mb-3">What you're activating</div>
+                            <ul className="grid gap-2 text-sm text-muted-foreground">
+                              {[
+                                `${displayPlanOption.name} plan (${displayPlanOption.priceLabel})`,
+                                'Full GEO workspace for ' + (companyName.trim() || 'your company'),
+                                'Auto-seed from your website',
+                                'CMS integration (' +
+                                  (cmsChoice === 'Other'
+                                    ? requestedCmsName.trim() || 'Custom'
+                                    : cmsChoice) +
+                                  ')',
+                                'Recurring billing — cancel anytime',
+                              ].map((item) => (
+                                <li key={item} className="flex items-center gap-2">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--sibling-primary)] shrink-0" />
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Info note */}
+                          <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground">
+                            You'll be redirected to our secure payment page. Once payment is
+                            confirmed, you can log in and your workspace will be ready.
+                          </div>
+                        </>
+                      )}
                     </div>
                   ) : null}
                 </div>
@@ -652,17 +794,31 @@ function RegisterPageContent() {
                       </m.button>
                     ) : (
                       // payment step
-                      <m.button
-                        type="button"
-                        onClick={handleGoToPayment}
-                        disabled={!checkoutUrl}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        transition={{ duration: 0.15 }}
-                        className={AUTH_SUBMIT_GLASS_CLASS}
-                      >
-                        Proceed to payment →
-                      </m.button>
+                      couponValidation ? (
+                        <m.button
+                          type="button"
+                          onClick={() => void handleRedeemCoupon()}
+                          disabled={couponRedeeming}
+                          whileHover={{ scale: 1.02, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={{ duration: 0.15 }}
+                          className={AUTH_SUBMIT_GLASS_CLASS}
+                        >
+                          {couponRedeeming ? 'Activating…' : 'Activate subscription →'}
+                        </m.button>
+                      ) : (
+                        <m.button
+                          type="button"
+                          onClick={handleGoToPayment}
+                          disabled={!checkoutUrl}
+                          whileHover={{ scale: 1.02, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={{ duration: 0.15 }}
+                          className={AUTH_SUBMIT_GLASS_CLASS}
+                        >
+                          Proceed to payment →
+                        </m.button>
+                      )
                     )}
                     <Link
                       href="/landing"
@@ -696,6 +852,83 @@ export default function RegisterPage() {
     >
       <RegisterPageContent />
     </Suspense>
+  );
+}
+
+function CouponField({
+  open,
+  onOpenChange,
+  code,
+  onCodeChange,
+  error,
+  validating,
+  validation,
+  onApply,
+  onClear,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  code: string;
+  onCodeChange: (code: string) => void;
+  error: string | null;
+  validating: boolean;
+  validation: CouponValidation | null;
+  onApply: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className="text-sm font-semibold text-foreground hover:text-[var(--sibling-primary)]"
+      >
+        {open ? '− Hide coupon code' : '+ Have a coupon code?'}
+      </button>
+      {open ? (
+        <div className="mt-3 grid gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => onCodeChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onApply();
+                }
+              }}
+              placeholder="Enter coupon code"
+              className="flex-1 rounded-xl border border-[var(--glass-border)] bg-background/40 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <button
+              type="button"
+              onClick={onApply}
+              disabled={validating || !code.trim()}
+              className="rounded-xl border border-[var(--glass-border)] bg-background/40 px-4 py-3 text-sm font-semibold text-foreground disabled:opacity-50"
+            >
+              {validating ? 'Checking…' : 'Apply'}
+            </button>
+            {validation || code ? (
+              <button
+                type="button"
+                onClick={onClear}
+                className="rounded-xl border border-[var(--glass-border)] bg-background/40 px-4 py-3 text-sm text-muted-foreground"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : validation ? (
+            <p className="text-sm text-emerald-600 dark:text-emerald-400">
+              Valid coupon for {validation.planName} — {validation.termYears}-year term, $0 due.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -1,12 +1,16 @@
+import { setAuthCookie } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import DodoPayments from "dodopayments";
 import { activateFreePlan } from "@/lib/subscription/activate-free";
+import { redeemCouponForCompany, validateCouponCode } from "@/lib/subscription/coupon";
+import { triggerGeoAutoSeed } from "@/lib/subscription/trigger-geo-auto-seed";
 import {
   getDodoProductId,
   getSubscriptionFieldsForPlan,
+  isDealifyPlan,
   isFreePlan,
   isPaidPlan,
   isPlanId,
@@ -59,6 +63,7 @@ export async function POST(request: Request) {
       shopDomain,
       wordpressSiteUrl,
       plan: planRaw,
+      couponCode: couponCodeRaw,
     }: {
       email?: unknown;
       password?: unknown;
@@ -70,6 +75,7 @@ export async function POST(request: Request) {
       shopDomain?: unknown;
       wordpressSiteUrl?: unknown;
       plan?: unknown;
+      couponCode?: unknown;
     } = body ?? {};
 
     if (typeof email !== "string" || !email.trim()) {
@@ -106,10 +112,31 @@ export async function POST(request: Request) {
       );
     }
     const plan = planRaw;
-    const freePlan = isFreePlan(plan);
+    if (isDealifyPlan(plan)) {
+      return NextResponse.json(
+        { error: "Dealify plans require a valid coupon code." },
+        { status: 400 }
+      );
+    }
+
+    const couponCode =
+      typeof couponCodeRaw === "string" ? couponCodeRaw.trim() : "";
+    const hasCoupon = couponCode.length > 0;
+
+    if (hasCoupon) {
+      const couponValidation = await validateCouponCode(couponCode);
+      if (!couponValidation.valid) {
+        return NextResponse.json(
+          { error: couponValidation.error, code: couponValidation.code },
+          { status: 400 }
+        );
+      }
+    }
+
+    const freePlan = isFreePlan(plan) && !hasCoupon;
 
     let productId: string | undefined;
-    if (isPaidPlan(plan)) {
+    if (isPaidPlan(plan) && !hasCoupon) {
       try {
         productId = getDodoProductId(plan);
       } catch {
@@ -192,6 +219,63 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const subscriptionFields = getSubscriptionFieldsForPlan(plan);
 
+    if (hasCoupon) {
+      const { company, redemption } = await prisma.$transaction(async (tx) => {
+        const created = await tx.company.create({
+          data: {
+            name: companyName.trim(),
+            slug,
+            domain: domainNormalized,
+            website: websiteNormalized,
+            email: emailNormalized,
+            userName: emailNormalized,
+            password: hashedPassword,
+            requestedCmsIntegrations,
+            wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
+          },
+          select: { id: true, name: true, email: true },
+        });
+
+        if (cms === "Shopify" && shopDomainNormalized) {
+          await tx.companyIntegrationCms.create({
+            data: {
+              companyId: created.id,
+              provider: "Shopify",
+              expectedShopDomain: shopDomainNormalized,
+            },
+          });
+        }
+
+        await tx.geoDataSource.create({
+          data: {
+            companyId: created.id,
+            sourceType: "URL",
+            label: "Website URL",
+            rawContent: websiteNormalized,
+            isActive: true,
+          },
+        });
+
+        const redemptionResult = await redeemCouponForCompany({
+          companyId: created.id,
+          code: couponCode,
+          tx,
+        });
+
+        return { company: created, redemption: redemptionResult };
+      });
+
+      await triggerGeoAutoSeed(company.id);
+      await setAuthCookie(company.id);
+
+      return NextResponse.json({
+        success: true,
+        couponActivated: true,
+        plan: redemption.plan,
+        planName: redemption.planName,
+      });
+    }
+
     const company = await prisma.company.create({
       data: {
         name: companyName.trim(),
@@ -267,6 +351,8 @@ export async function POST(request: Request) {
       },
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup/success`,
     });
+
+    await setAuthCookie(company.id);
 
     return NextResponse.json({ checkoutUrl: session.checkout_url });
   } catch (err) {
