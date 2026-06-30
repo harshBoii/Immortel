@@ -164,6 +164,33 @@ function RegisterPageContent() {
       setError(msg);
       return;
     }
+
+    if (step === 'account') {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/auth/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data?.available === false) {
+          setError(
+            data?.code === 'EMAIL_EXISTS'
+              ? 'This email is already registered. Please log in instead.'
+              : (data?.error ?? 'Could not verify email. Please try again.')
+          );
+          return;
+        }
+      } catch {
+        setError('Could not verify email. Please try again.');
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
     goNext();
   }
 
@@ -482,7 +509,10 @@ function RegisterPageContent() {
                         <input
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            setError(null);
+                          }}
                           placeholder="you@company.com"
                           className="w-full rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         />
@@ -789,7 +819,7 @@ function RegisterPageContent() {
                         transition={{ duration: 0.15 }}
                         className={AUTH_SUBMIT_GLASS_CLASS}
                       >
-                        Next →
+                        {loading && step === 'account' ? 'Checking…' : 'Next →'}
                       </m.button>
                     ) : step === 'launch' ? (
                       <m.button
