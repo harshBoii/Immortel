@@ -16,7 +16,7 @@ import {
   isPlanId,
 } from "@/lib/subscription/plans";
 
-type CmsChoice = "Shopify" | "WordPress" | "Other";
+type CmsChoice = "Shopify" | "WordPress" | "Other" | "None";
 
 function slugify(text: string): string {
   return text
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
     }
 
     const cms = (typeof cmsChoice === "string" ? cmsChoice : "Other") as CmsChoice;
-    if (!["Shopify", "WordPress", "Other"].includes(cms)) {
+    if (!["Shopify", "WordPress", "Other", "None"].includes(cms)) {
       return NextResponse.json({ error: "Invalid CMS choice" }, { status: 400 });
     }
 
@@ -200,7 +200,7 @@ export async function POST(request: Request) {
         );
       }
       requestedCmsIntegrations.push(requestedCmsName.trim());
-    } else {
+    } else if (cms !== "None") {
       requestedCmsIntegrations.push(cms);
     }
 

@@ -20,7 +20,7 @@ type CouponValidation = {
   amountDue: 0;
 };
 
-type CmsChoice = 'Shopify' | 'WordPress' | 'Other';
+type CmsChoice = 'Shopify' | 'WordPress' | 'Other' | 'None';
 
 type StepId = 'account' | 'company' | 'cms' | 'site' | 'plan' | 'launch' | 'payment';
 
@@ -184,6 +184,16 @@ function RegisterPageContent() {
         body: JSON.stringify({ code: trimmed }),
       });
       const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCouponValidation(null);
+        setCouponError(
+          data?.error ??
+            (res.status === 404 || res.status === 405
+              ? 'Coupon validation is unavailable. Please try again after the latest app update is deployed.'
+              : 'Could not validate coupon. Please try again.')
+        );
+        return;
+      }
       if (data?.valid) {
         setCouponValidation(data as CouponValidation);
         setCouponError(null);
@@ -302,7 +312,11 @@ function RegisterPageContent() {
 
   const review = useMemo(() => {
     const cmsLabel =
-      cmsChoice === 'Other' ? (requestedCmsName.trim() || 'Other') : cmsChoice;
+      cmsChoice === 'Other'
+        ? requestedCmsName.trim() || 'Other'
+        : cmsChoice === 'None'
+          ? 'None'
+          : cmsChoice;
     const planLabel = couponValidation
       ? `${couponValidation.planName} (${couponValidation.termYears}-year · $0)`
       : `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`;
@@ -516,6 +530,7 @@ function RegisterPageContent() {
                           onChange={(e) => setCmsChoice(e.target.value as CmsChoice)}
                           className="w-full rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                         >
+                          <option value="None">None</option>
                           <option value="Shopify">Shopify</option>
                           <option value="WordPress">WordPress</option>
                           <option value="Other">Request other</option>
@@ -531,6 +546,10 @@ function RegisterPageContent() {
                             className="w-full rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                           />
                         </Field>
+                      ) : cmsChoice === 'None' ? (
+                        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground flex items-center">
+                          No CMS integration for now — you can connect one later.
+                        </div>
                       ) : (
                         <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground flex items-center">
                           {cmsChoice === 'Shopify'
@@ -586,39 +605,53 @@ function RegisterPageContent() {
                   ) : null}
 
                   {step === 'plan' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {SIGNUP_PLAN_OPTIONS.map((option) => {
-                        const selected = selectedPlan === option.id;
-                        return (
-                          <button
-                            key={option.id}
-                            type="button"
-                            onClick={() => setSelectedPlan(option.id)}
-                            className={`rounded-xl border px-4 py-2.5 text-left transition-all ${
-                              selected
-                                ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
-                                : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="text-sm font-semibold text-foreground">
-                                {option.name}
-                              </span>
-                              <span className="shrink-0 text-xs font-semibold text-[var(--sibling-primary)]">
-                                {option.priceLabel}
-                              </span>
-                            </div>
-                            <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs leading-snug text-muted-foreground">
-                              {option.highlights.map((line) => (
-                                <li key={line} className="flex items-center gap-1.5">
-                                  <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
-                                  {line}
-                                </li>
-                              ))}
-                            </ul>
-                          </button>
-                        );
-                      })}
+                    <div className="grid gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {SIGNUP_PLAN_OPTIONS.map((option) => {
+                          const selected = selectedPlan === option.id;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => setSelectedPlan(option.id)}
+                              className={`rounded-xl border px-4 py-2.5 text-left transition-all ${
+                                selected
+                                  ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
+                                  : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {option.name}
+                                </span>
+                                <span className="shrink-0 text-xs font-semibold text-[var(--sibling-primary)]">
+                                  {option.priceLabel}
+                                </span>
+                              </div>
+                              <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs leading-snug text-muted-foreground">
+                                {option.highlights.map((line) => (
+                                  <li key={line} className="flex items-center gap-1.5">
+                                    <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                                    {line}
+                                  </li>
+                                ))}
+                              </ul>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <CouponField
+                        alwaysVisible
+                        open={couponOpen}
+                        onOpenChange={setCouponOpen}
+                        code={couponCode}
+                        onCodeChange={setCouponCode}
+                        error={couponError}
+                        validating={couponValidating}
+                        validation={couponValidation}
+                        onApply={() => void validateCouponInput(couponCode)}
+                        onClear={clearCoupon}
+                      />
                     </div>
                   ) : null}
 
@@ -650,17 +683,6 @@ function RegisterPageContent() {
                             ? ' — no payment required on the free plan.'
                             : ' and take you to the payment step to activate your subscription.'}
                       </div>
-                      <CouponField
-                        open={couponOpen}
-                        onOpenChange={setCouponOpen}
-                        code={couponCode}
-                        onCodeChange={setCouponCode}
-                        error={couponError}
-                        validating={couponValidating}
-                        validation={couponValidation}
-                        onApply={() => void validateCouponInput(couponCode)}
-                        onClear={clearCoupon}
-                      />
                     </div>
                   ) : null}
 
@@ -683,18 +705,6 @@ function RegisterPageContent() {
                           <span className="font-semibold">{email.trim()}</span>. One step left.
                         </span>
                       </div>
-
-                      <CouponField
-                        open={couponOpen}
-                        onOpenChange={setCouponOpen}
-                        code={couponCode}
-                        onCodeChange={setCouponCode}
-                        error={couponError}
-                        validating={couponValidating}
-                        validation={couponValidation}
-                        onApply={() => void validateCouponInput(couponCode)}
-                        onClear={clearCoupon}
-                      />
 
                       {couponValidation ? (
                         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
@@ -726,11 +736,13 @@ function RegisterPageContent() {
                                 `${displayPlanOption.name} plan (${displayPlanOption.priceLabel})`,
                                 'Full GEO workspace for ' + (companyName.trim() || 'your company'),
                                 'Auto-seed from your website',
-                                'CMS integration (' +
-                                  (cmsChoice === 'Other'
-                                    ? requestedCmsName.trim() || 'Custom'
-                                    : cmsChoice) +
-                                  ')',
+                                cmsChoice === 'None'
+                                  ? 'No CMS integration (connect later)'
+                                  : 'CMS integration (' +
+                                    (cmsChoice === 'Other'
+                                      ? requestedCmsName.trim() || 'Custom'
+                                      : cmsChoice) +
+                                    ')',
                                 'Recurring billing — cancel anytime',
                               ].map((item) => (
                                 <li key={item} className="flex items-center gap-2">
@@ -856,6 +868,7 @@ export default function RegisterPage() {
 }
 
 function CouponField({
+  alwaysVisible = false,
   open,
   onOpenChange,
   code,
@@ -866,6 +879,7 @@ function CouponField({
   onApply,
   onClear,
 }: {
+  alwaysVisible?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   code: string;
@@ -876,16 +890,22 @@ function CouponField({
   onApply: () => void;
   onClear: () => void;
 }) {
+  const showInput = alwaysVisible || open;
+
   return (
     <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
-      <button
-        type="button"
-        onClick={() => onOpenChange(!open)}
-        className="text-sm font-semibold text-foreground hover:text-[var(--sibling-primary)]"
-      >
-        {open ? '− Hide coupon code' : '+ Have a coupon code?'}
-      </button>
-      {open ? (
+      {alwaysVisible ? (
+        <div className="text-sm font-semibold text-foreground">Have a coupon code?</div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onOpenChange(!open)}
+          className="text-sm font-semibold text-foreground hover:text-[var(--sibling-primary)]"
+        >
+          {open ? '− Hide coupon code' : '+ Have a coupon code?'}
+        </button>
+      )}
+      {showInput ? (
         <div className="mt-3 grid gap-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <input

@@ -434,7 +434,7 @@ export default function ImmortelLanding() {
             <Link href="/login" className="nav-login">
               Login
             </Link>
-            <Link href="#cta" className="nav-cta">
+            <Link href="/register" className="nav-cta">
               Get Access
             </Link>
           </div>
