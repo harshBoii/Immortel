@@ -1,10 +1,17 @@
 import { setAuthCookie } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { activateFreePlan } from "@/lib/subscription/activate-free";
 import { redeemCouponForCompany, validateCouponCode } from "@/lib/subscription/coupon";
+import { createPlanCheckoutSession } from "@/lib/subscription/dodo-checkout";
 import { triggerGeoAutoSeed } from "@/lib/subscription/trigger-geo-auto-seed";
+import {
+  getSubscriptionFieldsForPlan,
+  isDealifyPlan,
+  isPlanId,
+  type DealifyPlanId,
+} from "@/lib/subscription/plans";
 
 type CmsChoice = "Shopify" | "WordPress" | "Other" | "None";
 
@@ -52,6 +59,7 @@ export async function POST(request: Request) {
       requestedCmsName,
       shopDomain,
       wordpressSiteUrl,
+      plan: planRaw,
       couponCode: couponCodeRaw,
     }: {
       email?: unknown;
@@ -63,6 +71,7 @@ export async function POST(request: Request) {
       requestedCmsName?: unknown;
       shopDomain?: unknown;
       wordpressSiteUrl?: unknown;
+      plan?: unknown;
       couponCode?: unknown;
     } = body ?? {};
 
@@ -93,9 +102,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    // Signup has exactly two outcomes: redeem a coupon for a Dealify plan, or land on
-    // the free fallback. Plans are not sold at signup, so no plan is accepted from the
-    // client — extra usage is bought later as an add-on.
+    // Signup has exactly two routes in: redeem a valid coupon, or buy a Dealify plan.
+    // There is deliberately no free fallback — the free tier is reserved for legacy
+    // accounts and internal teams, and is provisioned manually rather than at signup.
     const couponCode =
       typeof couponCodeRaw === "string" ? couponCodeRaw.trim() : "";
     const hasCoupon = couponCode.length > 0;
@@ -108,6 +117,25 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+    }
+
+    let purchasePlan: DealifyPlanId | null = null;
+    if (!hasCoupon) {
+      if (
+        typeof planRaw !== "string" ||
+        !isPlanId(planRaw) ||
+        !isDealifyPlan(planRaw)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Enter a valid coupon code, or choose a plan to purchase.",
+            code: "PLAN_REQUIRED",
+          },
+          { status: 400 }
+        );
+      }
+      purchasePlan = planRaw;
     }
 
     const cms = (typeof cmsChoice === "string" ? cmsChoice : "Other") as CmsChoice;
@@ -235,6 +263,9 @@ export async function POST(request: Request) {
       });
     }
 
+    // Paid signup: the subscription starts PENDING and is only activated by the
+    // payment.succeeded webhook, so an abandoned checkout never yields usable quota.
+    const plan = purchasePlan!;
     const company = await prisma.company.create({
       data: {
         name: companyName.trim(),
@@ -246,6 +277,13 @@ export async function POST(request: Request) {
         password: hashedPassword,
         requestedCmsIntegrations,
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
+        subscription: {
+          create: {
+            ...getSubscriptionFieldsForPlan(plan),
+            status: SubscriptionStatus.PENDING,
+            provider: "dodopayments",
+          },
+        },
       },
       select: { id: true, name: true, email: true },
     });
@@ -270,9 +308,30 @@ export async function POST(request: Request) {
       },
     });
 
-    await activateFreePlan(company.id);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
 
-    return NextResponse.json({ success: true, freePlan: true });
+    let checkoutUrl: string;
+    try {
+      checkoutUrl = await createPlanCheckoutSession({
+        companyId: company.id,
+        plan,
+        customerEmail: emailNormalized,
+        customerName: companyName.trim(),
+        // /signup/success does not exist; the plan page is authenticated (the cookie is
+        // set below), already shows a success banner, and reflects webhook activation.
+        returnUrl: `${appUrl}/workspace/plan?checkout=success`,
+      });
+    } catch (err) {
+      console.error("[register] plan checkout", err);
+      return NextResponse.json(
+        { error: "Payment configuration is incomplete. Please contact support." },
+        { status: 500 }
+      );
+    }
+
+    await setAuthCookie(company.id);
+
+    return NextResponse.json({ checkoutUrl, plan });
   } catch (err) {
     console.error("Register error:", err);
     return NextResponse.json(

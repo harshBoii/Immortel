@@ -922,12 +922,12 @@ export default function ImmortelLanding() {
           <m.div {...sectionMist.pricing}>
             <div className="pricing-label">Pricing</div>
             <h2 className="pricing-h2">
-              Start free.
+              Pay once.
               <br />
               <span>Scale fast.</span>
             </h2>
           </m.div>
-          <m.div className="pricing-grid" {...priceStagger}>
+          <m.div className="pricing-grid pricing-grid--two" {...priceStagger}>
             {LANDING_PLANS.map((plan) => (
               <PricingCard
                 key={plan.id}
@@ -936,34 +936,23 @@ export default function ImmortelLanding() {
                   plan.featured ? `${plan.name} — Most Popular` : plan.name
                 }
                 amount={
-                  plan.priceAmount === 0 ? (
-                    <>
-                      <sup>$</sup>0
-                    </>
-                  ) : (
-                    <>
-                      <sup>$</sup>
-                      {plan.priceAmount / 100}
-                    </>
-                  )
+                  <>
+                    <sup>$</sup>
+                    {plan.priceAmount / 100}
+                  </>
                 }
-                per={
-                  plan.priceAmount === 0
-                    ? 'Free forever · No card required'
-                    : 'One-time · Unlocked with your code'
-                }
+                per="One-time payment · Or redeem your code"
                 feats={plan.features}
-                cta={
-                  plan.requiresCoupon ? 'Redeem Your Code' : 'Get Started Free'
-                }
+                cta="Get Started"
                 href="/register"
               />
             ))}
           </m.div>
           <m.div {...sectionMist.pricing}>
             <p className="pricing-addon-note">
-              Need more room? Stack monthly usage boosts on any Dealify plan from your
-              workspace — from ${CHEAPEST_ADD_ON_PRICE / 100}/mo.
+              Have a coupon code? Redeem it at signup and pay nothing. Need more room?
+              Stack monthly usage boosts on either plan from your workspace — from $
+              {CHEAPEST_ADD_ON_PRICE / 100}/mo.
             </p>
           </m.div>
         </section>

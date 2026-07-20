@@ -1,9 +1,9 @@
-import { BillingCycle, SubscriptionStatus, type Prisma } from "@prisma/client";
+import { SubscriptionStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { activateDealifyPlan } from "@/lib/subscription/activate-dealify";
 import {
   COUPON_TERM_YEARS,
   getPlanOption,
-  getSubscriptionFieldsForPlan,
   isDealifyPlan,
   type DealifyPlanId,
   type PlanId,
@@ -43,12 +43,6 @@ export function normalizeCouponCode(code: string): string {
 }
 
 type TxClient = Prisma.TransactionClient;
-
-function addMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + months);
-  return result;
-}
 
 function assertCouponUsable(
   coupon: {
@@ -159,52 +153,14 @@ export async function redeemCouponForCompany(opts: {
     }
 
     const plan = coupon.plan as DealifyPlanId;
-    // Two different clocks: the entitlement runs for the full coupon term, but quota is
-    // granted monthly and rolled forward by ensureCurrentUsagePeriod.
-    const entitlementEnd = addMonths(now, COUPON_TERM_YEARS * 12);
-    const usagePeriodEnd = addMonths(now, 1);
-    const fields = getSubscriptionFieldsForPlan(plan);
 
-    const subscription = await tx.subscription.upsert({
-      where: { companyId: opts.companyId },
-      create: {
-        companyId: opts.companyId,
-        ...fields,
-        status: SubscriptionStatus.ACTIVE,
-        provider: "coupon",
-        cycle: BillingCycle.TWO_YEAR,
-        currentPeriodStart: now,
-        currentPeriodEnd: entitlementEnd,
-        metadata: { couponCode: normalized, couponTermYears: COUPON_TERM_YEARS },
-      },
-      update: {
-        ...fields,
-        status: SubscriptionStatus.ACTIVE,
-        provider: "coupon",
-        cycle: BillingCycle.TWO_YEAR,
-        currentPeriodStart: now,
-        currentPeriodEnd: entitlementEnd,
-        metadata: { couponCode: normalized, couponTermYears: COUPON_TERM_YEARS },
-      },
-    });
-
-    await tx.subscriptionUsage.upsert({
-      where: { companyId: opts.companyId },
-      create: {
-        companyId: opts.companyId,
-        subscriptionId: subscription.id,
-        periodStart: now,
-        periodEnd: usagePeriodEnd,
-      },
-      update: {
-        subscriptionId: subscription.id,
-        periodStart: now,
-        periodEnd: usagePeriodEnd,
-        radarScansUsed: 0,
-        bountyGeneratorUsed: 0,
-        seoPageGenerationUsed: 0,
-        rivalsAnalysisUsed: 0,
-      },
+    const subscription = await activateDealifyPlan({
+      companyId: opts.companyId,
+      plan,
+      provider: "coupon",
+      metadata: { couponCode: normalized, couponTermYears: COUPON_TERM_YEARS },
+      startedAt: now,
+      tx,
     });
 
     return {

@@ -44,6 +44,13 @@ type AddOnOption = {
   stackable: boolean;
 };
 
+type PlanOption = {
+  id: PlanId;
+  name: string;
+  priceLabel: string;
+  highlights: string[];
+};
+
 type SummaryResponse = {
   success?: boolean;
   subscription: SubscriptionPayload | null;
@@ -52,6 +59,7 @@ type SummaryResponse = {
   addOns: ActiveAddOn[];
   availableAddOns: AddOnOption[];
   canPurchaseAddOns: boolean;
+  plans: PlanOption[];
   error?: string;
 };
 
@@ -177,6 +185,29 @@ function WorkspacePlanContent() {
     }
   }
 
+  async function handleBuyPlan(plan: string) {
+    setPendingAddOn(plan);
+    setAddOnError(null);
+    try {
+      const res = await fetch("/api/subscription/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ plan }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.checkoutUrl) {
+        setAddOnError(json.error ?? "Could not start checkout");
+        return;
+      }
+      window.location.href = json.checkoutUrl as string;
+    } catch {
+      setAddOnError("Could not start checkout");
+    } finally {
+      setPendingAddOn(null);
+    }
+  }
+
   async function handleCancelAddOn(addOn: string) {
     setPendingAddOn(addOn);
     setAddOnError(null);
@@ -245,9 +276,60 @@ function WorkspacePlanContent() {
       {!loading && data && !sub ? (
         <div className="rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass)] p-8 text-center">
           <p className="text-sm text-muted-foreground">
-            No subscription found for this workspace. Redeem your code to activate a plan.
+            No subscription found for this workspace.
           </p>
         </div>
+      ) : null}
+
+      {!loading && data && !data.canPurchaseAddOns ? (
+        <section className="mb-8 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/60 p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-1">
+            {sub?.status === "PENDING"
+              ? "Complete your purchase"
+              : "Activate a plan"}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4">
+            {sub?.status === "PENDING"
+              ? "Your payment wasn't completed, so your quotas aren't active yet."
+              : "Pick a plan to unlock full quotas and add-ons. Already have a coupon code? Redeem it instead — it covers the full plan."}
+          </p>
+
+          {addOnError ? (
+            <p className="mb-4 text-sm text-destructive">{addOnError}</p>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {data.plans.map((plan) => (
+              <div
+                key={plan.id}
+                className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold text-foreground">{plan.name}</span>
+                  <span className="text-sm font-medium text-[var(--sibling-primary)]">
+                    {plan.priceLabel}
+                  </span>
+                </div>
+                <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                  {plan.highlights.map((h) => (
+                    <li key={h} className="flex items-center gap-2">
+                      <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => void handleBuyPlan(plan.id)}
+                  disabled={pendingAddOn === plan.id}
+                  className="mt-4 w-full rounded-lg bg-[var(--sibling-primary)] px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                >
+                  {pendingAddOn === plan.id ? "Redirecting…" : "Get this plan"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       {sub && data ? (

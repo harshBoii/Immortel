@@ -1,5 +1,10 @@
 import DodoPayments from "dodopayments";
-import { getDodoAddOnProductId, type AddOnId } from "@/lib/subscription/plans";
+import {
+  getDodoAddOnProductId,
+  getDodoPlanProductId,
+  type AddOnId,
+  type DealifyPlanId,
+} from "@/lib/subscription/plans";
 
 function getDodoClient() {
   return new DodoPayments({
@@ -8,6 +13,47 @@ function getDodoClient() {
       | "test_mode"
       | "live_mode",
   });
+}
+
+/** Dodo types checkout_url as optional; a session without one is unusable to us. */
+function requireCheckoutUrl(url: string | null | undefined): string {
+  if (!url?.trim()) {
+    throw new Error("Dodo returned a checkout session with no checkout_url");
+  }
+  return url;
+}
+
+/**
+ * Start checkout for a Dealify plan bought without a coupon.
+ *
+ * This is a one-time charge, so activation arrives as `payment.succeeded` rather than
+ * the `subscription.*` events add-ons use — hence the distinct `plan_purchase` intent.
+ */
+export async function createPlanCheckoutSession(opts: {
+  companyId: string;
+  plan: DealifyPlanId;
+  customerEmail: string;
+  customerName: string;
+  returnUrl: string;
+}) {
+  const productId = getDodoPlanProductId(opts.plan);
+  const dodo = getDodoClient();
+
+  const session = await dodo.checkoutSessions.create({
+    product_cart: [{ product_id: productId, quantity: 1 }],
+    customer: {
+      email: opts.customerEmail,
+      name: opts.customerName,
+    },
+    metadata: {
+      companyId: opts.companyId,
+      plan: opts.plan,
+      intent: "plan_purchase",
+    },
+    return_url: opts.returnUrl,
+  });
+
+  return requireCheckoutUrl(session.checkout_url);
 }
 
 /**
@@ -42,5 +88,5 @@ export async function createAddOnCheckoutSession(opts: {
     return_url: opts.returnUrl,
   });
 
-  return session.checkout_url;
+  return requireCheckoutUrl(session.checkout_url);
 }

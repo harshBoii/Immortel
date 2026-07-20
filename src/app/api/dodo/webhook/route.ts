@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import DodoPayments from "dodopayments";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionStatus } from "@prisma/client";
+import { activateDealifyPlan } from "@/lib/subscription/activate-dealify";
 import {
   ADD_ON_CONFIG,
   getSubscriptionFieldsForPlan,
   isAddOnId,
+  isDealifyPlan,
   isPlanId,
   isStackableAddOn,
 } from "@/lib/subscription/plans";
@@ -67,12 +69,28 @@ async function processEvent(
     type: string;
     data: {
       subscription_id?: string;
+      payment_id?: string;
       status?: string;
       metadata?: Record<string, string>;
       created_at?: string;
       customer?: { email?: string };
     };
   };
+
+  // Dealify plans are sold as a one-time charge, so their activation arrives as
+  // payment.succeeded rather than any subscription.* event.
+  if (data.metadata?.intent === "plan_purchase") {
+    await processPlanPurchaseEvent({
+      type,
+      companyId: data.metadata?.companyId,
+      customerEmail: data.customer?.email,
+      planRaw: data.metadata?.plan,
+      paymentId: data.payment_id,
+      createdAt: data.created_at,
+      webhookId,
+    });
+    return;
+  }
 
   if (!EVENT_STATUS_MAP[type]) {
     console.log(`[dodo/webhook] ignoring event type: ${type}`);
@@ -223,6 +241,84 @@ async function processEvent(
   if (isNewSignup) {
     await triggerGeoAutoSeed(company.id);
   }
+}
+
+const PLAN_PURCHASE_FAILURE_EVENTS = new Set([
+  "payment.failed",
+  "payment.cancelled",
+]);
+
+async function processPlanPurchaseEvent(opts: {
+  type: string;
+  companyId?: string;
+  customerEmail?: string;
+  planRaw?: string;
+  paymentId?: string;
+  createdAt?: string;
+  webhookId: string;
+}) {
+  const { type, planRaw, paymentId, webhookId } = opts;
+
+  if (type !== "payment.succeeded" && !PLAN_PURCHASE_FAILURE_EVENTS.has(type)) {
+    console.log(`[dodo/webhook] ignoring plan-purchase event type: ${type}`);
+    return;
+  }
+
+  let company: { id: string } | null = null;
+  if (opts.companyId) {
+    company = await prisma.company.findUnique({
+      where: { id: opts.companyId },
+      select: { id: true },
+    });
+  }
+  if (!company && opts.customerEmail) {
+    company = await prisma.company.findUnique({
+      where: { email: opts.customerEmail },
+      select: { id: true },
+    });
+  }
+
+  if (!company) {
+    console.warn(
+      `[dodo/webhook] no company for plan-purchase ${type} | ` +
+        `companyId=${opts.companyId} | webhookId=${webhookId}`
+    );
+    return;
+  }
+
+  if (PLAN_PURCHASE_FAILURE_EVENTS.has(type)) {
+    // Leave the row PENDING rather than ACTIVE so no quota is ever granted.
+    await prisma.subscription.updateMany({
+      where: { companyId: company.id, status: SubscriptionStatus.PENDING },
+      data: { status: SubscriptionStatus.FAILED },
+    });
+    console.log(`[dodo/webhook] ✓ plan purchase ${type} for company ${company.id}`);
+    return;
+  }
+
+  if (!planRaw || !isPlanId(planRaw) || !isDealifyPlan(planRaw)) {
+    console.warn(
+      `[dodo/webhook] plan-purchase with unusable plan=${planRaw} | webhookId=${webhookId}`
+    );
+    return;
+  }
+
+  const startedAt = opts.createdAt ? new Date(opts.createdAt) : new Date();
+
+  await activateDealifyPlan({
+    companyId: company.id,
+    plan: planRaw,
+    provider: "dodopayments",
+    externalId: paymentId ?? null,
+    metadata: { purchasedPaymentId: paymentId ?? null },
+    startedAt: Number.isNaN(startedAt.getTime()) ? new Date() : startedAt,
+  });
+
+  await triggerGeoAutoSeed(company.id);
+
+  console.log(
+    `[dodo/webhook] ✓ plan ${planRaw} purchased and activated for company ${company.id}`
+  );
 }
 
 const ADD_ON_ACTIVE_EVENTS = new Set([

@@ -42,14 +42,14 @@ export const PLAN_CONFIG = {
     rivalsAnalysisQuota: 50,
   },
   DEALIFY_STARTER: {
-    priceAmount: 9000,
+    priceAmount: 29900,
     radarScansQuota: 5,
     bountyGeneratorQuota: 4,
     seoPageGenerationQuota: 16,
     rivalsAnalysisQuota: 0,
   },
   DEALIFY_PRO: {
-    priceAmount: 14000,
+    priceAmount: 49900,
     radarScansQuota: 9,
     bountyGeneratorQuota: 8,
     seoPageGenerationQuota: 24,
@@ -119,8 +119,8 @@ const PLAN_PRICE_LABEL: Record<PlanId, string> = {
   STARTER: "$49/mo",
   GROWTH: "$149/mo",
   SCALE: "$499/mo",
-  DEALIFY_STARTER: "$90",
-  DEALIFY_PRO: "$140",
+  DEALIFY_STARTER: "$299",
+  DEALIFY_PRO: "$499",
 };
 
 const PLAN_NAME: Record<PlanId, string> = {
@@ -149,12 +149,11 @@ export const PURCHASABLE_PLAN_OPTIONS = PLAN_OPTIONS.filter((p) =>
   (PURCHASABLE_PLAN_IDS as string[]).includes(p.id)
 );
 
-/** Display order for the marketing pricing section: the free entry point, then Dealify. */
-export const LANDING_PLAN_ORDER: PlanId[] = [
-  "FREE",
-  "DEALIFY_STARTER",
-  "DEALIFY_PRO",
-];
+/**
+ * Marketing pricing section. FREE is deliberately absent — it is reserved for legacy
+ * accounts and internal teams, and must not be advertised as an entry point.
+ */
+export const LANDING_PLAN_ORDER: PlanId[] = ["DEALIFY_STARTER", "DEALIFY_PRO"];
 
 export function getLandingPlanCards() {
   return LANDING_PLAN_ORDER.map((id) => {
@@ -190,8 +189,26 @@ export function getPlanOption(plan: PlanId) {
   return PLAN_OPTIONS.find((p) => p.id === plan)!;
 }
 
-/** Length of the Dealify entitlement. Server-side only — never expose to a client. */
+/**
+ * Length of the Dealify entitlement, whether it was redeemed with a code or bought
+ * outright. Server-side only — never expose to a client.
+ */
 export const COUPON_TERM_YEARS = 2;
+
+const DODO_PLAN_PRODUCT_ENV: Record<DealifyPlanId, string> = {
+  DEALIFY_STARTER: "DODO_DEALIFY_STARTER_PRODUCT_ID",
+  DEALIFY_PRO: "DODO_DEALIFY_PRO_PRODUCT_ID",
+};
+
+/** Dealify plans are sold as a single one-time charge, not a recurring subscription. */
+export function getDodoPlanProductId(plan: DealifyPlanId): string {
+  const envKey = DODO_PLAN_PRODUCT_ENV[plan];
+  const productId = process.env[envKey];
+  if (!productId?.trim()) {
+    throw new Error(`${envKey} is not configured`);
+  }
+  return productId.trim();
+}
 
 /* ------------------------------------------------------------------ add-ons */
 

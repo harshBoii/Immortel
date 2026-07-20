@@ -4,7 +4,11 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
-import { getPlanOption } from '@/lib/subscription/plans';
+import {
+  PURCHASABLE_PLAN_OPTIONS,
+  getPlanOption,
+  type PlanId,
+} from '@/lib/subscription/plans';
 
 type CouponValidation = {
   valid: true;
@@ -46,6 +50,9 @@ function RegisterPageContent() {
 
   // Stored after successful registration — used by payment step
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+
+  // Only consulted when the user has no coupon — a valid code always wins.
+  const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
 
   const [couponOpen, setCouponOpen] = useState(false);
   const [couponCode, setCouponCode] = useState('');
@@ -136,7 +143,14 @@ function RegisterPageContent() {
       if (cmsChoice === 'WordPress' && !wordpressSiteUrl.trim())
         return 'Site URL is required for WordPress.';
     }
-    // The plan step is optional — no coupon simply means the free fallback.
+    if (current === 'plan') {
+      // Every account needs an entitlement: a valid code, or a purchased plan.
+      if (!couponValidation && !selectedPlan) {
+        return couponCode.trim()
+          ? 'That coupon code is not valid. Fix it, or pick a plan to purchase.'
+          : 'Enter a coupon code, or pick a plan to purchase.';
+      }
+    }
     return null;
   }
 
@@ -245,7 +259,9 @@ function RegisterPageContent() {
           requestedCmsName: cmsChoice === 'Other' ? requestedCmsName : undefined,
           shopDomain: cmsChoice === 'Shopify' ? shopDomain : undefined,
           wordpressSiteUrl: cmsChoice === 'WordPress' ? wordpressSiteUrl : undefined,
-          ...(couponCode.trim() ? { couponCode: couponCode.trim() } : {}),
+          ...(couponValidation
+            ? { couponCode: couponCode.trim() }
+            : { plan: selectedPlan }),
         }),
       });
 
@@ -257,13 +273,19 @@ function RegisterPageContent() {
         return;
       }
 
-      if (registerData?.couponActivated || registerData?.freePlan) {
+      if (registerData?.couponActivated) {
         router.push('/login?registered=1');
         return;
       }
 
-      setError(registerData?.error ?? 'Signup failed. Please try again.');
-      setLoading(false);
+      if (!registerData?.checkoutUrl) {
+        setError(registerData?.error ?? 'Signup failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      setCheckoutUrl(registerData.checkoutUrl);
+      goNext(); // → 'payment'
     } catch (e) {
       console.error(e);
       setError('Something went sideways. Try again.');
@@ -302,6 +324,10 @@ function RegisterPageContent() {
     }
   }
 
+  const selectedPlanOption = selectedPlan
+    ? PURCHASABLE_PLAN_OPTIONS.find((p) => p.id === selectedPlan)
+    : null;
+
   const review = useMemo(() => {
     const cmsLabel =
       cmsChoice === 'Other'
@@ -310,8 +336,10 @@ function RegisterPageContent() {
           ? 'None'
           : cmsChoice;
     const planLabel = couponValidation
-      ? `${couponValidation.planName} ($0)`
-      : 'Free';
+      ? `${couponValidation.planName} ($0 — coupon)`
+      : selectedPlanOption
+        ? `${selectedPlanOption.name} (${selectedPlanOption.priceLabel})`
+        : '—';
     return [
       { k: 'Email', v: email.trim() || '—' },
       { k: 'Company', v: companyName.trim() || '—' },
@@ -336,6 +364,7 @@ function RegisterPageContent() {
     shopDomain,
     wordpressSiteUrl,
     couponValidation,
+    selectedPlanOption,
   ]);
 
   return (
@@ -614,7 +643,7 @@ function RegisterPageContent() {
                       {couponValidation ? (
                         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                           <div className="text-sm font-semibold text-foreground">
-                            {couponValidation.planName} unlocked
+                            {couponValidation.planName} unlocked — $0 due
                           </div>
                           <ul className="mt-2 grid gap-1.5 text-sm text-muted-foreground">
                             {getPlanOption(
@@ -626,13 +655,67 @@ function RegisterPageContent() {
                               </li>
                             ))}
                           </ul>
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            Your code covers the full plan — no purchase needed.
+                          </p>
                         </div>
                       ) : (
-                        <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4 text-sm text-muted-foreground">
-                          Got a code? Enter it above to unlock your plan. Without one you'll
-                          start on our free tier — you can add more usage any time from your
-                          workspace.
-                        </div>
+                        <>
+                          <div className="flex items-center gap-3">
+                            <span className="h-px flex-1 bg-[var(--glass-border)]" />
+                            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              No code?
+                            </span>
+                            <span className="h-px flex-1 bg-[var(--glass-border)]" />
+                          </div>
+
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                            Only purchase a plan if you don&apos;t have a coupon code. If you
+                            do have one, enter it above instead — you&apos;d be paying for
+                            something your code already covers.
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {PURCHASABLE_PLAN_OPTIONS.map((option) => {
+                              const selected = selectedPlan === option.id;
+                              return (
+                                <button
+                                  key={option.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedPlan(selected ? null : option.id)
+                                  }
+                                  className={`rounded-xl border px-4 py-3 text-left transition-all ${
+                                    selected
+                                      ? 'border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40'
+                                      : 'border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between gap-3">
+                                    <span className="text-sm font-semibold text-foreground">
+                                      {option.name}
+                                    </span>
+                                    <span className="shrink-0 text-sm font-semibold text-[var(--sibling-primary)]">
+                                      {option.priceLabel}
+                                    </span>
+                                  </div>
+                                  <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs leading-snug text-muted-foreground">
+                                    {option.highlights.map((line) => (
+                                      <li key={line} className="flex items-center gap-1.5">
+                                        <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
+                                        {line}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            One-time payment. Add-ons for extra monthly usage are available
+                            later from your workspace.
+                          </p>
+                        </>
                       )}
                     </div>
                   ) : null}
@@ -661,11 +744,63 @@ function RegisterPageContent() {
                         create your workspace
                         {couponValidation
                           ? ` and activate your ${couponValidation.planName} subscription ($0).`
-                          : ' — no payment required to get started.'}
+                          : ' and take you to secure checkout to activate your plan.'}
                       </div>
                     </div>
                   ) : null}
 
+                  {step === 'payment' ? (
+                    <div className="grid gap-4">
+                      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-3">
+                        <svg
+                          className="h-5 w-5 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          aria-hidden
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>
+                          Account created for{' '}
+                          <span className="font-semibold">{email.trim()}</span>. One step left.
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] p-4">
+                        <div className="text-sm font-semibold mb-3">
+                          What you&apos;re activating
+                        </div>
+                        <ul className="grid gap-2 text-sm text-muted-foreground">
+                          {[
+                            selectedPlanOption
+                              ? `${selectedPlanOption.name} — ${selectedPlanOption.priceLabel}, one-time`
+                              : 'Your selected plan',
+                            'Full GEO workspace for ' + (companyName.trim() || 'your company'),
+                            'Auto-seed from your website',
+                            cmsChoice === 'None'
+                              ? 'No CMS integration (connect later)'
+                              : 'CMS integration (' +
+                                (cmsChoice === 'Other'
+                                  ? requestedCmsName.trim() || 'Custom'
+                                  : cmsChoice) +
+                                ')',
+                          ].map((item) => (
+                            <li key={item} className="flex items-center gap-2">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[var(--sibling-primary)] shrink-0" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-3 text-sm text-muted-foreground">
+                        You&apos;ll be redirected to our secure payment page. Your workspace
+                        activates as soon as payment is confirmed.
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
