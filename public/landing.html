@@ -74,6 +74,13 @@
     transition:transform .2s ease, box-shadow .2s ease;
   }
   .nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 24px var(--mint-glow);}
+  .nav-actions{display:flex;align-items:center;gap:12px;}
+  .nav-login{
+    font-size:13px;font-weight:600;padding:9px 18px;border-radius:100px;
+    border:1px solid var(--border);color:var(--text);letter-spacing:0.01em;
+    transition:border-color .2s, background .2s;
+  }
+  .nav-login:hover{border-color:var(--mint);background:var(--mint-dim);}
   .nav-cta:focus-visible, a:focus-visible, button:focus-visible{outline:2px solid var(--mint);outline-offset:3px;}
 
   /* ---------- HERO ---------- */
@@ -318,7 +325,10 @@
       <li><a href="#compare">Compare</a></li>
       <li><a href="#stories">Stories</a></li>
     </ul>
-    <a href="#cta" class="nav-cta">Get AEO Snapshot</a>
+    <div class="nav-actions">
+      <a href="/login" class="nav-login">Log in</a>
+      <a href="/register" class="nav-cta">Sign up</a>
+    </div>
   </div>
 </nav>
 
@@ -328,8 +338,8 @@
     <h1 class="headline">Your brand is being<br>answered about <span class="accent">right now.</span></h1>
     <p class="sub">Immortell tracks every mention across ChatGPT, Perplexity, Gemini and Google AI Overviews, shows you exactly where competitors are winning, and builds the pages that turn the next answer into yours.</p>
     <div class="cta-row">
-      <a href="#cta" class="btn-primary">Run a free AEO Snapshot</a>
-      <a href="#product" class="btn-ghost">See Bounty Hunt in action</a>
+      <a href="/register" class="btn-primary">Sign up</a>
+      <a href="/login" class="btn-ghost">Log in</a>
     </div>
 
     <div class="radar-wrap reveal" id="radar">
@@ -552,8 +562,8 @@
       <div class="eyebrow" style="justify-content:center;">START FREE</div>
       <h2>Stop hoping the answer mentions you.</h2>
       <div class="cta-row">
-        <a href="/register" class="btn-primary">Run a free AEO Snapshot</a>
-        <a href="https://calendly.com/clipfoxcredentials/30min" target="_blank" rel="noopener" class="btn-ghost">Talk to us</a>
+        <a href="/register" class="btn-primary">Sign up</a>
+        <a href="/login" class="btn-ghost">Log in</a>
       </div>
     </div>
   </div>
