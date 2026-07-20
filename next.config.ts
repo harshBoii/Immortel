@@ -16,6 +16,14 @@ const nextConfig: NextConfig = {
         source: '/robust/:path*',
         destination: `https://robust-neon.vercel.app/:path*`,
       },
+      // The marketing page is a self-contained static file in public/. Serving it as a
+      // real file (rather than injecting its markup into a React page) keeps its inline
+      // <script> executing — scripts added via innerHTML never run — and keeps ~900KB of
+      // embedded imagery out of the client JS bundle.
+      {
+        source: '/landing',
+        destination: '/landing.html',
+      },
     ]
   }
 };
