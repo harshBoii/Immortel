@@ -1,62 +1,32 @@
-import { AddOnType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { PLAN_OPTIONS, type PlanId } from "@/lib/subscription/plans";
-import type { Feature } from "@/lib/subscription/check-limit";
+import {
+  ADD_ON_OPTIONS,
+  PLAN_OPTIONS,
+  PURCHASABLE_PLAN_OPTIONS,
+  canPurchaseAddOns,
+  getAddOnOption,
+  isAddOnId,
+  isDealifyPlan,
+  type PlanId,
+} from "@/lib/subscription/plans";
+import {
+  FEATURES,
+  USAGE_FIELD,
+  resolveEffectiveQuotas,
+  type Feature,
+} from "@/lib/subscription/effective-quota";
+import { ensureCurrentUsagePeriod } from "@/lib/subscription/rollover";
 
-const FEATURE_META: Record<
-  Feature,
-  { label: string; quotaKey: keyof typeof QUOTA_KEYS; usedKey: keyof typeof USED_KEYS }
-> = {
-  radarScans: {
-    label: "Radar scans",
-    quotaKey: "radarScansQuota",
-    usedKey: "radarScansUsed",
-  },
-  bountyGenerator: {
-    label: "Bounty generator",
-    quotaKey: "bountyGeneratorQuota",
-    usedKey: "bountyGeneratorUsed",
-  },
-  seoPageGeneration: {
-    label: "SEO page generation",
-    quotaKey: "seoPageGenerationQuota",
-    usedKey: "seoPageGenerationUsed",
-  },
-  rivalsAnalysis: {
-    label: "Rivals analysis",
-    quotaKey: "rivalsAnalysisQuota",
-    usedKey: "rivalsAnalysisUsed",
-  },
-};
-
-const QUOTA_KEYS = {
-  radarScansQuota: "radarScansQuota",
-  bountyGeneratorQuota: "bountyGeneratorQuota",
-  seoPageGenerationQuota: "seoPageGenerationQuota",
-  rivalsAnalysisQuota: "rivalsAnalysisQuota",
-} as const;
-
-const USED_KEYS = {
-  radarScansUsed: "radarScansUsed",
-  bountyGeneratorUsed: "bountyGeneratorUsed",
-  seoPageGenerationUsed: "seoPageGenerationUsed",
-  rivalsAnalysisUsed: "rivalsAnalysisUsed",
-} as const;
-
-const FEATURES: Feature[] = [
-  "radarScans",
-  "bountyGenerator",
-  "seoPageGeneration",
-  "rivalsAnalysis",
-];
-
-const ADD_ON_LABELS: Record<AddOnType, string> = {
-  AEO_CONTENT_BOOST: "AEO Content Boost (2× SEO quota)",
-  ALTERNATE_DAY_AUTOMATION: "Alternate-day automation",
-  EXTRA_RIVALS_PACK: "Extra rivals pack (+10 analyses)",
+const FEATURE_LABEL: Record<Feature, string> = {
+  radarScans: "Radar scans",
+  bountyGenerator: "Bounty generator",
+  seoPageGeneration: "SEO page generation",
+  rivalsAnalysis: "Rivals analysis",
 };
 
 export async function getSubscriptionSummary(companyId: string) {
+  await ensureCurrentUsagePeriod(companyId);
+
   const sub = await prisma.subscription.findUnique({
     where: { companyId },
     include: {
@@ -71,34 +41,25 @@ export async function getSubscriptionSummary(companyId: string) {
       usage: null,
       features: [],
       addOns: [],
-      plans: PLAN_OPTIONS,
+      plans: PURCHASABLE_PLAN_OPTIONS,
+      availableAddOns: [],
+      canPurchaseAddOns: false,
     };
   }
 
   const usageRecord = sub.usage[0] ?? null;
-  const extraRivalsPacks = sub.addOns.filter(
-    (a) => a.addOnType === AddOnType.EXTRA_RIVALS_PACK
-  ).length;
-  const hasAeoContentBoost = sub.addOns.some(
-    (a) => a.addOnType === AddOnType.AEO_CONTENT_BOOST
-  );
+  const quotas = resolveEffectiveQuotas(sub, sub.addOns);
 
   const features = FEATURES.map((feature) => {
-    const meta = FEATURE_META[feature];
-    const used = usageRecord?.[meta.usedKey] ?? 0;
-    const baseQuota = sub[meta.quotaKey];
-    const quota =
-      feature === "rivalsAnalysis"
-        ? baseQuota + extraRivalsPacks * 10
-        : feature === "seoPageGeneration" && hasAeoContentBoost
-          ? baseQuota * 2
-          : baseQuota;
+    const used = usageRecord?.[USAGE_FIELD[feature]] ?? 0;
+    const quota = quotas[feature];
     const remaining = Math.max(0, quota - used);
-    const percentUsed = quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
+    const percentUsed =
+      quota > 0 ? Math.min(100, Math.round((used / quota) * 100)) : 0;
 
     return {
       key: feature,
-      label: meta.label,
+      label: FEATURE_LABEL[feature],
       used,
       quota,
       remaining,
@@ -106,18 +67,23 @@ export async function getSubscriptionSummary(companyId: string) {
     };
   });
 
-  const planOption = PLAN_OPTIONS.find((p) => p.id === sub.plan);
+  const plan = sub.plan as PlanId;
+  const planOption = PLAN_OPTIONS.find((p) => p.id === plan);
+  const addOnsUnlocked = canPurchaseAddOns(plan);
 
   return {
     subscription: {
-      plan: sub.plan as PlanId,
+      plan,
       planName: planOption?.name ?? sub.plan,
       priceLabel: planOption?.priceLabel ?? null,
       status: sub.status,
       currency: sub.currency,
       priceAmount: sub.priceAmount,
       currentPeriodStart: sub.currentPeriodStart?.toISOString() ?? null,
-      currentPeriodEnd: sub.currentPeriodEnd?.toISOString() ?? null,
+      // The Dealify term is an internal entitlement detail — never send it to a client.
+      currentPeriodEnd: isDealifyPlan(plan)
+        ? null
+        : (sub.currentPeriodEnd?.toISOString() ?? null),
       provider: sub.provider,
     },
     usage: usageRecord
@@ -127,10 +93,19 @@ export async function getSubscriptionSummary(companyId: string) {
         }
       : null,
     features,
-    addOns: sub.addOns.map((a) => ({
-      type: a.addOnType,
-      label: ADD_ON_LABELS[a.addOnType],
-    })),
-    plans: PLAN_OPTIONS,
+    addOns: sub.addOns.filter((a) => isAddOnId(a.addOnType)).map((a) => {
+      const option = getAddOnOption(a.addOnType as never);
+      return {
+        type: a.addOnType,
+        label: option.name,
+        description: option.description,
+        priceLabel: option.priceLabel,
+        quantity: a.quantity,
+        stackable: option.stackable,
+      };
+    }),
+    plans: PURCHASABLE_PLAN_OPTIONS,
+    availableAddOns: addOnsUnlocked ? ADD_ON_OPTIONS : [],
+    canPurchaseAddOns: addOnsUnlocked,
   };
 }

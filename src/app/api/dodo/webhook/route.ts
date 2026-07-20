@@ -3,8 +3,11 @@ import DodoPayments from "dodopayments";
 import { prisma } from "@/lib/prisma";
 import { SubscriptionStatus } from "@prisma/client";
 import {
+  ADD_ON_CONFIG,
   getSubscriptionFieldsForPlan,
+  isAddOnId,
   isPlanId,
+  isStackableAddOn,
 } from "@/lib/subscription/plans";
 import { triggerGeoAutoSeed } from "@/lib/subscription/trigger-geo-auto-seed";
 
@@ -118,6 +121,21 @@ async function processEvent(
     return;
   }
 
+  // Add-on events layer usage onto an existing plan — they must never touch the
+  // subscription's plan or quota fields, so they are handled entirely separately.
+  if (data.metadata?.intent === "addon_purchase") {
+    await processAddOnEvent({
+      type,
+      companyId: company.id,
+      subscriptionRowId: company.subscription?.id ?? null,
+      addOnRaw: data.metadata?.addOnType,
+      quantityRaw: data.metadata?.quantity,
+      externalId: subscriptionId,
+      webhookId,
+    });
+    return;
+  }
+
   const isActivation = type === "subscription.active";
   const isPlanChange = type === "subscription.plan_changed";
   const periodStart =
@@ -205,4 +223,100 @@ async function processEvent(
   if (isNewSignup) {
     await triggerGeoAutoSeed(company.id);
   }
+}
+
+const ADD_ON_ACTIVE_EVENTS = new Set([
+  "subscription.active",
+  "subscription.renewed",
+]);
+
+const ADD_ON_INACTIVE_EVENTS = new Set([
+  "subscription.cancelled",
+  "subscription.expired",
+  "subscription.failed",
+]);
+
+async function processAddOnEvent(opts: {
+  type: string;
+  companyId: string;
+  subscriptionRowId: string | null;
+  addOnRaw?: string;
+  quantityRaw?: string;
+  externalId?: string;
+  webhookId: string;
+}) {
+  const { type, companyId, subscriptionRowId, addOnRaw, externalId, webhookId } = opts;
+
+  if (!addOnRaw || !isAddOnId(addOnRaw)) {
+    console.warn(
+      `[dodo/webhook] add-on event with unknown addOnType=${addOnRaw} | webhookId=${webhookId}`
+    );
+    return;
+  }
+
+  if (!subscriptionRowId) {
+    console.warn(
+      `[dodo/webhook] add-on event for company ${companyId} with no subscription row`
+    );
+    return;
+  }
+
+  const addOn = addOnRaw;
+  const parsedQty = Number.parseInt(opts.quantityRaw ?? "1", 10);
+  const quantity =
+    Number.isFinite(parsedQty) && parsedQty > 0 && isStackableAddOn(addOn)
+      ? parsedQty
+      : 1;
+
+  if (ADD_ON_INACTIVE_EVENTS.has(type)) {
+    await prisma.subscriptionAddOn.updateMany({
+      where: { subscriptionId: subscriptionRowId, addOnType: addOn, isActive: true },
+      data: { isActive: false, cancelledAt: new Date() },
+    });
+    console.log(`[dodo/webhook] ✓ deactivated add-on ${addOn} for company ${companyId}`);
+    return;
+  }
+
+  if (!ADD_ON_ACTIVE_EVENTS.has(type)) {
+    console.log(`[dodo/webhook] ignoring add-on event type: ${type}`);
+    return;
+  }
+
+  const config = ADD_ON_CONFIG[addOn];
+
+  // A renewal must not keep stacking quantity, so only a fresh activation increments.
+  const existing = await prisma.subscriptionAddOn.findUnique({
+    where: { subscriptionId_addOnType: { subscriptionId: subscriptionRowId, addOnType: addOn } },
+    select: { id: true, isActive: true, quantity: true },
+  });
+
+  const nextQuantity =
+    existing?.isActive && type === "subscription.active" && isStackableAddOn(addOn)
+      ? existing.quantity + quantity
+      : quantity;
+
+  await prisma.subscriptionAddOn.upsert({
+    where: {
+      subscriptionId_addOnType: { subscriptionId: subscriptionRowId, addOnType: addOn },
+    },
+    create: {
+      subscriptionId: subscriptionRowId,
+      addOnType: addOn,
+      priceAmount: config.priceAmount,
+      quantity: nextQuantity,
+      externalId: externalId ?? null,
+      isActive: true,
+    },
+    update: {
+      priceAmount: config.priceAmount,
+      quantity: nextQuantity,
+      externalId: externalId ?? undefined,
+      isActive: true,
+      cancelledAt: null,
+    },
+  });
+
+  console.log(
+    `[dodo/webhook] ✓ add-on ${addOn} ×${nextQuantity} active for company ${companyId}`
+  );
 }

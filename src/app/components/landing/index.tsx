@@ -12,10 +12,13 @@ import {
   HiSignal,
   HiShoppingBag,
 } from 'react-icons/hi2';
-import { getLandingPlanCards } from '@/lib/subscription/plans';
+import { ADD_ON_OPTIONS, getLandingPlanCards } from '@/lib/subscription/plans';
 import './ac-landing.css';
 
 const LANDING_PLANS = getLandingPlanCards();
+const CHEAPEST_ADD_ON_PRICE = Math.min(
+  ...ADD_ON_OPTIONS.map((a) => a.priceAmount)
+);
 
 const barlow = Barlow({
   subsets: ['latin'],
@@ -303,7 +306,6 @@ const PROOF = [
 const PricingCard = memo(function PricingCard({
   tier,
   amount,
-  amountIsCustom,
   per,
   featured,
   feats,
@@ -312,7 +314,6 @@ const PricingCard = memo(function PricingCard({
 }: {
   tier: string;
   amount: React.ReactNode;
-  amountIsCustom?: boolean;
   per: string;
   featured?: boolean;
   feats: readonly string[];
@@ -325,14 +326,7 @@ const PricingCard = memo(function PricingCard({
       variants={priceCardMist}
     >
       <div className="price-tier">{tier}</div>
-      <div
-        className="price-amount"
-        style={
-          amountIsCustom ? { fontSize: 48, paddingTop: 12 } : undefined
-        }
-      >
-        {amount}
-      </div>
+      <div className="price-amount">{amount}</div>
       <div className="price-per">{per}</div>
       <ul className="price-features">
         {feats.map((f) => (
@@ -933,7 +927,7 @@ export default function ImmortelLanding() {
               <span>Scale fast.</span>
             </h2>
           </m.div>
-          <m.div className="pricing-grid pricing-grid--four" {...priceStagger}>
+          <m.div className="pricing-grid" {...priceStagger}>
             {LANDING_PLANS.map((plan) => (
               <PricingCard
                 key={plan.id}
@@ -956,17 +950,21 @@ export default function ImmortelLanding() {
                 per={
                   plan.priceAmount === 0
                     ? 'Free forever · No card required'
-                    : 'per month · billed monthly'
+                    : 'One-time · Unlocked with your code'
                 }
                 feats={plan.features}
                 cta={
-                  plan.priceAmount === 0
-                    ? 'Get Started Free'
-                    : `Get ${plan.name}`
+                  plan.requiresCoupon ? 'Redeem Your Code' : 'Get Started Free'
                 }
-                href={`/register?plan=${plan.id}`}
+                href="/register"
               />
             ))}
+          </m.div>
+          <m.div {...sectionMist.pricing}>
+            <p className="pricing-addon-note">
+              Need more room? Stack monthly usage boosts on any Dealify plan from your
+              workspace — from ${CHEAPEST_ADD_ON_PRICE / 100}/mo.
+            </p>
           </m.div>
         </section>
 

@@ -1467,6 +1467,24 @@ html {
   .landing-page .pricing-grid.pricing-grid--four {
     grid-template-columns: repeat(2, 1fr);
   }
+  .landing-page .pricing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .landing-page .pricing-grid,
+  .landing-page .pricing-grid.pricing-grid--four {
+    grid-template-columns: 1fr;
+  }
+}
+
+.landing-page .pricing-addon-note {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink-soft, var(--ink));
+  opacity: 0.75;
 }
 
 .landing-page .price-card {

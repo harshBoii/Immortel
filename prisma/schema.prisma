@@ -1859,7 +1859,10 @@ model Subscription {
   externalId String?            @db.VarChar(255) @map("external_id")
   provider   String?            @default("razorpay") @db.VarChar(50)
 
-  plan       SubscriptionPlan   @default(STARTER)
+  /// STARTER/GROWTH/SCALE are deprecated and no longer purchasable — retained so
+  /// existing rows and in-flight provider webhooks still resolve. New subscriptions
+  /// are either a coupon-activated Dealify tier or the FREE fallback.
+  plan       SubscriptionPlan   @default(FREE)
   status     SubscriptionStatus @default(PENDING)
   cycle      BillingCycle       @default(MONTHLY) 
 
@@ -1895,7 +1898,7 @@ model Subscription {
   @@map("subscriptions")
 }
 
-/// Single-use coupon codes for Dealify plan signup (100% off, 3-year term).
+/// Single-use coupon codes for Dealify plan signup (100% off; term set by COUPON_TERM_YEARS).
 model SubscriptionCoupon {
   id                  String           @id @default(cuid())
   code                String           @unique @db.VarChar(64)
@@ -1923,6 +1926,10 @@ model SubscriptionAddOn {
   /// Price in smallest currency unit
   priceAmount    Int             @map("price_amount")
   currency       String          @default("USD") @db.VarChar(10)
+
+  /// How many units of this add-on are held. Stackable add-ons increment this rather
+  /// than creating extra rows, since (subscription, type) is unique.
+  quantity       Int             @default(1)
 
   isActive       Boolean         @default(true) @map("is_active")
   activatedAt    DateTime        @default(now()) @map("activated_at") @db.Timestamptz(3)
@@ -2273,6 +2280,9 @@ enum BillingCycle {
 
 enum AddOnType {
   AEO_CONTENT_BOOST          // +$29/mo — doubles SEO page quota
-  ALTERNATE_DAY_AUTOMATION   // +$19/mo — Growth plan only
+  ALTERNATE_DAY_AUTOMATION   // +$19/mo
   EXTRA_RIVALS_PACK          // +$25/mo — +10 Rivals Analysis runs
+  STARTER_BOOST              // +$49/mo — adds a Starter tier's monthly usage
+  GROWTH_BOOST               // +$149/mo — adds a Growth tier's monthly usage
+  SCALE_BOOST                // +$499/mo — adds a Scale tier's monthly usage
 }

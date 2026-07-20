@@ -1,25 +1,12 @@
-import { AddOnType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  resolveEffectiveQuotas,
+  USAGE_FIELD,
+  type Feature,
+} from "@/lib/subscription/effective-quota";
+import { ensureCurrentUsagePeriod } from "@/lib/subscription/rollover";
 
-export type Feature =
-  | "radarScans"
-  | "bountyGenerator"
-  | "seoPageGeneration"
-  | "rivalsAnalysis";
-
-const USAGE_FIELD = {
-  radarScans: "radarScansUsed",
-  bountyGenerator: "bountyGeneratorUsed",
-  seoPageGeneration: "seoPageGenerationUsed",
-  rivalsAnalysis: "rivalsAnalysisUsed",
-} as const;
-
-const QUOTA_FIELD = {
-  radarScans: "radarScansQuota",
-  bountyGenerator: "bountyGeneratorQuota",
-  seoPageGeneration: "seoPageGenerationQuota",
-  rivalsAnalysis: "rivalsAnalysisQuota",
-} as const;
+export type { Feature };
 
 export class SubscriptionLimitError extends Error {
   constructor(
@@ -50,10 +37,12 @@ export async function requireLimit(companyId: string, feature: Feature) {
 }
 
 export async function checkLimit(companyId: string, feature: Feature) {
+  await ensureCurrentUsagePeriod(companyId);
+
   const sub = await prisma.subscription.findUnique({
     where: { companyId },
     include: {
-      usage: true,
+      usage: { orderBy: { periodStart: "desc" }, take: 1 },
       addOns: { where: { isActive: true } },
     },
   });
@@ -64,22 +53,7 @@ export async function checkLimit(companyId: string, feature: Feature) {
 
   const usageRecord = sub.usage[0];
   const used = usageRecord?.[USAGE_FIELD[feature]] ?? 0;
-  const quota = sub[QUOTA_FIELD[feature]];
-
-  const extraRivalsPacks = sub.addOns.filter(
-    (a) => a.addOnType === AddOnType.EXTRA_RIVALS_PACK
-  ).length;
-  const hasAeoContentBoost = sub.addOns.some(
-    (a) => a.addOnType === AddOnType.AEO_CONTENT_BOOST
-  );
-
-  const effectiveQuota =
-    feature === "rivalsAnalysis"
-      ? quota + extraRivalsPacks * 10
-      : feature === "seoPageGeneration" && hasAeoContentBoost
-        ? quota * 2
-        : quota;
-
+  const effectiveQuota = resolveEffectiveQuotas(sub, sub.addOns)[feature];
   const remaining = effectiveQuota - used;
 
   return {

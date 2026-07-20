@@ -1,5 +1,5 @@
 import DodoPayments from "dodopayments";
-import { getDodoProductId, type PaidPlanId } from "@/lib/subscription/plans";
+import { getDodoAddOnProductId, type AddOnId } from "@/lib/subscription/plans";
 
 function getDodoClient() {
   return new DodoPayments({
@@ -10,26 +10,34 @@ function getDodoClient() {
   });
 }
 
-export async function createPlanCheckoutSession(opts: {
+/**
+ * Start checkout for a monthly add-on. Add-ons layer extra usage on top of an already
+ * active Dealify base plan — they never change the plan itself, which is why the
+ * metadata carries `intent: "addon_purchase"` for the webhook to branch on.
+ */
+export async function createAddOnCheckoutSession(opts: {
   companyId: string;
-  plan: PaidPlanId;
+  addOn: AddOnId;
+  quantity?: number;
   customerEmail: string;
   customerName: string;
   returnUrl: string;
 }) {
-  const productId = getDodoProductId(opts.plan);
+  const productId = getDodoAddOnProductId(opts.addOn);
+  const quantity = Math.max(1, opts.quantity ?? 1);
   const dodo = getDodoClient();
 
   const session = await dodo.checkoutSessions.create({
-    product_cart: [{ product_id: productId, quantity: 1 }],
+    product_cart: [{ product_id: productId, quantity }],
     customer: {
       email: opts.customerEmail,
       name: opts.customerName,
     },
     metadata: {
       companyId: opts.companyId,
-      plan: opts.plan,
-      intent: "plan_change",
+      addOnType: opts.addOn,
+      quantity: String(quantity),
+      intent: "addon_purchase",
     },
     return_url: opts.returnUrl,
   });

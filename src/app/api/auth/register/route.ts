@@ -1,20 +1,10 @@
 import { setAuthCookie } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import DodoPayments from "dodopayments";
 import { activateFreePlan } from "@/lib/subscription/activate-free";
 import { redeemCouponForCompany, validateCouponCode } from "@/lib/subscription/coupon";
 import { triggerGeoAutoSeed } from "@/lib/subscription/trigger-geo-auto-seed";
-import {
-  getDodoProductId,
-  getSubscriptionFieldsForPlan,
-  isDealifyPlan,
-  isFreePlan,
-  isPaidPlan,
-  isPlanId,
-} from "@/lib/subscription/plans";
 
 type CmsChoice = "Shopify" | "WordPress" | "Other" | "None";
 
@@ -62,7 +52,6 @@ export async function POST(request: Request) {
       requestedCmsName,
       shopDomain,
       wordpressSiteUrl,
-      plan: planRaw,
       couponCode: couponCodeRaw,
     }: {
       email?: unknown;
@@ -74,7 +63,6 @@ export async function POST(request: Request) {
       requestedCmsName?: unknown;
       shopDomain?: unknown;
       wordpressSiteUrl?: unknown;
-      plan?: unknown;
       couponCode?: unknown;
     } = body ?? {};
 
@@ -105,20 +93,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    if (typeof planRaw !== "string" || !isPlanId(planRaw)) {
-      return NextResponse.json(
-        { error: "A valid subscription plan is required" },
-        { status: 400 }
-      );
-    }
-    const plan = planRaw;
-    if (isDealifyPlan(plan)) {
-      return NextResponse.json(
-        { error: "Dealify plans require a valid coupon code." },
-        { status: 400 }
-      );
-    }
-
+    // Signup has exactly two outcomes: redeem a coupon for a Dealify plan, or land on
+    // the free fallback. Plans are not sold at signup, so no plan is accepted from the
+    // client — extra usage is bought later as an add-on.
     const couponCode =
       typeof couponCodeRaw === "string" ? couponCodeRaw.trim() : "";
     const hasCoupon = couponCode.length > 0;
@@ -129,23 +106,6 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: couponValidation.error, code: couponValidation.code },
           { status: 400 }
-        );
-      }
-    }
-
-    const freePlan = isFreePlan(plan) && !hasCoupon;
-
-    let productId: string | undefined;
-    if (isPaidPlan(plan) && !hasCoupon) {
-      try {
-        productId = getDodoProductId(plan);
-      } catch {
-        return NextResponse.json(
-          {
-            error:
-              "Payment configuration is incomplete. Please contact support.",
-          },
-          { status: 500 }
         );
       }
     }
@@ -217,7 +177,6 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const subscriptionFields = getSubscriptionFieldsForPlan(plan);
 
     if (hasCoupon) {
       const { company, redemption } = await prisma.$transaction(async (tx) => {
@@ -287,17 +246,6 @@ export async function POST(request: Request) {
         password: hashedPassword,
         requestedCmsIntegrations,
         wordpressRequestedSiteUrl: cms === "WordPress" ? wpSiteNormalized : null,
-        ...(freePlan
-          ? {}
-          : {
-              subscription: {
-                create: {
-                  ...subscriptionFields,
-                  status: SubscriptionStatus.PENDING,
-                  provider: "dodopayments",
-                },
-              },
-            }),
       },
       select: { id: true, name: true, email: true },
     });
@@ -322,39 +270,9 @@ export async function POST(request: Request) {
       },
     });
 
-    if (freePlan) {
-      await activateFreePlan(company.id);
-      return NextResponse.json({ success: true, freePlan: true });
-    }
+    await activateFreePlan(company.id);
 
-    const dodo = new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY!,
-      environment: (process.env.DODO_PAYMENTS_ENVIRONMENT ?? "test_mode") as
-        | "test_mode"
-        | "live_mode",
-    });
-
-    const session = await dodo.checkoutSessions.create({
-      product_cart: [
-        {
-          product_id: productId!,
-          quantity: 1,
-        },
-      ],
-      customer: {
-        email: emailNormalized,
-        name: companyName.trim(),
-      },
-      metadata: {
-        companyId: company.id,
-        plan,
-      },
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/signup/success`,
-    });
-
-    await setAuthCookie(company.id);
-
-    return NextResponse.json({ checkoutUrl: session.checkout_url });
+    return NextResponse.json({ success: true, freePlan: true });
   } catch (err) {
     console.error("Register error:", err);
     return NextResponse.json(

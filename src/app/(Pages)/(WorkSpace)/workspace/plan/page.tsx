@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CreditCard, RefreshCw, ArrowLeft } from "lucide-react";
+import { CreditCard, RefreshCw, Plus } from "lucide-react";
 import { isDealifyPlan, type PlanId } from "@/lib/subscription/plans";
 
 type FeatureUsage = {
@@ -26,11 +26,22 @@ type SubscriptionPayload = {
   provider: string | null;
 };
 
-type PlanOption = {
-  id: PlanId;
-  name: string;
+type ActiveAddOn = {
+  type: string;
+  label: string;
+  description: string;
   priceLabel: string;
-  highlights: string[];
+  quantity: number;
+  stackable: boolean;
+};
+
+type AddOnOption = {
+  id: string;
+  name: string;
+  description: string;
+  priceLabel: string;
+  priceAmount: number;
+  stackable: boolean;
 };
 
 type SummaryResponse = {
@@ -38,8 +49,9 @@ type SummaryResponse = {
   subscription: SubscriptionPayload | null;
   usage: { periodStart: string; periodEnd: string } | null;
   features: FeatureUsage[];
-  addOns: { type: string; label: string }[];
-  plans: PlanOption[];
+  addOns: ActiveAddOn[];
+  availableAddOns: AddOnOption[];
+  canPurchaseAddOns: boolean;
   error?: string;
 };
 
@@ -94,61 +106,17 @@ function UsageBar({ feature }: { feature: FeatureUsage }) {
   );
 }
 
-function PlanCard({
-  plan,
-  selected,
-  isCurrent,
-  onSelect,
-}: {
-  plan: PlanOption;
-  selected: boolean;
-  isCurrent: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={`w-full rounded-xl border p-4 text-left transition-all ${
-        selected
-          ? "border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/10 ring-2 ring-[var(--sibling-primary)]/40"
-          : isCurrent
-            ? "border-[var(--sibling-primary)]/50 bg-[var(--sibling-primary)]/5"
-            : "border-[var(--glass-border)] bg-[var(--glass-hover)] hover:border-[var(--sibling-primary)]/30"
-      }`}
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="font-semibold text-foreground">{plan.name}</span>
-        <span className="text-sm font-medium text-[var(--sibling-primary)]">{plan.priceLabel}</span>
-      </div>
-      {isCurrent ? (
-        <span className="mt-2 inline-block text-[10px] font-bold uppercase tracking-wider text-[var(--sibling-primary)]">
-          Current plan
-        </span>
-      ) : null}
-      <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-        {plan.highlights.map((h) => (
-          <li key={h} className="flex items-center gap-2">
-            <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
-            {h}
-          </li>
-        ))}
-      </ul>
-    </button>
-  );
-}
-
 function WorkspacePlanContent() {
   const searchParams = useSearchParams();
-  const checkoutSuccess = searchParams?.get("checkout") === "success";
+  const purchaseSuccess =
+    searchParams?.get("checkout") === "success" ||
+    searchParams?.get("addon") === "success";
 
   const [data, setData] = useState<SummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [managingPlans, setManagingPlans] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>("STARTER");
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pendingAddOn, setPendingAddOn] = useState<string | null>(null);
+  const [addOnError, setAddOnError] = useState<string | null>(null);
   const [successBanner, setSuccessBanner] = useState(false);
 
   const load = useCallback(async () => {
@@ -163,9 +131,6 @@ function WorkspacePlanContent() {
         return;
       }
       setData(json);
-      if (json.subscription?.plan) {
-        setSelectedPlan(json.subscription.plan);
-      }
     } catch {
       setError("Failed to load subscription");
       setData(null);
@@ -179,50 +144,59 @@ function WorkspacePlanContent() {
   }, [load]);
 
   useEffect(() => {
-    if (checkoutSuccess) {
+    if (purchaseSuccess) {
       setSuccessBanner(true);
-      setManagingPlans(false);
       void load();
       window.history.replaceState({}, "", "/workspace/plan");
     }
-  }, [checkoutSuccess, load]);
+  }, [purchaseSuccess, load]);
 
   const sub = data?.subscription;
-  const currentPlanId = sub?.plan;
-  const selectedPlanOption = data?.plans.find((p) => p.id === selectedPlan);
-  const isSamePlan = selectedPlan === currentPlanId && sub?.status === "ACTIVE";
+  const activeByType = new Map((data?.addOns ?? []).map((a) => [a.type, a]));
 
-  async function handleCheckout() {
-    if (isSamePlan) return;
-    setCheckoutLoading(true);
-    setCheckoutError(null);
+  async function handleBuyAddOn(addOn: string) {
+    setPendingAddOn(addOn);
+    setAddOnError(null);
     try {
-      const res = await fetch("/api/subscription/checkout", {
+      const res = await fetch("/api/subscription/addons/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan: selectedPlan }),
+        body: JSON.stringify({ addOn }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setCheckoutError(json.error ?? "Could not start checkout");
-        return;
-      }
-      if (json.freePlan) {
-        setManagingPlans(false);
-        setSuccessBanner(true);
-        await load();
-        return;
-      }
-      if (!json.checkoutUrl) {
-        setCheckoutError(json.error ?? "Could not start checkout");
+      if (!res.ok || !json.checkoutUrl) {
+        setAddOnError(json.error ?? "Could not start checkout");
         return;
       }
       window.location.href = json.checkoutUrl as string;
     } catch {
-      setCheckoutError("Could not start checkout");
+      setAddOnError("Could not start checkout");
     } finally {
-      setCheckoutLoading(false);
+      setPendingAddOn(null);
+    }
+  }
+
+  async function handleCancelAddOn(addOn: string) {
+    setPendingAddOn(addOn);
+    setAddOnError(null);
+    try {
+      const res = await fetch("/api/subscription/addons/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ addOn }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setAddOnError(json.error ?? "Could not cancel add-on");
+        return;
+      }
+      await load();
+    } catch {
+      setAddOnError("Could not cancel add-on");
+    } finally {
+      setPendingAddOn(null);
     }
   }
 
@@ -236,25 +210,23 @@ function WorkspacePlanContent() {
           </div>
           <h1 className="text-2xl font-semibold text-foreground">Plan & usage</h1>
           <p className="mt-1 text-sm text-muted-foreground max-w-lg">
-            Your subscription tier, billing period, and feature quotas for this workspace.
+            Your subscription, feature quotas, and any extra usage you&apos;ve added.
           </p>
         </div>
-        {!managingPlans ? (
-          <button
-            type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="inline-flex items-center gap-2 self-start rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-2 text-sm font-medium text-foreground hover:bg-[var(--glass)] transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 self-start rounded-xl border border-[var(--glass-border)] bg-[var(--glass-hover)] px-4 py-2 text-sm font-medium text-foreground hover:bg-[var(--glass)] transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
       </div>
 
       {successBanner ? (
         <div className="mb-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400">
-          Payment received. Your plan has been updated.
+          Payment received. Your workspace has been updated.
         </div>
       ) : null}
 
@@ -270,78 +242,15 @@ function WorkspacePlanContent() {
         </div>
       ) : null}
 
-      {!loading && data && !sub && !managingPlans ? (
+      {!loading && data && !sub ? (
         <div className="rounded-xl border border-dashed border-[var(--glass-border)] bg-[var(--glass)] p-8 text-center">
-          <p className="text-sm text-muted-foreground mb-4">No subscription found for this workspace.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setManagingPlans(true);
-              setSelectedPlan("STARTER");
-            }}
-            className="inline-flex rounded-xl bg-[var(--sibling-primary)] px-4 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            Choose a plan
-          </button>
+          <p className="text-sm text-muted-foreground">
+            No subscription found for this workspace. Redeem your code to activate a plan.
+          </p>
         </div>
       ) : null}
 
-      {managingPlans && data ? (
-        <section className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/60 p-6">
-          <button
-            type="button"
-            onClick={() => {
-              setManagingPlans(false);
-              setCheckoutError(null);
-              if (currentPlanId) setSelectedPlan(currentPlanId);
-            }}
-            className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to usage
-          </button>
-          <h2 className="text-lg font-semibold text-foreground">Choose a plan</h2>
-          <p className="mt-1 text-sm text-muted-foreground mb-6">
-            Select a tier and continue to our secure checkout. Your workspace updates after payment
-            is confirmed.
-          </p>
-          <div className="grid gap-4 md:grid-cols-3">
-            {data.plans.map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                selected={selectedPlan === plan.id}
-                isCurrent={plan.id === currentPlanId}
-                onSelect={() => setSelectedPlan(plan.id)}
-              />
-            ))}
-          </div>
-          {checkoutError ? (
-            <p className="mt-4 text-sm text-destructive">{checkoutError}</p>
-          ) : null}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => void handleCheckout()}
-              disabled={checkoutLoading || isSamePlan}
-              className="rounded-xl bg-[var(--sibling-primary)] px-5 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-            >
-              {checkoutLoading
-                ? "Redirecting…"
-                : isSamePlan
-                  ? "Already on this plan"
-                  : `Continue to checkout — ${selectedPlanOption?.name ?? selectedPlan}`}
-            </button>
-            {sub?.status === "PENDING" ? (
-              <p className="text-xs text-muted-foreground">
-                Complete checkout to activate your subscription.
-              </p>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      {sub && !managingPlans ? (
+      {sub && data ? (
         <div className="grid gap-8">
           <section className="rounded-2xl border border-[var(--glass-border)] bg-[var(--glass)]/60 p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
@@ -358,45 +267,19 @@ function WorkspacePlanContent() {
                   ) : null}
                 </h2>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setManagingPlans(true);
-                    setCheckoutError(null);
-                    if (currentPlanId) setSelectedPlan(currentPlanId);
-                  }}
-                  className="rounded-xl border border-[var(--sibling-primary)]/40 bg-[var(--sibling-primary)]/10 px-4 py-2 text-sm font-semibold text-[var(--sibling-primary)] hover:bg-[var(--sibling-primary)]/15 transition-colors"
-                >
-                  Manage plans
-                </button>
-                <span
-                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusStyles(sub.status)}`}
-                >
-                  {sub.status.replace(/_/g, " ")}
-                </span>
-              </div>
+              <span
+                className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusStyles(sub.status)}`}
+              >
+                {sub.status.replace(/_/g, " ")}
+              </span>
             </div>
-
-            {sub.status === "PENDING" ? (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Payment is not complete yet.{" "}
-                <button
-                  type="button"
-                  onClick={() => setManagingPlans(true)}
-                  className="font-medium text-[var(--sibling-primary)] hover:underline"
-                >
-                  Complete checkout
-                </button>{" "}
-                to activate your workspace quotas.
-              </p>
-            ) : null}
 
             {data.usage && sub.plan && !isDealifyPlan(sub.plan) ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 Billing period:{" "}
                 <span className="text-foreground font-medium">
-                  {formatPeriodDate(data.usage.periodStart)} – {formatPeriodDate(data.usage.periodEnd)}
+                  {formatPeriodDate(data.usage.periodStart)} –{" "}
+                  {formatPeriodDate(data.usage.periodEnd)}
                 </span>
               </p>
             ) : null}
@@ -407,19 +290,6 @@ function WorkspacePlanContent() {
               <p className="mt-4 text-sm text-muted-foreground">
                 Usage counters will appear after your first billing period is recorded.
               </p>
-            ) : null}
-
-            {data.addOns.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {data.addOns.map((a) => (
-                  <span
-                    key={a.type}
-                    className="rounded-lg border border-[var(--glass-border)] bg-[var(--glass-hover)] px-2.5 py-1 text-xs text-foreground"
-                  >
-                    {a.label}
-                  </span>
-                ))}
-              </div>
             ) : null}
           </section>
 
@@ -437,45 +307,81 @@ function WorkspacePlanContent() {
           </section>
 
           <section>
-            <h3 className="text-sm font-semibold text-foreground mb-1">Available plans</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-1">Extra usage</h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Compare tiers or use Manage plans to switch your subscription.
+              {data.canPurchaseAddOns
+                ? "Add-ons stack on top of your plan and are billed monthly. Cancel any time."
+                : "Add-ons are available once you activate a plan with your code."}
             </p>
-            <div className="grid gap-4 md:grid-cols-3">
-              {data.plans.map((plan) => {
-                const isCurrent = plan.id === currentPlanId;
-                return (
-                  <div
-                    key={plan.id}
-                    className={`rounded-xl border p-4 ${
-                      isCurrent
-                        ? "border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/8 ring-1 ring-[var(--sibling-primary)]/30"
-                        : "border-[var(--glass-border)] bg-[var(--glass-hover)]"
-                    }`}
-                  >
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-semibold text-foreground">{plan.name}</span>
-                      <span className="text-sm font-medium text-[var(--sibling-primary)]">
-                        {plan.priceLabel}
-                      </span>
+
+            {addOnError ? (
+              <p className="mb-4 text-sm text-destructive">{addOnError}</p>
+            ) : null}
+
+            {data.availableAddOns.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {data.availableAddOns.map((option) => {
+                  const active = activeByType.get(option.id);
+                  const busy = pendingAddOn === option.id;
+                  const canBuyMore = !active || option.stackable;
+
+                  return (
+                    <div
+                      key={option.id}
+                      className={`rounded-xl border p-4 ${
+                        active
+                          ? "border-[var(--sibling-primary)] bg-[var(--sibling-primary)]/8 ring-1 ring-[var(--sibling-primary)]/30"
+                          : "border-[var(--glass-border)] bg-[var(--glass-hover)]"
+                      }`}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-semibold text-foreground">{option.name}</span>
+                        <span className="text-sm font-medium text-[var(--sibling-primary)]">
+                          {option.priceLabel}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {option.description}
+                      </p>
+
+                      {active ? (
+                        <span className="mt-3 inline-block text-[10px] font-bold uppercase tracking-wider text-[var(--sibling-primary)]">
+                          Active{active.quantity > 1 ? ` · ×${active.quantity}` : ""}
+                        </span>
+                      ) : null}
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {canBuyMore ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleBuyAddOn(option.id)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--sibling-primary)] px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            {busy ? "Redirecting…" : active ? "Add another" : "Add"}
+                          </button>
+                        ) : null}
+                        {active ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleCancelAddOn(option.id)}
+                            disabled={busy}
+                            className="rounded-lg border border-[var(--glass-border)] px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
-                    {isCurrent ? (
-                      <span className="mt-2 inline-block text-[10px] font-bold uppercase tracking-wider text-[var(--sibling-primary)]">
-                        Current plan
-                      </span>
-                    ) : null}
-                    <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
-                      {plan.highlights.map((h) => (
-                        <li key={h} className="flex items-center gap-2">
-                          <span className="h-1 w-1 shrink-0 rounded-full bg-[var(--sibling-primary)]" />
-                          {h}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No add-ons are available on your current plan.
+              </p>
+            )}
           </section>
         </div>
       ) : null}

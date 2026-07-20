@@ -2,7 +2,7 @@
 
 Single-use codes for coupon-only signup. Each code grants **100% off** and a **2-year** subscription term.
 
-_Generated: 2026-06-30T09:32:20.254Z_
+*Generated: 2026-06-30T09:32:20.254Z*
 
 > Regenerate after seeding or redemptions: `npx tsx scripts/export-dealify-coupons-md.ts`
 
@@ -69,7 +69,7 @@ _Generated: 2026-06-30T09:32:20.254Z_
 - `DFY-ST-4FA38496`
 - `DFY-ST-5155CF99`
 - `DFY-ST-579DA690`
-- `DFY-ST-5BA76C3B`
+- `DFY-ST-5BA76C3B` 
 - `DFY-ST-5C8E73ED`
 - `DFY-ST-5D5AB82A`
 - `DFY-ST-5D7C7FE3`
@@ -172,11 +172,15 @@ _Generated: 2026-06-30T09:32:20.254Z_
 - `DFY-ST-FE50D1F1`
 - `DFY-ST-FF7CEB9B`
 
+
+
 ## Dealify Pro
 
 - **Price:** $140 / 2yr
 - **Term:** 2 years
 - **Available coupons:** 150
+
+
 
 ### Features included
 
@@ -184,6 +188,8 @@ _Generated: 2026-06-30T09:32:20.254Z_
 - 8 bounty generations / month
 - 24 SEO pages / month
 - 2 rival analyses / month
+
+
 
 ### Coupon codes
 
@@ -337,3 +343,4 @@ _Generated: 2026-06-30T09:32:20.254Z_
 - `DFY-PR-FAC871B7`
 - `DFY-PR-FB3626CC`
 - `DFY-PR-FC4AC130`
+

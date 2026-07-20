@@ -71,11 +71,11 @@ function assertCouponUsable(
   }
 }
 
+/** Deliberately omits the term — the entitlement length is not disclosed to clients. */
 export type CouponValidationSuccess = {
   valid: true;
   plan: DealifyPlanId;
   planName: string;
-  termYears: number;
   amountDue: 0;
 };
 
@@ -108,7 +108,6 @@ export async function validateCouponCode(
       valid: true,
       plan,
       planName: getPlanOption(plan).name,
-      termYears: COUPON_TERM_YEARS,
       amountDue: 0,
     };
   } catch (err) {
@@ -160,7 +159,10 @@ export async function redeemCouponForCompany(opts: {
     }
 
     const plan = coupon.plan as DealifyPlanId;
-    const periodEnd = addMonths(now, COUPON_TERM_YEARS * 12);
+    // Two different clocks: the entitlement runs for the full coupon term, but quota is
+    // granted monthly and rolled forward by ensureCurrentUsagePeriod.
+    const entitlementEnd = addMonths(now, COUPON_TERM_YEARS * 12);
+    const usagePeriodEnd = addMonths(now, 1);
     const fields = getSubscriptionFieldsForPlan(plan);
 
     const subscription = await tx.subscription.upsert({
@@ -172,7 +174,7 @@ export async function redeemCouponForCompany(opts: {
         provider: "coupon",
         cycle: BillingCycle.TWO_YEAR,
         currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: entitlementEnd,
         metadata: { couponCode: normalized, couponTermYears: COUPON_TERM_YEARS },
       },
       update: {
@@ -181,7 +183,7 @@ export async function redeemCouponForCompany(opts: {
         provider: "coupon",
         cycle: BillingCycle.TWO_YEAR,
         currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: entitlementEnd,
         metadata: { couponCode: normalized, couponTermYears: COUPON_TERM_YEARS },
       },
     });
@@ -192,12 +194,16 @@ export async function redeemCouponForCompany(opts: {
         companyId: opts.companyId,
         subscriptionId: subscription.id,
         periodStart: now,
-        periodEnd,
+        periodEnd: usagePeriodEnd,
       },
       update: {
         subscriptionId: subscription.id,
         periodStart: now,
-        periodEnd,
+        periodEnd: usagePeriodEnd,
+        radarScansUsed: 0,
+        bountyGeneratorUsed: 0,
+        seoPageGenerationUsed: 0,
+        rivalsAnalysisUsed: 0,
       },
     });
 
