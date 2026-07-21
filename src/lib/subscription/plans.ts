@@ -275,13 +275,6 @@ export const ADD_ON_CONFIG = {
     stackable: false,
     factor: { seoPageGeneration: 2 },
   },
-  ALTERNATE_DAY_AUTOMATION: {
-    name: "Alternate-day Automation",
-    description: "Runs your automations every other day.",
-    priceAmount: 1900,
-    mode: "none",
-    stackable: false,
-  },
 } as const;
 
 export type AddOnId = keyof typeof ADD_ON_CONFIG;
@@ -330,7 +323,6 @@ const DODO_ADD_ON_PRODUCT_ENV: Record<AddOnId, string> = {
   SCALE_BOOST: "DODO_SCALE_BOOST_PRODUCT_ID",
   EXTRA_RIVALS_PACK: "DODO_EXTRA_RIVALS_PACK_PRODUCT_ID",
   AEO_CONTENT_BOOST: "DODO_AEO_CONTENT_BOOST_PRODUCT_ID",
-  ALTERNATE_DAY_AUTOMATION: "DODO_ALTERNATE_DAY_AUTOMATION_PRODUCT_ID",
 };
 
 export function getDodoAddOnProductId(addOn: AddOnId): string {
